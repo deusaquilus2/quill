@@ -12,7 +12,8 @@ lazy val sparkIncludeProp = Option(System.getProperty("spark.include"))
 lazy val modules = Seq[sbt.ClasspathDep[sbt.ProjectReference]](
   `quill-core-jvm`, `quill-core-js`, `quill-sql-jvm`, `quill-sql-js`,
   `quill-jdbc`, `quill-finagle-mysql`, `quill-finagle-postgres`, `quill-async`,
-  `quill-async-mysql`, `quill-async-postgres`, `quill-cassandra`, `quill-orientdb`
+  `quill-async-mysql`, `quill-async-postgres`, `quill-cassandra`, `quill-orientdb`,
+  `quill-ndbc`
 ) ++ 
   Seq[sbt.ClasspathDep[sbt.ProjectReference]](`quill-spark`)
     .filter(_ => sparkIncludeProp.contains("true"))
@@ -159,6 +160,18 @@ lazy val `quill-async-postgres` =
       )
     )
     .dependsOn(`quill-async` % "compile->compile;test->test")
+
+lazy val `quill-ndbc` =
+  (project in file("quill-ndbc"))
+    .settings(commonSettings: _*)
+    .settings(mimaSettings: _*)
+    .settings(
+      fork in Test := true,
+      libraryDependencies ++= Seq(
+        "io.trane" % "ndbc-api" % "0.0.1"
+      )
+    )
+    .dependsOn(`quill-sql-jvm` % "compile->compile;test->test")
 
 lazy val `quill-cassandra` =
   (project in file("quill-cassandra"))

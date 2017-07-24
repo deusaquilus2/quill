@@ -15,7 +15,7 @@ class PeopleNdbcSpec extends PeopleSpec {
 
   override def beforeAll =
     await {
-      testContext.transaction {
+      testContext.transaction { 
         for {
           _ <- testContext.run(query[Couple].delete)
           _ <- testContext.run(query[Person].filter(_.age > 0).delete)

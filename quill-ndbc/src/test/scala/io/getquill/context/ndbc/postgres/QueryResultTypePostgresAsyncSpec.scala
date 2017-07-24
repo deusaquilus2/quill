@@ -1,4 +1,4 @@
-//package io.getquill.context.async.mysql
+//package io.getquill.context.async.postgres
 //
 //import java.util.concurrent.ConcurrentLinkedQueue
 //
@@ -13,7 +13,7 @@
 //
 //import io.getquill.context.sql.QueryResultTypeSpec
 //
-//class QueryResultTypeMysqlAsyncSpec extends QueryResultTypeSpec {
+//class QueryResultTypePostgresAsyncSpec extends QueryResultTypeSpec {
 //
 //  val context = testContext
 //  import testContext._

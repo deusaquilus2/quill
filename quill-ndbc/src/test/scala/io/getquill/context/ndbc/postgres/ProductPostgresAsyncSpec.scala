@@ -1,13 +1,14 @@
-//package io.getquill.context.ndbc.postgres
+//package io.getquill.context.async.postgres
 //
 //import scala.concurrent.Await
-//import io.trane.future.scala.Future
+//import scala.concurrent.Future
 //import scala.concurrent.duration.Duration
+//import scala.concurrent.ExecutionContext.Implicits.global
 //
 //import io.getquill.context.sql.ProductSpec
 //import io.getquill.context.sql.Id
 //
-//class ProductNdbcSpec extends ProductSpec {
+//class ProductPostgresAsyncSpec extends ProductSpec {
 //
 //  val context = testContext
 //  import testContext._
@@ -21,8 +22,7 @@
 //
 //  "Product" - {
 //    "Insert multiple products" in {
-//      val inserted =
-//        await(Future.sequence(productEntries.map(product => testContext.run(productInsert(lift(product))))))
+//      val inserted = await(Future.sequence(productEntries.map(product => testContext.run(productInsert(lift(product))))))
 //      val product = await(testContext.run(productById(lift(inserted(2))))).head
 //      product.description mustEqual productEntries(2).description
 //      product.id mustEqual inserted(2)
@@ -59,15 +59,6 @@
 //      returnedProduct.id mustEqual inserted
 //    }
 //
-//    "Single insert with value class" in {
-//      case class Product(id: Id, description: String, sku: Long)
-//      val prd = Product(Id(0L), "test2", 2L)
-//      val q1 = quote {
-//        query[Product].insert(_.sku -> lift(prd.sku), _.description -> lift(prd.description)).returning(_.id)
-//      }
-//      await(testContext.run(q1)) mustBe a[Id]
-//    }
-//
 //    "Single product insert with a method quotation" in {
 //      val prd = Product(0L, "test3", 3L)
 //      val inserted = await(testContext.run(productInsert(lift(prd))))
@@ -75,6 +66,15 @@
 //      returnedProduct.description mustEqual "test3"
 //      returnedProduct.sku mustEqual 3L
 //      returnedProduct.id mustEqual inserted
+//    }
+//
+//    "Single insert with value class" in {
+//      case class Product(id: Id, description: String, sku: Long)
+//      val prd = Product(Id(0L), "test2", 2L)
+//      val q1 = quote {
+//        query[Product].insert(_.sku -> lift(prd.sku), _.description -> lift(prd.description)).returning(_.id)
+//      }
+//      await(testContext.run(q1)) mustBe a[Id]
 //    }
 //
 //    "supports casts from string to number" - {

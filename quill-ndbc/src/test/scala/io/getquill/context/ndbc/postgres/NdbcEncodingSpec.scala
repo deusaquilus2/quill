@@ -1,14 +1,17 @@
 package io.getquill.context.ndbc.postgres
 
-import java.time.{ LocalDate, LocalDateTime }
+import java.time.{ LocalDateTime }
 
 import io.getquill.context.sql.EncodingSpec
 
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
-import java.util.Date
+import java.util.UUID
 
-class MysqlAsyncEncodingSpec extends EncodingSpec {
+//import java.util.Date
+//import java.util.UUID
+
+class NdbcEncodingSpec extends EncodingSpec {
 
   val context = testContext
   import testContext._
@@ -24,87 +27,23 @@ class MysqlAsyncEncodingSpec extends EncodingSpec {
     verify(Await.result(r, Duration.Inf))
   }
 
-//  "decode numeric types correctly" - {
-//    "decode byte to" - {
-//      "short" in {
-//        prepareEncodingTestEntity()
-//        case class EncodingTestEntity(v3: Short)
-//        val v3List = Await.result(testContext.run(query[EncodingTestEntity]), Duration.Inf)
-//        v3List.map(_.v3) must contain theSameElementsAs List(1: Byte, 0: Byte)
-//      }
-//      "int" in {
-//        prepareEncodingTestEntity()
-//        case class EncodingTestEntity(v3: Int)
-//        val v3List = Await.result(testContext.run(query[EncodingTestEntity]), Duration.Inf)
-//        v3List.map(_.v3) must contain theSameElementsAs List(1, 0)
-//      }
-//      "long" in {
-//        prepareEncodingTestEntity()
-//        case class EncodingTestEntity(v3: Long)
-//        val v3List = Await.result(testContext.run(query[EncodingTestEntity]), Duration.Inf)
-//        v3List.map(_.v3) must contain theSameElementsAs List(1L, 0L)
-//      }
-//    }
-//    "decode short to" - {
-//      "int" in {
-//        prepareEncodingTestEntity()
-//        case class EncodingTestEntity(v5: Int)
-//        val v5List = Await.result(testContext.run(query[EncodingTestEntity]), Duration.Inf)
-//        v5List.map(_.v5) must contain theSameElementsAs List(23, 0)
-//      }
-//      "long" in {
-//        prepareEncodingTestEntity()
-//        case class EncodingTestEntity(v5: Long)
-//        val v5List = Await.result(testContext.run(query[EncodingTestEntity]), Duration.Inf)
-//        v5List.map(_.v5) must contain theSameElementsAs List(23L, 0L)
-//      }
-//    }
-//    "decode int to long" in {
-//      case class EncodingTestEntity(v6: Long)
-//      val v6List = Await.result(testContext.run(query[EncodingTestEntity]), Duration.Inf)
-//      v6List.map(_.v6) must contain theSameElementsAs List(33L, 0L)
-//    }
-//
-//    "decode and encode any numeric as boolean" in {
-//      case class EncodingTestEntity(v3: Boolean, v4: Boolean, v6: Boolean, v7: Boolean)
-//      Await.result(testContext.run(query[EncodingTestEntity]), Duration.Inf)
-//      ()
-//    }
-//  }
+  "encodes and decodes uuids" in {
+    case class EncodingUUIDTestEntity(v1: UUID)
+    val testUUID = UUID.fromString("e5240c08-6ee7-474a-b5e4-91f79c48338f")
 
-  "decode date types" in {
-    case class DateEncodingTestEntity(v1: Date, v2: Date, v3: Date)
-    val entity = DateEncodingTestEntity(new Date, new Date, new Date)
-    val r = for {
-      _ <- testContext.run(query[DateEncodingTestEntity].delete)
-      _ <- testContext.run(query[DateEncodingTestEntity].insert(lift(entity)))
-      result <- testContext.run(query[DateEncodingTestEntity])
-    } yield result
-    Await.result(r, Duration.Inf)
-    ()
-  }
+    //delete old values
+    val q0 = quote(query[EncodingUUIDTestEntity].delete)
+    val rez0 = Await.result(testContext.run(q0), Duration.Inf)
 
-  "decode local date types" in {
-    case class DateEncodingTestEntity(v1: LocalDate, v2: LocalDate, v3: LocalDate)
-    val entity = DateEncodingTestEntity(LocalDate.now, LocalDate.now, LocalDate.now)
-    val r = for {
-      _ <- testContext.run(query[DateEncodingTestEntity].delete)
-      _ <- testContext.run(query[DateEncodingTestEntity].insert(lift(entity)))
-      result <- testContext.run(query[DateEncodingTestEntity])
-    } yield result
-    Await.result(r, Duration.Inf) must contain(entity)
-  }
+    //insert new uuid
+    val rez1 = Await.result(testContext.run(query[EncodingUUIDTestEntity].insert(lift(EncodingUUIDTestEntity(testUUID)))), Duration.Inf)
 
-  "decode local date time types" in {
-    case class DateEncodingTestEntity(v1: LocalDateTime, v2: LocalDateTime, v3: LocalDateTime)
-    //since localdatetime is converted to joda which doesn't store nanos need to zero the nano part
-    val entity = DateEncodingTestEntity(LocalDate.now().atStartOfDay(), LocalDateTime.now.withNano(0), LocalDateTime.now.withNano(0))
-    val r = for {
-      _ <- testContext.run(query[DateEncodingTestEntity].delete)
-      _ <- testContext.run(query[DateEncodingTestEntity].insert(lift(entity)))
-      result <- testContext.run(query[DateEncodingTestEntity])
-    } yield result
-    Await.result(r, Duration.Inf) must contain(entity)
+    //verify you can get the uuid back from the db
+    val q2 = quote(query[EncodingUUIDTestEntity].map(p => p.v1))
+    
+    val rez2 = Await.result(testContext.run(q2), Duration.Inf)
+
+    rez2 mustEqual List(testUUID)
   }
 
 //  "fails if the column has the wrong type" - {
@@ -124,20 +63,52 @@ class MysqlAsyncEncodingSpec extends EncodingSpec {
 //    }
 //  }
 
-  "encodes sets" in {
-    val q = quote {
-      (set: Query[Int]) =>
-        query[EncodingTestEntity].filter(t => set.contains(t.v6))
-    }
-    val fut =
-      for {
-        _ <- testContext.run(query[EncodingTestEntity].delete)
-        _ <- testContext.run(liftQuery(insertValues).foreach(e => query[EncodingTestEntity].insert(e)))
-        r <- testContext.run(q(liftQuery(insertValues.map(_.v6))))
-      } yield {
-        r
-      }
-    verify(Await.result(fut, Duration.Inf))
+//  "encodes sets" in {
+//    val q = quote {
+//      (set: Query[Int]) =>
+//        query[EncodingTestEntity].filter(t => set.contains(t.v6))
+//    }
+//    val fut =
+//      for {
+//        _ <- testContext.run(query[EncodingTestEntity].delete)
+//        _ <- testContext.run(liftQuery(insertValues).foreach(e => query[EncodingTestEntity].insert(e)))
+//        r <- testContext.run(q(liftQuery(insertValues.map(_.v6))))
+//      } yield {
+//        r
+//      }
+//    verify(Await.result(fut, Duration.Inf))
+//  }
+
+//  "returning UUID" in {
+//    val success = for {
+//      uuid <- Await.result(testContext.run(insertBarCode(lift(barCodeEntry))), Duration.Inf)
+//      barCode <- Await.result(testContext.run(findBarCodeByUuid(uuid)), Duration.Inf).headOption
+//    } yield {
+//      verifyBarcode(barCode)
+//    }
+//    success must not be empty
+//  }
+
+//  "encodes localdate type" in {
+//    case class DateEncodingTestEntity(v1: LocalDate, v2: LocalDate)
+//    val entity = DateEncodingTestEntity(LocalDate.now, LocalDate.now)
+//    val r = for {
+//      _ <- testContext.run(query[DateEncodingTestEntity].delete)
+//      _ <- testContext.run(query[DateEncodingTestEntity].insert(lift(entity)))
+//      result <- testContext.run(query[DateEncodingTestEntity])
+//    } yield result
+//    Await.result(r, Duration.Inf) must contain(entity)
+//  }
+
+  "encodes localdatetime type" in {
+    case class DateEncodingTestEntity(v1: LocalDateTime, v2: LocalDateTime)
+    val entity = DateEncodingTestEntity(LocalDateTime.now, LocalDateTime.now)
+    val r = for {
+      _ <- testContext.run(query[DateEncodingTestEntity].delete)
+      _ <- testContext.run(query[DateEncodingTestEntity].insert(lift(entity)))
+      result <- testContext.run(query[DateEncodingTestEntity])
+    } yield result
+    Await.result(r, Duration.Inf)
   }
 
 //  "encodes custom type inside singleton object" in {
@@ -154,12 +125,4 @@ class MysqlAsyncEncodingSpec extends EncodingSpec {
 //    implicit val c = testContext
 //    Await.result(Singleton(), Duration.Inf)
 //  }
-
-  private def prepareEncodingTestEntity() = {
-    val prepare = for {
-      _ <- testContext.run(delete)
-      _ <- testContext.run(liftQuery(insertValues).foreach(e => insert(e)))
-    } yield {}
-    Await.result(prepare, Duration.Inf)
-  }
 }

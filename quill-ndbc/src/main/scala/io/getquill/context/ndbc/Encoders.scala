@@ -16,7 +16,9 @@ trait Encoders {
   protected val zoneOffset: ZoneOffset
 
   def encoder[T, U](f: PreparedStatement => (Int, U) => PreparedStatement)(implicit ev: T => U): Encoder[T] =
-    (idx, v, ps) => f(ps)(idx, v)
+    (idx, v, ps) => 
+      if(v == null) ps.setNull(idx)
+      else f(ps)(idx, v)
 
   implicit def mappedEncoder[I, O](implicit mapped: MappedEncoding[I, O], e: Encoder[O]): Encoder[I] =
     mappedBaseEncoder(mapped, e)
@@ -29,11 +31,11 @@ trait Encoders {
       }
 
       
-  implicit val uuidEncoder: Encoder[UUID] = encoder(_.setString)(_.toString)
+  implicit val uuidEncoder: Encoder[UUID] = encoder(_.setUUID)
   implicit val stringEncoder: Encoder[String] = encoder(_.setString)
   implicit val bigDecimalEncoder: Encoder[BigDecimal] = encoder(_.setBigDecimal)(_.bigDecimal)
   implicit val booleanEncoder: Encoder[Boolean] = encoder(_.setBoolean)
-  implicit val byteEncoder: Encoder[Byte] = encoder(_.setByteArray)(Array(_))
+  implicit val byteEncoder: Encoder[Byte] = encoder(_.setByte)
   implicit val shortEncoder: Encoder[Short] = encoder(_.setShort)
   implicit val intEncoder: Encoder[Int] = encoder(_.setInteger)
   implicit val longEncoder: Encoder[Long] = encoder(_.setLong)

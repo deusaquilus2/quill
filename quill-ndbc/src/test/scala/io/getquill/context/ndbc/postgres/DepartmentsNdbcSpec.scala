@@ -8,7 +8,7 @@ import scala.concurrent.Await
 import scala.concurrent.duration._
 import language.postfixOps
 
-class DepartmentsPostgresAsyncSpec extends DepartmentsSpec {
+class DepartmentsNdbcSpec extends DepartmentsSpec {
 
   val context = testContext
   import testContext._

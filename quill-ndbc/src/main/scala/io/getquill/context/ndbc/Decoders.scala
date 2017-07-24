@@ -30,11 +30,11 @@ trait Decoders {
         case value      => Option(d(idx, row))
       }
 
-  implicit val uuidDecoder: Decoder[UUID] = decoder(r => UUID.fromString(r.getString))
+  implicit val uuidDecoder: Decoder[UUID] = decoder(_.getUUID)
   implicit val stringDecoder: Decoder[String] = decoder(_.getString)
   implicit val bigDecimalDecoder: Decoder[BigDecimal] = decoder(_.getBigDecimal)
   implicit val booleanDecoder: Decoder[Boolean] = decoder(_.getBoolean)
-  implicit val byteDecoder: Decoder[Byte] = decoder(_.getByteArray.head)
+  implicit val byteDecoder: Decoder[Byte] = decoder(_.getByte)
   implicit val shortDecoder: Decoder[Short] = decoder(_.getShort)
   implicit val intDecoder: Decoder[Int] = decoder(_.getInteger)
   implicit val longDecoder: Decoder[Long] = decoder(_.getLong)

@@ -4,7 +4,7 @@ import io.getquill.context.sql.DepartmentsSpec
 
 import io.getquill.context.sql.DepartmentsSpec
 import io.trane.future.scala.Future
-import scala.concurrent.Await
+import io.trane.future.scala.Await
 import scala.concurrent.duration._
 import language.postfixOps
 

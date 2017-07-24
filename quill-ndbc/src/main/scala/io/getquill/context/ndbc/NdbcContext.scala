@@ -1,7 +1,5 @@
 package io.getquill.context.ndbc
 
-import java.util.HashMap
-
 import scala.annotation.tailrec
 import scala.util.Try
 
@@ -17,7 +15,6 @@ import io.trane.future.scala._
 import io.trane.ndbc.DataSource
 import io.trane.ndbc.PreparedStatement
 import io.trane.ndbc.Row
-import io.trane.ndbc.value.LongValue
 import java.time.ZoneOffset
 
 abstract class NdbcContext[Dialect <: SqlIdiom, Naming <: NamingStrategy](dataSource: DataSource)
@@ -69,9 +66,7 @@ abstract class NdbcContext[Dialect <: SqlIdiom, Naming <: NamingStrategy](dataSo
   }
 
   def executeActionReturning[O](sql: String, prepare: PreparedStatement => PreparedStatement = identity, extractor: Row => O, returningColumn: String): Future[O] =
-    executeAction(sql, prepare).map { id =>
-      extractor(Row.apply(new HashMap, Array(new LongValue(id))))
-    }
+    executeQuerySingle(s"$sql RETURNING $returningColumn", prepare, extractor)
 
   def executeBatchAction(groups: List[BatchGroup]): Future[List[Long]] =
     Future.sequence {

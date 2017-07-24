@@ -1,6 +1,6 @@
 package io.getquill.context.ndbc.postgres
 
-import scala.concurrent.Await
+import io.trane.future.scala.Await
 import io.trane.future.scala.Future
 import scala.concurrent.duration.Duration
 

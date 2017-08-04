@@ -16,11 +16,13 @@ import io.trane.ndbc.DataSource
 import io.trane.ndbc.PreparedStatement
 import io.trane.ndbc.Row
 import java.time.ZoneOffset
+import io.getquill.context.sql.encoding.ArrayEncoding
 
 abstract class NdbcContext[Dialect <: SqlIdiom, Naming <: NamingStrategy](dataSource: DataSource)
     extends SqlContext[Dialect, Naming]
     with Encoders
-    with Decoders {
+    with Decoders
+    with ArrayEncoding {
 
   protected val zoneOffset: ZoneOffset = ZoneOffset.UTC
 

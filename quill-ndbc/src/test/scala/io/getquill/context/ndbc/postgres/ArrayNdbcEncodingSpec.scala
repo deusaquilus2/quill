@@ -1,15 +1,13 @@
-//package io.getquill.context.ndbc.postgres
-//
-//import java.time.LocalDate
-//
-//import io.getquill.context.sql.encoding.ArrayEncodingBaseSpec
-//
-//class ArrayAsyncEncodingSpec extends ArrayEncodingBaseSpec {
-//  val ctx = testContext
-//  import ctx._
-//
-//  val q = quote(query[ArraysTestEntity])
-//
+package io.getquill.context.ndbc.postgres
+
+import io.getquill.context.sql.encoding.ArrayEncodingBaseSpec
+
+class ArrayNdbcEncodingSpec extends ArrayEncodingBaseSpec {
+  val ctx = testContext
+  import ctx._
+
+  val q = quote(query[ArraysTestEntity])
+
 //  "Support all sql base types and `Traversable` implementers" in {
 //    await(ctx.run(q.insert(lift(e))))
 //    val actual = await(ctx.run(q)).head
@@ -54,9 +52,9 @@
 //    actual1 mustEqual List(e)
 //    actual2 mustEqual List()
 //  }
-//
-//  override protected def beforeEach(): Unit = {
-//    await(ctx.run(q.delete))
-//    ()
-//  }
-//}
+
+  override protected def beforeEach(): Unit = {
+    await(ctx.run(q.delete))
+    ()
+  }
+}

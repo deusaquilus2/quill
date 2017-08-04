@@ -45,4 +45,16 @@ trait Encoders {
   implicit val dateEncoder: Encoder[Date] = encoder(_.setLocalDateTime)(d => LocalDateTime.ofInstant(d.toInstant(), zoneOffset))
   implicit val localDateEncoder: Encoder[LocalDate] = encoder(_.setLocalDate)
   implicit val localDateTimeEncoder: Encoder[LocalDateTime] = encoder(_.setLocalDateTime)
+  
+  implicit def arrayStringEncoder[Col <: Seq[String]]: Encoder[Col] = encoder(_.setStringArray)(_.toArray)
+  implicit def arrayBigDecimalEncoder[Col <: Seq[BigDecimal]]: Encoder[Col] = encoder(_.setBigDecimalArray)(_.map(_.bigDecimal).toArray)
+  implicit def arrayBooleanEncoder[Col <: Seq[Boolean]]: Encoder[Col] = encoder(_.setBooleanArray)(_.map(new java.lang.Boolean(_)).toArray)
+  implicit def arrayByteEncoder[Col <: Seq[Byte]]: Encoder[Col] = encoder(_.setByteArray)(_.toArray)
+  implicit def arrayShortEncoder[Col <: Seq[Short]]: Encoder[Col] = encoder(_.setShortArray)(_.map(new java.lang.Short(_)).toArray)
+  implicit def arrayIntEncoder[Col <: Seq[Int]]: Encoder[Col] = encoder(_.setIntegerArray)(_.map(new java.lang.Integer(_)).toArray)
+  implicit def arrayLongEncoder[Col <: Seq[Long]]: Encoder[Col] = encoder(_.setLongArray)(_.map(new java.lang.Long(_)).toArray)
+  implicit def arrayFloatEncoder[Col <: Seq[Float]]: Encoder[Col] = encoder(_.setFloatArray)(_.map(new java.lang.Float(_)).toArray)
+  implicit def arrayDoubleEncoder[Col <: Seq[Double]]: Encoder[Col] = encoder(_.setDoubleArray)(_.map(new java.lang.Double(_)).toArray)
+  implicit def arrayDateEncoder[Col <: Seq[Date]]: Encoder[Col] = encoder(_.setLocalDateTimeArray)(_.map(d => LocalDateTime.ofInstant(d.toInstant(), zoneOffset)).toArray)
+  implicit def arrayLocalDateEncoder[Col <: Seq[LocalDate]]: Encoder[Col] = encoder(_.setLocalDateArray)(_.toArray)
 }

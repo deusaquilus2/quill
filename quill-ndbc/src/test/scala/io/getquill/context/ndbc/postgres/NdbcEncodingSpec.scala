@@ -112,18 +112,18 @@ class NdbcEncodingSpec extends EncodingSpec {
     Await.result(r, Duration.Inf)
   }
 
-  "encodes custom type inside singleton object" in {
-    object Singleton {
-      def apply()(implicit c: TestContext) = {
-        import c._
-        for {
-          _ <- c.run(query[EncodingTestEntity].delete)
-          result <- c.run(liftQuery(insertValues).foreach(e => query[EncodingTestEntity].insert(e)))
-        } yield result
-      }
-    }
-
-    implicit val c = testContext
-    Await.result(Singleton(), Duration.Inf)
-  }
+//  "encodes custom type inside singleton object" in {
+//    object Singleton {
+//      def apply()(implicit c: TestContext) = {
+//        import c._
+//        for {
+//          _ <- c.run(query[EncodingTestEntity].delete)
+//          result <- c.run(liftQuery(insertValues).foreach(e => query[EncodingTestEntity].insert(e)))
+//        } yield result
+//      }
+//    }
+//
+//    implicit val c = testContext
+//    Await.result(Singleton(), Duration.Inf)
+//  }
 }

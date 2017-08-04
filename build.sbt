@@ -167,8 +167,11 @@ lazy val `quill-ndbc` =
     .settings(mimaSettings: _*)
     .settings(
       fork in Test := true,
+      resolvers += Resolver.sonatypeRepo("snapshots"),
       libraryDependencies ++= Seq(
-        "io.trane" % "ndbc-api" % "0.0.1"
+        "io.trane" % "future-scala" % "0.2.3-SNAPSHOT",
+        "io.trane" % "ndbc-api" % "0.0.2-SNAPSHOT",
+        "io.trane" % "ndbc-postgres-netty4" % "0.0.2-SNAPSHOT" % Test
       )
     )
     .dependsOn(`quill-sql-jvm` % "compile->compile;test->test")

@@ -51,7 +51,7 @@ trait Encoders {
   implicit val longEncoder: Encoder[Long] = encoder(Types.BIGINT, _.setLong)
   implicit val floatEncoder: Encoder[Float] = encoder(Types.FLOAT, _.setFloat)
   implicit val doubleEncoder: Encoder[Double] = encoder(Types.DOUBLE, _.setDouble)
-  implicit val byteArrayEncoder: Encoder[Array[Byte]] = encoder(Types.VARBINARY, _.setBytes)
+  implicit val byte  Encoder: Encoder[Array[Byte]] = encoder(Types.VARBINARY, _.setBytes)
   implicit val dateEncoder: Encoder[util.Date] =
     encoder(Types.TIMESTAMP, (index, value, row) =>
       row.setTimestamp(index, new sql.Timestamp(value.getTime), Calendar.getInstance(dateTimeZone)))

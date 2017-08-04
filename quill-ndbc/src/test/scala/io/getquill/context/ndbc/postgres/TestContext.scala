@@ -3,7 +3,7 @@ package io.getquill.context.ndbc.postgres
 import io.getquill.context.sql.{ TestDecoders, TestEncoders }
 import io.getquill.{ Literal, TestEntities }
 
-import scala.concurrent.{ Await, Future }
+import io.trane.future.scala.{ Await, Future }
 import scala.concurrent.duration.Duration
 import io.getquill.PostgresNdbcContext
 

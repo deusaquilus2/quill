@@ -25,16 +25,16 @@ then
         git reset --hard origin/master
         git push --delete origin website || true
 
-        $SBT_2_12 'release with-defaults'
-        $SBT_2_11 'release with-defaults'
+        $SBT_2_12 'project quill-monix' 'release with-defaults'
+        $SBT_2_11 'project quill-monix' 'release with-defaults'
 
     elif [[ $TRAVIS_BRANCH == "master" ]]
     then
-        $SBT_2_12 publish
-        $SBT_2_11 publish
+        $SBT_2_12 'project quill-monix' publish
+        $SBT_2_11 'project quill-monix' publish
     else
         echo "version in ThisBuild := \"$TRAVIS_BRANCH-SNAPSHOT\"" > version.sbt
-        $SBT_2_12 publish
-        $SBT_2_11 publish
+        $SBT_2_12 'project quill-monix' publish
+        $SBT_2_11 'project quill-monix' publish
     fi
 fi

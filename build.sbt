@@ -131,7 +131,7 @@ lazy val `quill-codegen-jdbc` =
     .dependsOn(`quill-jdbc` % "compile->compile;test->test")
 
 
-val codegen = taskKey[Seq[File]]("Run Code Generation Phase for Integration Testing")
+lazy val codegen = taskKey[Seq[File]]("Run Code Generation Phase for Integration Testing")
 
 lazy val `quill-codegen-tests` =
   (project in file("quill-codegen-tests"))

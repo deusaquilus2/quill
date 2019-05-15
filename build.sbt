@@ -183,7 +183,8 @@ lazy val `quill-codegen-tests` =
 //        recrusiveList(fileDir)
 //      }
     )
-    .dependsOn(`quill-codegen-jdbc` % "compile->test")
+    .dependsOn(`quill-codegen-jdbc` % "compile->compile;test->test")
+    //.dependsOn(`quill-codegen-jdbc` % "compile->test")
 
 val includeOracle =
   sys.props.getOrElse("oracle", "false").toBoolean

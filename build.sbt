@@ -144,16 +144,16 @@ lazy val `quill-codegen-tests` =
       releasePublishArtifactsAction := (),
       releaseProcess := Seq(),
       libraryDependencies += "org.scala-lang" % "scala-compiler" % scalaVersion.value % Test,
-      fork in Test := true,
-//      (sourceGenerators in Test) += (codegen in Test),
-      (excludeFilter in unmanagedSources) := excludePathsIfOracle {
-        (unmanagedSourceDirectories in Test).value.map { dir =>
-          (dir / "io" / "getquill" / "codegen" / "OracleCodegenTestCases.scala").getCanonicalPath
-        } ++
-        (unmanagedSourceDirectories in Test).value.map { dir =>
-          (dir / "io" / "getquill" / "codegen" / "util" / "WithOracleContext.scala").getCanonicalPath
-        }
-      }//,
+      fork in Test := true//,
+////      (sourceGenerators in Test) += (codegen in Test),
+//      (excludeFilter in unmanagedSources) := excludePathsIfOracle {
+//        (unmanagedSourceDirectories in Test).value.map { dir =>
+//          (dir / "io" / "getquill" / "codegen" / "OracleCodegenTestCases.scala").getCanonicalPath
+//        } ++
+//        (unmanagedSourceDirectories in Test).value.map { dir =>
+//          (dir / "io" / "getquill" / "codegen" / "util" / "WithOracleContext.scala").getCanonicalPath
+//        }
+//      }//,
 //      (codegen in Test) := {
 //        def recrusiveList(file:JFile): List[JFile] = {
 //          if (file.isDirectory)

@@ -145,7 +145,7 @@ lazy val `quill-codegen-tests` =
       releaseProcess := Seq(),
       libraryDependencies += "org.scala-lang" % "scala-compiler" % scalaVersion.value % Test,
       fork in Test := true,
-      (sourceGenerators in Test) += (codegen in Test),
+//      (sourceGenerators in Test) += (codegen in Test),
       (excludeFilter in unmanagedSources) := excludePathsIfOracle {
         (unmanagedSourceDirectories in Test).value.map { dir =>
           (dir / "io" / "getquill" / "codegen" / "OracleCodegenTestCases.scala").getCanonicalPath
@@ -153,35 +153,35 @@ lazy val `quill-codegen-tests` =
         (unmanagedSourceDirectories in Test).value.map { dir =>
           (dir / "io" / "getquill" / "codegen" / "util" / "WithOracleContext.scala").getCanonicalPath
         }
-      },
-      (codegen in Test) := {
-        def recrusiveList(file:JFile): List[JFile] = {
-          if (file.isDirectory)
-            Option(file.listFiles()).map(_.flatMap(child=> recrusiveList(child)).toList).toList.flatten
-          else
-            List(file)
-        }
-        val r = (runner in Compile).value
-        val s = streams.value.log
-        val sourcePath = sourceManaged.value
-        val classPath = (fullClasspath in Test in `quill-codegen-jdbc`).value.map(_.data)
-
-        // We could put the code generated products directly in the `sourcePath` directory but for some reason
-        // intellij doesn't like it unless there's a `main` directory inside.
-        val fileDir = new File(sourcePath, "main").getAbsoluteFile
-        val dbs =
-          Seq("testH2DB", "testMysqlDB", "testPostgresDB", "testSqliteDB", "testSqlServerDB"
-          ) ++ includeIfOracle("testOracleDB")
-        println(s"Running code generation for DBs: ${dbs.mkString(", ")}")
-        r.run(
-          "io.getquill.codegen.integration.CodegenTestCaseRunner",
-          classPath,
-          // If oracle tests are included, enable code generation for it
-          fileDir.getAbsolutePath +: dbs,
-          s
-        )
-        recrusiveList(fileDir)
-      }
+      }//,
+//      (codegen in Test) := {
+//        def recrusiveList(file:JFile): List[JFile] = {
+//          if (file.isDirectory)
+//            Option(file.listFiles()).map(_.flatMap(child=> recrusiveList(child)).toList).toList.flatten
+//          else
+//            List(file)
+//        }
+//        val r = (runner in Compile).value
+//        val s = streams.value.log
+//        val sourcePath = sourceManaged.value
+//        val classPath = (fullClasspath in Test in `quill-codegen-jdbc`).value.map(_.data)
+//
+//        // We could put the code generated products directly in the `sourcePath` directory but for some reason
+//        // intellij doesn't like it unless there's a `main` directory inside.
+//        val fileDir = new File(sourcePath, "main").getAbsoluteFile
+//        val dbs =
+//          Seq("testH2DB", "testMysqlDB", "testPostgresDB", "testSqliteDB", "testSqlServerDB"
+//          ) ++ includeIfOracle("testOracleDB")
+//        println(s"Running code generation for DBs: ${dbs.mkString(", ")}")
+//        r.run(
+//          "io.getquill.codegen.integration.CodegenTestCaseRunner",
+//          classPath,
+//          // If oracle tests are included, enable code generation for it
+//          fileDir.getAbsolutePath +: dbs,
+//          s
+//        )
+//        recrusiveList(fileDir)
+//      }
     )
     .dependsOn(`quill-codegen-jdbc` % "compile->test")
 

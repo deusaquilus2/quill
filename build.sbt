@@ -139,10 +139,6 @@ lazy val `quill-codegen-ext` =
   (project in file("quill-codegen-ext"))
     .settings(commonSettings: _*)
     .settings(mimaSettings: _*)
-    .settings(
-      libraryDependencies += "org.scala-lang" % "scala-compiler" % scalaVersion.value % Test,
-      fork in Test := true
-    )
 
 val includeOracle =
   sys.props.getOrElse("oracle", "false").toBoolean

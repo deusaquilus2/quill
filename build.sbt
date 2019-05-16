@@ -22,7 +22,7 @@ lazy val asyncModules = Seq[sbt.ClasspathDep[sbt.ProjectReference]](
 )
 
 lazy val codegenModules = Seq[sbt.ClasspathDep[sbt.ProjectReference]](
-  `quill-codegen`, `quill-codegen-jdbc`, `quill-codegen-ext`
+  `quill-codegen`, `quill-codegen-jdbc`, `quill-ext`
 )
 
 lazy val bigdataModules = Seq[sbt.ClasspathDep[sbt.ProjectReference]](
@@ -135,8 +135,8 @@ lazy val `quill-codegen-jdbc` =
 
 lazy val codegen = taskKey[Seq[File]]("Run Code Generation Phase for Integration Testing")
 
-lazy val `quill-codegen-ext` =
-  (project in file("quill-codegen-ext"))
+lazy val `quill-ext` =
+  (project in file("quill-ext"))
     .settings(commonSettings: _*)
     .settings(mimaSettings: _*)
 

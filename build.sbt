@@ -180,10 +180,10 @@ lazy val `quill-codegen-tests` =
 //        recrusiveList(fileDir)
 //      }
     )
-    .dependsOn(`quill-codegen-jdbc` % "compile->compile;test->test")
-    .dependsOn(`quill-core-jvm` % "compile->compile;test->test")
-    .dependsOn(`quill-codegen` % "compile->compile;test->test")
-    .dependsOn(`quill-jdbc` % "compile->compile;test->test")
+//    .dependsOn(`quill-codegen-jdbc` % "compile->compile;test->test")
+//    .dependsOn(`quill-core-jvm` % "compile->compile;test->test")
+//    .dependsOn(`quill-codegen` % "compile->compile;test->test")
+//    .dependsOn(`quill-jdbc` % "compile->compile;test->test")
     //.dependsOn(`quill-codegen-jdbc` % "compile->test")
 
 val includeOracle =

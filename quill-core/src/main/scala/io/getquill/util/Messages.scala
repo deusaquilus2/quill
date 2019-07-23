@@ -10,16 +10,18 @@ object Messages {
   }
 
   private val traceEnabled = false
+  private val traceColors = false
 
   def fail(msg: String) =
     throw new IllegalStateException(msg)
 
   def trace[T](label: String) =
-    (v: T) => {
-      if (traceEnabled)
-        println(s"$label:\n 		$v")
-      v
-    }
+    (v: T) =>
+      {
+        if (traceEnabled)
+          println(s"$label${{ if (traceColors) pprint.apply(v).render else pprint.apply(v).plainText }.split("\n").map("    " + _).mkString("\n")}")
+        v
+      }
 
   implicit class RichContext(c: MacroContext) {
 

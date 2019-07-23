@@ -9,17 +9,19 @@ object ApplyMap {
 
   object InfixedTailOperation {
 
-    def hasInfix(ast: Ast) =
-      CollectAst.byType[Infix](ast).nonEmpty
+    def hasImpureInfix(ast: Ast) =
+      CollectAst(ast) {
+        case i @ Infix(_, _, false) => i
+      }.nonEmpty
 
     def unapply(ast: Ast): Option[Ast] =
       ast match {
-        case cc: CaseClass if hasInfix(cc)     => Some(cc)
-        case tup: Tuple if hasInfix(tup)       => Some(tup)
-        case p: Property if hasInfix(p)        => Some(p)
-        case b: BinaryOperation if hasInfix(b) => Some(b)
-        case u: UnaryOperation if hasInfix(u)  => Some(u)
-        case i: Infix                          => Some(i)
+        case cc: CaseClass if hasImpureInfix(cc)     => Some(cc)
+        case tup: Tuple if hasImpureInfix(tup)       => Some(tup)
+        case p: Property if hasImpureInfix(p)        => Some(p)
+        case b: BinaryOperation if hasImpureInfix(b) => Some(b)
+        case u: UnaryOperation if hasImpureInfix(u)  => Some(u)
+        case i @ Infix(_, _, false)            => Some(i)
         case _                                 => None
       }
   }

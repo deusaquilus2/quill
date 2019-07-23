@@ -29,7 +29,7 @@ class SqlNormalize(concatBehavior: ConcatBehavior, equalityBehavior: EqualityBeh
       .andThen(trace("RenameProperties"))
       .andThen(ExpandDistinct.apply _)
       .andThen(trace("NestMappedInfix"))
-      .andThen(NestMappedInfix.apply _)
+      .andThen(NestImpureMappedInfix.apply _)
       .andThen(trace("ExpandDistinct"))
       .andThen(Normalize.apply _)
       .andThen(trace("Normalize"))

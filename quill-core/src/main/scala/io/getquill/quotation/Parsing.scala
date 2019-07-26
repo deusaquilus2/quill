@@ -983,18 +983,18 @@ trait Parsing extends ValueComputation {
     val rightInner = innerOptionParam(rightType, Some(1))
     val leftIsOptional = isOptionType(leftType) && !is[Nothing](lhs)
     val rightIsOptional = isOptionType(rightType) && !is[Nothing](rhs)
-    val typesMatch = matchTypes(rightInner, leftInner)
+    val innerTypesMatch = matchTypes(rightInner, leftInner)
 
     optionCheckBehavior match {
-      case AllowInnerCompare if typesMatch =>
+      case AllowInnerCompare if innerTypesMatch =>
         (leftIsOptional, rightIsOptional)
-      case ForbidInnerCompare if ((leftIsOptional && rightIsOptional) || (!leftIsOptional && !rightIsOptional)) && typesMatch =>
+      case ForbidInnerCompare if ((leftIsOptional && rightIsOptional) || (!leftIsOptional && !rightIsOptional)) && innerTypesMatch =>
         (leftIsOptional, rightIsOptional)
+      case _ if (innerTypesMatch) && (leftIsOptional != rightIsOptional) =>
+        c.abort(lhs.pos, s"${leftType.widen} == ${rightType.widen} will always be false in standard Scala. Use Option.contains or === to compare any T with Option[T].")
       case _ =>
-        if (leftIsOptional || rightIsOptional)
-          c.abort(lhs.pos, s"${leftType.widen} == ${rightType.widen} is not allowed since ${leftInner.widen}, ${rightInner.widen} are different types.")
-        else
-          c.abort(lhs.pos, s"${leftType.widen} == ${rightType.widen} is not allowed since they are different types.")
+        c.abort(lhs.pos, s"${leftType.widen} == ${rightType.widen} is not allowed since they are different types.")
+
     }
   }
 

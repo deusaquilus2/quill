@@ -1,10 +1,14 @@
 package io.getquill.dsl
 
+import io.getquill.ast.Renameable.{ ByStrategy, Fixed }
+
 import scala.language.implicitConversions
 import scala.language.experimental.macros
 import io.getquill.ast._
+
 import scala.reflect.macros.whitebox.{ Context => MacroContext }
 import io.getquill.util.Messages._
+
 import scala.annotation.tailrec
 import scala.util.DynamicVariable
 import scala.reflect.ClassTag
@@ -84,7 +88,7 @@ trait DynamicQueryDsl {
     }
 
   def set[T, U](property: String, value: Quoted[U]): DynamicSet[T, U] =
-    set((f: Quoted[T]) => splice(Property(f.ast, property)), value)
+    set((f: Quoted[T]) => splice(Property(f.ast, property, ByStrategy)), value)
 
   def setValue[T, U](property: String, value: U)(implicit enc: Encoder[U]): DynamicSet[T, U] =
     set(property, spliceLift(value))
@@ -95,7 +99,7 @@ trait DynamicQueryDsl {
 
         @tailrec def path(ast: Ast, acc: List[String] = Nil): List[String] =
           ast match {
-            case Property(a, name) =>
+            case Property(a, name, _) =>
               path(a, name :: acc)
             case _ =>
               acc
@@ -103,7 +107,7 @@ trait DynamicQueryDsl {
 
         PropertyAlias(path(alias.property(splice[T](Ident("v"))).ast), alias.name)
       }
-    DynamicEntityQuery(splice[EntityQuery[T]](Entity(entity, aliases.toList)))
+    DynamicEntityQuery(splice[EntityQuery[T]](Entity(entity, aliases.toList, Fixed)))
   }
 
   private[this] val nextIdentId = new DynamicVariable(0)

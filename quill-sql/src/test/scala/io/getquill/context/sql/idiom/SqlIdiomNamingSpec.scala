@@ -1,7 +1,6 @@
 package io.getquill.context.sql.idiom
 
 import io.getquill.Spec
-import io.getquill.SqlMirrorContext
 import io.getquill.Escape
 import io.getquill.SnakeCase
 import io.getquill.UpperCase
@@ -10,17 +9,17 @@ import io.getquill.SqlMirrorContext
 import io.getquill.NamingStrategy
 
 trait CustomTableStrategy extends SnakeCase {
-  override def table(s: String) = s"t_$s".toLowerCase
+  override def table(s: String): String = s"t_$s".toLowerCase
 }
 object CustomTableStrategy extends CustomTableStrategy
 
 trait CustomColumnStrategy extends SnakeCase {
-  override def column(s: String) = s"c_$s".toLowerCase
+  override def column(s: String): String = s"c_$s".toLowerCase
 }
 object CustomColumnStrategy extends CustomColumnStrategy
 
 trait CustomDefaultStrategy extends SnakeCase {
-  override def default(s: String) = s"d_$s".toLowerCase
+  override def default(s: String): String = s"d_$s".toLowerCase
 }
 object CustomDefaultStrategy extends CustomDefaultStrategy
 

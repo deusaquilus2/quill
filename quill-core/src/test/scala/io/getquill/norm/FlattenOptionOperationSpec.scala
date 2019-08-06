@@ -7,6 +7,7 @@ import io.getquill.ast.NumericOperator
 import io.getquill.ast.Implicits._
 import io.getquill.norm.ConcatBehavior.{ AnsiConcat, NonAnsiConcat }
 import io.getquill.MoreAstOps._
+import io.getquill.ast.Renameable.ByStrategy
 
 class FlattenOptionOperationSpec extends Spec {
 
@@ -182,16 +183,16 @@ class FlattenOptionOperationSpec extends Spec {
           (o: Option[TestEntity]) => o.map(_.i).forall(i => i != 1) && true
         }
         new FlattenOptionOperation(AnsiConcat)(q.ast.body: Ast) mustEqual
-          ((IsNullCheck(Property(o, "i")) +||+ ((Property(o, "i") +!=+ c1))) +&&+ Constant(true))
+          ((IsNullCheck(Property(o, "i", ByStrategy)) +||+ ((Property(o, "i", ByStrategy) +!=+ c1))) +&&+ Constant(true))
       }
       "possible-fallthrough operation" in {
         val q = quote {
           (o: Option[TestEntity2]) => o.map(_.s).forall(s => s + "foo" == "bar") && true
         }
         new FlattenOptionOperation(AnsiConcat)(q.ast.body: Ast) mustEqual
-          ((IsNullCheck(Property(o, "s")) +||+ ((Property(o, "s") +++ cFoo) +==+ cBar) +&&+ Constant(true)))
+          ((IsNullCheck(Property(o, "s", ByStrategy)) +||+ ((Property(o, "s", ByStrategy) +++ cFoo) +==+ cBar) +&&+ Constant(true)))
         new FlattenOptionOperation(NonAnsiConcat)(q.ast.body: Ast) mustEqual
-          ((IsNullCheck(Property(o, "s")) +||+ (IsNotNullCheck(Property(o, "s")) +&&+ ((Property(o, "s") +++ cFoo) +==+ cBar))) +&&+ Constant(true))
+          ((IsNullCheck(Property(o, "s", ByStrategy)) +||+ (IsNotNullCheck(Property(o, "s", ByStrategy)) +&&+ ((Property(o, "s", ByStrategy) +++ cFoo) +==+ cBar))) +&&+ Constant(true))
       }
     }
     "exists" - {
@@ -227,7 +228,7 @@ class FlattenOptionOperationSpec extends Spec {
       val q = quote {
         (o: Option[Row]) => o.exists(r => r.id != 1)
       }
-      new FlattenOptionOperation(AnsiConcat)(q.ast.body: Ast) mustEqual (Property(o, "id") +!=+ c1)
+      new FlattenOptionOperation(AnsiConcat)(q.ast.body: Ast) mustEqual (Property(o, "id", ByStrategy) +!=+ c1)
     }
     "contains" in {
       val q = quote {

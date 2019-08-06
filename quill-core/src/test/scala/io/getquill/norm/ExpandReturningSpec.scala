@@ -2,6 +2,7 @@ package io.getquill.norm
 
 import io.getquill.ReturnAction.{ ReturnColumns, ReturnRecord }
 import io.getquill._
+import io.getquill.ast.Renameable.ByStrategy
 import io.getquill.ast._
 import io.getquill.context.Expand
 
@@ -22,7 +23,7 @@ class ExpandReturningSpec extends Spec {
       val list =
         ExpandReturning.apply(q.ast.asInstanceOf[Returning])(MirrorIdiom, Literal)
       list must matchPattern {
-        case List((Property(ExternalIdent("p"), "name"), _), (Property(ExternalIdent("p"), "age"), _)) =>
+        case List((Property(ExternalIdent("p"), "name", _)), (Property(ExternalIdent("p"), "age", _))) =>
       }
     }
 
@@ -33,7 +34,7 @@ class ExpandReturningSpec extends Spec {
       val list =
         ExpandReturning.apply(q.ast.asInstanceOf[Returning])(MirrorIdiom, Literal)
       list must matchPattern {
-        case List((Property(ExternalIdent("p"), "name"), _), (Property(ExternalIdent("p"), "age"), _)) =>
+        case List((Property(ExternalIdent("p"), "name", _)), (Property(ExternalIdent("p"), "age", _))) =>
       }
     }
   }
@@ -106,18 +107,21 @@ class ExpandReturningSpec extends Spec {
   }
 
   "returning single and unsupported" - {
-    val insert = Insert(
+
+    val renameable = ByStrategy
+
+    def insert = Insert(
       Map(
-        Entity("Person", List()),
+        Entity("Person", List(), renameable),
         Ident("p"),
-        Tuple(List(Property(Ident("p"), "name"), Property(Ident("p"), "age")))
+        Tuple(List(Property(Ident("p"), "name", renameable), Property(Ident("p"), "age", renameable)))
       ),
-      List(Assignment(Ident("pp"), Property(Ident("pp"), "name"), Constant("Joe")))
+      List(Assignment(Ident("pp"), Property(Ident("pp"), "name", renameable), Constant("Joe")))
     )
-    val retMulti =
-      Returning(insert, Ident("r"), Tuple(List(Property(Ident("r"), "name"), Property(Ident("r"), "age"))))
-    val retSingle =
-      Returning(insert, Ident("r"), Tuple(List(Property(Ident("r"), "name"))))
+    def retMulti =
+      Returning(insert, Ident("r"), Tuple(List(Property(Ident("r"), "name", renameable), Property(Ident("r"), "age", renameable))))
+    def retSingle =
+      Returning(insert, Ident("r"), Tuple(List(Property(Ident("r"), "name", renameable))))
 
     "returning single" - {
       val mi = MirrorIdiomReturningSingle

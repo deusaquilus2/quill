@@ -1,5 +1,6 @@
 package io.getquill.context.spark.norm
 
+import io.getquill.ast.Renameable.ByStrategy
 import io.getquill.ast.{ Entity, Ident, Property }
 
 sealed trait SearchState {
@@ -27,8 +28,8 @@ object FoundEntityIds {
     new FoundEntityIds(Seq(EntityId(id, e)))
 
   def apply(id: String, propertyList: List[String]) =
-    new FoundEntityIds(Seq(EntityId(id, propertyList.map(p => Property(Ident(id), p)))))
+    new FoundEntityIds(Seq(EntityId(id, propertyList.map(p => Property(Ident(id), p, ByStrategy)))))
 }
 object EntityId {
-  def apply(id: String, e: Entity) = new EntityId(id, e.properties.map(pa => Property(Ident(id), pa.path.mkString("."))))
+  def apply(id: String, e: Entity) = new EntityId(id, e.properties.map(pa => Property(Ident(id), pa.path.mkString("."), ByStrategy)))
 }

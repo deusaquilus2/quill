@@ -1,5 +1,6 @@
 package io.getquill.norm
 
+import io.getquill.ast.Renameable.Internal
 import io.getquill.ast._
 
 /**
@@ -32,26 +33,26 @@ object NestImpureMappedInfix extends StatelessTransformer {
       case m @ Map(_, x, cc @ CaseClass(values)) if hasInfix(cc) => //Nested(m)
         Map(Nested(applyInside(m)), x,
           CaseClass(values.map {
-            case (str, _) => (str, Property(x, str))
+            case (str, _) => (str, Property(x, str, Internal)) // mappings of nested-query case class properties should not be renamed
           }))
 
       case m @ Map(_, x, tup @ Tuple(values)) if hasInfix(tup) =>
         Map(Nested(applyInside(m)), x,
           Tuple(values.zipWithIndex.map {
-            case (_, i) => Property(x, s"_${i + 1}")
+            case (_, i) => Property(x, s"_${i + 1}", Internal) // mappings of nested-query tuple properties should not be renamed
           }))
 
       case m @ Map(_, x, i @ Infix(_, _, false)) =>
-        Map(Nested(applyInside(m)), x, Property(x, "_1"))
+        Map(Nested(applyInside(m)), x, Property(x, "_1", Internal))
 
-      case m @ Map(_, x, Property(prop, _)) if hasInfix(prop) =>
-        Map(Nested(applyInside(m)), x, Property(x, "_1"))
+      case m @ Map(_, x, Property(prop, _, _)) if hasInfix(prop) =>
+        Map(Nested(applyInside(m)), x, Property(x, "_1", Internal))
 
       case m @ Map(_, x, BinaryOperation(a, _, b)) if hasInfix(a, b) =>
-        Map(Nested(applyInside(m)), x, Property(x, "_1"))
+        Map(Nested(applyInside(m)), x, Property(x, "_1", Internal))
 
       case m @ Map(_, x, UnaryOperation(_, a)) if hasInfix(a) =>
-        Map(Nested(applyInside(m)), x, Property(x, "_1"))
+        Map(Nested(applyInside(m)), x, Property(x, "_1", Internal))
 
       case other => super.apply(other)
     }

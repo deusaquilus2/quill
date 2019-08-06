@@ -1,4 +1,5 @@
 package io.getquill.ast
+import io.getquill.NamingStrategy
 
 //************************************************************
 
@@ -8,6 +9,7 @@ sealed trait Ast {
     import io.getquill.idiom.StatementInterpolator._
     implicit def liftTokenizer: Tokenizer[Lift] =
       Tokenizer[Lift](_ => stmt"?")
+    implicit val namingStrategy: NamingStrategy = io.getquill.Literal
     this.token.toString
   }
 }
@@ -16,7 +18,7 @@ sealed trait Ast {
 
 sealed trait Query extends Ast
 
-case class Entity(name: String, properties: List[PropertyAlias]) extends Query
+case class Entity(name: String, properties: List[PropertyAlias], renameable: Renameable) extends Query
 
 case class PropertyAlias(path: List[String], alias: String)
 
@@ -73,7 +75,20 @@ case class Ident(name: String) extends Ast
 // for 'returning' clauses to define properties being retruned.
 case class ExternalIdent(name: String) extends Ast
 
-case class Property(ast: Ast, name: String) extends Ast
+sealed trait Renameable {
+  def fixedOr[T](plain: T)(otherwise: T) =
+    this match {
+      case Renameable.Fixed => plain
+      case _                => otherwise
+    }
+}
+object Renameable {
+  case object Fixed extends Renameable
+  case object ByStrategy extends Renameable
+  case object Internal extends Renameable
+}
+
+case class Property(ast: Ast, name: String, renameable: Renameable) extends Ast
 
 sealed trait OptionOperation extends Ast
 case class OptionFlatten(ast: Ast) extends OptionOperation

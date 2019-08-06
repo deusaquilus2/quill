@@ -35,8 +35,8 @@ trait ReifyLiftings {
 
     private def unparse(ast: Ast): Tree =
       ast match {
-        case Property(Ident(alias), name) => q"${TermName(alias)}.${TermName(name)}"
-        case Property(nested, name)       => q"${unparse(nested)}.${TermName(name)}"
+        case Property(Ident(alias), name, _) => q"${TermName(alias)}.${TermName(name)}"
+        case Property(nested, name, _)       => q"${unparse(nested)}.${TermName(name)}"
         case OptionTableMap(ast2, Ident(alias), body) =>
           q"${unparse(ast2)}.map((${TermName(alias)}: ${tq""}) => ${unparse(body)})"
         case OptionMap(ast2, Ident(alias), body) =>
@@ -89,8 +89,8 @@ trait ReifyLiftings {
 
         case p: Property =>
           super.apply(p) match {
-            case (p2 @ Property(_: CaseClassValueLift, _), _) => apply(lift(unparse(p2)))
-            case other                                        => other
+            case (p2 @ Property(_: CaseClassValueLift, _, _), _) => apply(lift(unparse(p2)))
+            case other => other
           }
 
         case QuotedReference(ref: Tree, refAst) =>

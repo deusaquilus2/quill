@@ -86,7 +86,7 @@ trait StatelessTransformer {
 
   def apply(e: Property): Property =
     e match {
-      case Property(a, name) => Property(apply(a), name)
+      case Property(a, name, renameable) => Property(apply(a), name, renameable)
     }
 
   def apply(e: Operation): Operation =

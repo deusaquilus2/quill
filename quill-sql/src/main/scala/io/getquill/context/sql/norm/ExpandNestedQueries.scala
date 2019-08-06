@@ -69,29 +69,34 @@ object ExpandNestedQueries {
         Some(s"${alias.getOrElse("")}_${idx + 1}")
 
       ref match {
-        case Property(ast: Property, TupleIndex(idx)) =>
+        // TODO With properties marked Internal, is this really needed? we know know it's not renameable because it's marked Internal
+        case Property(ast: Property, TupleIndex(idx), _) =>
           expandReference(ast) match {
             case SelectValue(Tuple(elems), alias, c) =>
               SelectValue(elems(idx), concat(alias, idx), c)
             case SelectValue(ast, alias, c) =>
               SelectValue(ast, concat(alias, idx), c)
           }
-        case Property(ast: Property, name) =>
+        case Property(ast: Property, name, renameable) =>
           expandReference(ast) match {
             case SelectValue(ast, nested, c) =>
-              SelectValue(Property(ast, name), Some(s"${nested.getOrElse("")}$name"), c)
+              // Alias is the plain name of the column, not using the name strategy.
+              // The clauses in `SqlIdiom` that use `Tokenizer[SelectValue]` select the
+              // alias field when it's value is Some(T).
+              // TODO Should aliases follow column naming conventions?
+              SelectValue(Property(ast, name, renameable), Some(s"${nested.getOrElse("")}$name"), c)
           }
-        case Property(_, TupleIndex(idx)) =>
+        case Property(_, TupleIndex(idx), _) =>
           select(idx) match {
             case SelectValue(ast, alias, c) =>
               SelectValue(ast, concat(alias, idx), c)
           }
-        case Property(_, name) =>
+        case Property(_, name, renameable) =>
           select match {
             case List(SelectValue(cc: CaseClass, alias, c)) =>
               SelectValue(cc.values.toMap.apply(name), Some(name), c)
             case List(SelectValue(i: Ident, _, c)) =>
-              SelectValue(Property(i, name), None, c)
+              SelectValue(Property(i, name, renameable), None, c)
             case other =>
               SelectValue(Ident(name), Some(name), false)
           }
@@ -124,9 +129,9 @@ case class References(val state: State)
   object reference {
     def unapply(p: Property): Option[Property] =
       p match {
-        case Property(`ident`, name)      => Some(p)
-        case Property(reference(_), name) => Some(p)
-        case other                        => None
+        case Property(`ident`, name, _)      => Some(p)
+        case Property(reference(_), name, _) => Some(p)
+        case other                           => None
       }
   }
 }

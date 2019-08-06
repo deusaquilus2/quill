@@ -14,6 +14,7 @@ import scala.annotation.tailrec
 import scala.collection.immutable.StringOps
 import scala.reflect.macros.TypecheckException
 import io.getquill.ast.Implicits._
+import io.getquill.ast.Renameable.{ ByStrategy, Fixed, Internal }
 import io.getquill.util.Interleave
 
 trait Parsing extends ValueComputation {
@@ -90,7 +91,7 @@ trait Parsing extends ValueComputation {
     val body = astParser(bodyTree)
     def property(path: List[Int]) =
       path.foldLeft(tuple) {
-        case (t, i) => Property(t, s"_${i + 1}")
+        case (t, i) => Property(t, s"_${i + 1}", Internal)
       }
     def reductions(ast: Ast, path: List[Int] = List()): List[(Ident, Ast)] = {
       ast match {
@@ -173,10 +174,10 @@ trait Parsing extends ValueComputation {
 
     case q"$pack.query[$t]" =>
       // Unused, it's here only to make eclipse's presentation compiler happy
-      Entity("unused", Nil)
+      Entity("unused", Nil, ByStrategy)
 
     case q"$pack.querySchema[$t](${ name: String }, ..$properties)" =>
-      Entity(name, properties.map(propertyAliasParser(_)))
+      Entity(name, properties.map(propertyAliasParser(_)), Fixed)
 
     case q"$source.filter(($alias) => $body)" if (is[CoreDsl#Query[Any]](source)) =>
       Filter(astParser(source), identParser(alias), astParser(body))
@@ -479,7 +480,7 @@ trait Parsing extends ValueComputation {
       if (caseAccessors.nonEmpty && !caseAccessors.contains(property))
         c.fail(s"Can't find case class property: ${property.decodedName.toString}")
 
-      Property(astParser(e), property.decodedName.toString)
+      Property(astParser(e), property.decodedName.toString, ByStrategy)
   }
 
   val operationParser: Parser[Operation] = Parser[Operation] {
@@ -819,21 +820,21 @@ trait Parsing extends ValueComputation {
       case ReturningMultipleFieldSupported =>
         returnBody match {
           case CaseClass(list) if (list.forall {
-            case (_, Property(_, _)) => true
-            case _                   => false
+            case (_, Property(_, _, _)) => true
+            case _                      => false
           }) =>
           case Tuple(list) if (list.forall {
-            case Property(_, _) => true
-            case _              => false
+            case Property(_, _, _) => true
+            case _                 => false
           }) =>
-          case Property(_, _) =>
+          case Property(_, _, _) =>
           case other =>
             c.fail(s"${currentIdiom.map(n => s"The dialect ${n} only allows").getOrElse("Unspecified dialects only allow")} single a single property or multiple properties in case classes / tuples in 'returning' clauses ${other}.")
         }
       // Only .returning(r => r.prop) or .returning(r => OneElementCaseClass(r.prop)) is allowed.
       case ReturningSingleFieldSupported =>
         returnBody match {
-          case Property(_, _) =>
+          case Property(_, _, _) =>
           case other =>
             c.fail(s"${currentIdiom.map(n => s"The dialect ${n} only allows").getOrElse("Unspecified dialects only allow")} single, auto-incrementing columns in 'returning' clauses.")
         }

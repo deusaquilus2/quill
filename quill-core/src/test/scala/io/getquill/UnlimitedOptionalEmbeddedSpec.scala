@@ -1,5 +1,6 @@
 package io.getquill
 
+import io.getquill.ast.Renameable.Fixed
 import io.getquill.ast.{ Entity, PropertyAlias }
 import io.getquill.context.mirror.Row
 
@@ -46,7 +47,7 @@ class UnlimitedOptionalEmbeddedSpec extends Spec {
       PropertyAlias(List("e2", "e1", "e2", "value"), "value212"),
       PropertyAlias(List("e2", "e2", "e1", "value"), "value221"),
       PropertyAlias(List("e2", "e2", "e2", "value"), "value222")
-    ))
+    ), Fixed)
   }
 
   "meta" - {

@@ -1,8 +1,15 @@
 package io.getquill.norm
 
+import io.getquill.ast.Renameable.{ ByStrategy, Fixed, Internal }
 import io.getquill.ast._
+import io.getquill.norm.Replacements.pairsWithKeyTransform
 
 object RenameProperties extends StatelessTransformer {
+
+  def keyTransform(ast: Ast): Ast =
+    Transform(ast) {
+      case Property(a, b, _) => Property(keyTransform(a), b, ByStrategy)
+    }
 
   override def apply(q: Query): Query =
     applySchemaOnly(q)
@@ -31,14 +38,14 @@ object RenameProperties extends StatelessTransformer {
         applySchema(action) match {
           case (action, schema) =>
             val replace = replacements(alias, schema)
-            val bodyr = BetaReduction(body, replace: _*)
+            val bodyr = BetaReduction(body, pairsWithKeyTransform(replace: _*)(keyTransform(_)))
             (Returning(action, alias, bodyr), schema)
         }
       case ReturningGenerated(action: Action, alias, body) =>
         applySchema(action) match {
           case (action, schema) =>
             val replace = replacements(alias, schema)
-            val bodyr = BetaReduction(body, replace: _*)
+            val bodyr = BetaReduction(body, pairsWithKeyTransform(replace: _*)(keyTransform(_)))
             (ReturningGenerated(action, alias, bodyr), schema)
         }
       case OnConflict(a: Action, target, act) =>
@@ -54,8 +61,8 @@ object RenameProperties extends StatelessTransformer {
         val ar = a.map {
           case Assignment(alias, prop, value) =>
             val replace = replacements(alias, schema)
-            val propr = BetaReduction(prop, replace: _*)
-            val valuer = BetaReduction(value, replace: _*)
+            val propr = BetaReduction(prop, pairsWithKeyTransform(replace: _*)(keyTransform(_)))
+            val valuer = BetaReduction(value, pairsWithKeyTransform(replace: _*)(keyTransform(_)))
             Assignment(alias, propr, valuer)
         }
         (f(q, ar), schema)
@@ -101,7 +108,7 @@ object RenameProperties extends StatelessTransformer {
           case ((a, schemaA), (b, schemaB)) =>
             val replaceA = replacements(iA, schemaA)
             val replaceB = replacements(iB, schemaB)
-            val onr = BetaReduction(on, replaceA ++ replaceB: _*)
+            val onr = BetaReduction(on, pairsWithKeyTransform(replaceA ++ replaceB: _*)(keyTransform(_)))
             (Join(typ, a, b, iA, iB, onr), Tuple(List(schemaA, schemaB)))
         }
 
@@ -109,7 +116,7 @@ object RenameProperties extends StatelessTransformer {
         applySchema(a) match {
           case (a, schemaA) =>
             val replaceA = replacements(iA, schemaA)
-            val onr = BetaReduction(on, replaceA: _*)
+            val onr = BetaReduction(on, pairsWithKeyTransform(replaceA: _*)(keyTransform(_)))
             (FlatJoin(typ, a, iA, onr), schemaA)
         }
 
@@ -135,7 +142,7 @@ object RenameProperties extends StatelessTransformer {
             case ls       => Tuple(ls)
           }
         val replace = replacements(x, schema)
-        val pr = BetaReduction(p, replace: _*)
+        val pr = BetaReduction(p, pairsWithKeyTransform(replace: _*)(keyTransform(_)))
         val prr = apply(pr)
 
         (Map(Infix(parts, transformed.map(_._1), pure), x, prr), schema)
@@ -154,27 +161,38 @@ object RenameProperties extends StatelessTransformer {
     applySchema(q) match {
       case (q, schema) =>
         val replace = replacements(x, schema)
-        val pr = BetaReduction(p, replace: _*)
+        val pr = BetaReduction(p, pairsWithKeyTransform(replace: _*)(keyTransform(_)))
         val prr = apply(pr)
         (f(q, x, prr), schema)
     }
 
   private def replacements(base: Ast, schema: Ast): List[(Ast, Ast)] =
     (schema: @unchecked) match {
-      case Entity(entity, properties) =>
+      // The entity renameable property should already have been marked as Fixed
+      case Entity(entity, properties, _) =>
         properties.map {
+          // A property alias means that there was either a querySchema(tableName, _.propertyName -> PropertyAlias)
+          // or a schemaMeta (which ultimately gets turned into a querySchema) which is the same thing but implicit.
+          // In this case, we want to rename the properties based on the property aliases as well as mark
+          // them Fixed since they should not be renamed based on
+          // the naming strategy wherever they are tokenized (e.g. in SqlIdiom)
           case PropertyAlias(path, alias) =>
             def apply(base: Ast, path: List[String]): Ast =
               path match {
                 case Nil          => base
-                case head :: tail => apply(Property(base, head), tail)
+                case head :: tail => apply(Property(base, head, ByStrategy), tail)
               }
-            apply(base, path) -> Property(base, alias)
+            apply(base, path) -> Property(base, alias, Fixed)
         }
       case Tuple(values) =>
         values.zipWithIndex.flatMap {
           case (value, idx) =>
-            replacements(Property(base, s"_${idx + 1}"), value)
+            replacements(
+              // Should not matter whether property is fixed or variable here
+              // since beta reduction ignores that
+              Property(base, s"_${idx + 1}", Internal),
+              value
+            )
         }
     }
 }

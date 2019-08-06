@@ -2,6 +2,7 @@ package io.getquill.ast
 
 import io.getquill.Spec
 import io.getquill.ast.Implicits._
+import io.getquill.ast.Renameable.ByStrategy
 
 class AstOpsSpec extends Spec {
 
@@ -97,9 +98,9 @@ class AstOpsSpec extends Spec {
   }
 
   "returning matcher" - {
-    val insert = Insert(Entity("Ent", List()), List(Assignment(Ident("p"), Property(Ident("p"), "prop"), Constant(123))))
+    val insert = Insert(Entity("Ent", List(), ByStrategy), List(Assignment(Ident("p"), Property(Ident("p"), "prop", ByStrategy), Constant(123))))
     val r = Ident("r")
-    val prop = Property(r, "value")
+    val prop = Property(r, "value", ByStrategy)
 
     "must match returning" in {
       Returning(insert, r, prop) must matchPattern {

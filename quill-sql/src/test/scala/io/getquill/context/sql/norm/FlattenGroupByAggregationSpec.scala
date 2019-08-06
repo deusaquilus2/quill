@@ -16,7 +16,7 @@ class FlattenGroupByAggregationSpec extends Spec {
           e.map(_.i).max
       }
       FlattenGroupByAggregation(Ident("e"))(q.ast.body) mustEqual
-        Aggregation(AggregationOperator.max, Property(Ident("e"), "i"))
+        Aggregation(AggregationOperator.max, Property(Ident("e"), "i", Internal))
     }
     "nested infix" in {
       val q = quote {

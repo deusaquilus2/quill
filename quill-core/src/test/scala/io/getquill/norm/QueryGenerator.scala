@@ -1,7 +1,8 @@
 package io.getquill.norm
 
-import scala.util.Random
+import io.getquill.ast.Renameable.ByStrategy
 
+import scala.util.Random
 import io.getquill.ast._
 
 class QueryGenerator(seed: Int) {
@@ -11,7 +12,7 @@ class QueryGenerator(seed: Int) {
   def apply(i: Int): Query =
     if (i <= 2) {
       val s = string(3)
-      Entity(s, Nil)
+      Entity(s, Nil, ByStrategy)
     } else {
       random.nextInt(8) match {
         case 0 => map(i)
@@ -43,17 +44,17 @@ class QueryGenerator(seed: Int) {
 
   private def filter(i: Int) = {
     val id = ident
-    Filter(apply(i), id, BinaryOperation(Property(id, string), EqualityOperator.`!=`, Constant(1)))
+    Filter(apply(i), id, BinaryOperation(Property(id, string, ByStrategy), EqualityOperator.`!=`, Constant(1)))
   }
 
   private def sortBy(i: Int) = {
     val id = ident
-    SortBy(apply(i), id, Property(id, string), AscNullsFirst)
+    SortBy(apply(i), id, Property(id, string, ByStrategy), AscNullsFirst)
   }
 
   private def groupBy(i: Int) = {
     val id = ident
-    val group = GroupBy(apply(i), id, Property(id, string))
+    val group = GroupBy(apply(i), id, Property(id, string, ByStrategy))
     Map(group, id, id)
   }
 

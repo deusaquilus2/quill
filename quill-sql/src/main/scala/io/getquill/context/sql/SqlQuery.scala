@@ -5,6 +5,7 @@ import io.getquill.context.sql.norm.FlattenGroupByAggregation
 import io.getquill.norm.BetaReduction
 import io.getquill.util.Messages.fail
 import io.getquill.Literal
+import io.getquill.norm.Replacements.pairs
 
 case class OrderByCriteria(ast: Ast, ordering: PropertyOrdering)
 
@@ -135,7 +136,7 @@ object SqlQuery {
 
       case Map(GroupBy(q, x @ Ident(alias), g), a, p) =>
         val b = base(q, alias)
-        val select = BetaReduction(p, a -> Tuple(List(g, x)))
+        val select = BetaReduction(p, pairs(a -> Tuple(List(g, x))))
         val flattenSelect = FlattenGroupByAggregation(x)(select)
         b.copy(groupBy = Some(g), select = this.selectValues(flattenSelect))
 

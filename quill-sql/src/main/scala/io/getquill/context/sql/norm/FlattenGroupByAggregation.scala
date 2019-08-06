@@ -17,6 +17,7 @@ import io.getquill.ast.UnionAll
 import io.getquill.norm.BetaReduction
 import io.getquill.util.Messages.fail
 import io.getquill.ast.ConcatMap
+import io.getquill.norm.Replacements.pairs
 
 case class FlattenGroupByAggregation(agg: Ident) extends StatelessTransformer {
 
@@ -25,9 +26,9 @@ case class FlattenGroupByAggregation(agg: Ident) extends StatelessTransformer {
       case q: Query if (isGroupByAggregation(q)) =>
         q match {
           case Aggregation(op, Map(`agg`, ident, body)) =>
-            Aggregation(op, BetaReduction(body, ident -> agg))
+            Aggregation(op, BetaReduction(body, pairs(ident -> agg)))
           case Map(`agg`, ident, body) =>
-            BetaReduction(body, ident -> agg)
+            BetaReduction(body, pairs(ident -> agg))
           case q @ Aggregation(op, `agg`) =>
             q
           case other =>

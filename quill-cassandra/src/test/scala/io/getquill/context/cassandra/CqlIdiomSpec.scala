@@ -1,6 +1,7 @@
 package io.getquill.context.cassandra
 
 import io.getquill._
+import io.getquill.ast.Renameable.ByStrategy
 import io.getquill.idiom.StatementInterpolator._
 import io.getquill.ast.{ Action => AstAction, _ }
 import io.getquill.idiom.StringToken
@@ -372,7 +373,7 @@ class CqlIdiomSpec extends Spec {
     }
     "cql" in {
       val t = implicitly[Tokenizer[CqlQuery]]
-      val e = CqlQuery(Entity("name", Nil), None, Nil, None, Nil, distinct = true)
+      val e = CqlQuery(Entity("name", Nil, ByStrategy), None, Nil, None, Nil, distinct = true)
       intercept[IllegalStateException](t.token(e))
       t.token(e.copy(distinct = false)) mustBe stmt"SELECT * FROM name"
     }

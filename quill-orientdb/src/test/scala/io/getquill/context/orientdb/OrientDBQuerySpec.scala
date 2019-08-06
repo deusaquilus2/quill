@@ -1,5 +1,6 @@
 package io.getquill.context.orientdb
 
+import io.getquill.ast.Renameable.ByStrategy
 import io.getquill.ast.{ Action => AstAction, Query => AstQuery, _ }
 import io.getquill.context.sql._
 import io.getquill.idiom.StatementInterpolator._
@@ -192,7 +193,7 @@ class OrientDBQuerySpec extends Spec {
     }
     "query" in {
       val t = implicitly[Tokenizer[AstQuery]]
-      t.token(Entity("name", Nil)) mustBe SqlQuery(Entity("name", Nil)).token
+      t.token(Entity("name", Nil, ByStrategy)) mustBe SqlQuery(Entity("name", Nil, ByStrategy)).token
     }
     "sql query" in {
       val t = implicitly[Tokenizer[SqlQuery]]
@@ -207,7 +208,7 @@ class OrientDBQuerySpec extends Spec {
       intercept[IllegalStateException](t.token(e.copy(select = List(x, x), distinct = true)))
         .getMessage mustBe "OrientDB DISTINCT with multiple columns is not supported"
 
-      val tb = TableContext(Entity("tb", Nil), "x1")
+      val tb = TableContext(Entity("tb", Nil, ByStrategy), "x1")
       t.token(e.copy(from = List(tb, tb))) mustBe stmt"SELECT * FROM tb"
 
       val jn = FlatJoinContext(InnerJoin, tb.copy(alias = "x2"), Ident("x"))
@@ -241,13 +242,13 @@ class OrientDBQuerySpec extends Spec {
     "select value" in {
       val t = implicitly[Tokenizer[SelectValue]]
       t.token(SelectValue(Ident("?"))) mustBe "?".token
-      t.token(SelectValue(Aggregation(AggregationOperator.`max`, Entity("t", Nil)), Some("x"))) mustBe stmt"(SELECT MAX(*) FROM t) x"
+      t.token(SelectValue(Aggregation(AggregationOperator.`max`, Entity("t", Nil, ByStrategy)), Some("x"))) mustBe stmt"(SELECT MAX(*) FROM t) x"
     }
     "prop" in {
       val t = implicitly[Tokenizer[Property]]
-      t.token(Property(i, "isEmpty")) mustBe stmt"i IS NULL"
-      t.token(Property(i, "nonEmpty")) mustBe stmt"i IS NOT NULL"
-      t.token(Property(i, "isDefined")) mustBe stmt"i IS NOT NULL"
+      t.token(Property(i, "isEmpty", ByStrategy)) mustBe stmt"i IS NULL"
+      t.token(Property(i, "nonEmpty", ByStrategy)) mustBe stmt"i IS NOT NULL"
+      t.token(Property(i, "isDefined", ByStrategy)) mustBe stmt"i IS NOT NULL"
     }
     "value" in {
       val t = implicitly[Tokenizer[Value]]
@@ -258,11 +259,11 @@ class OrientDBQuerySpec extends Spec {
       val t = implicitly[Tokenizer[AstAction]]
       intercept[IllegalStateException](t.token(null: AstAction))
       def ins(a: String) =
-        Insert(Entity("tb", Nil), List(Assignment(i, Property(Property(i, "x"), a), i)))
+        Insert(Entity("tb", Nil, ByStrategy), List(Assignment(i, Property(Property(i, "x", ByStrategy), a, ByStrategy), i)))
       t.token(ins("isEmpty")) mustBe stmt"INSERT INTO tb (x IS NULL) VALUES(i)"
       t.token(ins("isDefined")) mustBe stmt"INSERT INTO tb (x IS NOT NULL) VALUES(i)"
       t.token(ins("nonEmpty")) mustBe stmt"INSERT INTO tb (x IS NOT NULL) VALUES(i)"
-      t.token(Insert(Entity("tb", Nil), List(Assignment(i, Property(i, "i"), i)))) mustBe stmt"INSERT INTO tb (i) VALUES(i)"
+      t.token(Insert(Entity("tb", Nil, ByStrategy), List(Assignment(i, Property(i, "i", ByStrategy), i)))) mustBe stmt"INSERT INTO tb (i) VALUES(i)"
     }
     // not actually used anywhere but doing a sanity check here
     "external ident sanity check" in {

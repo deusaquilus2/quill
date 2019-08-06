@@ -1,6 +1,7 @@
 package io.getquill.ast
 
 import io.getquill.Spec
+import io.getquill.ast.Renameable.{ ByStrategy, Fixed }
 
 class StatefulTransformerSpec extends Spec {
 
@@ -16,7 +17,7 @@ class StatefulTransformerSpec extends Spec {
   "transforms asts using a transformation state" - {
     "query" - {
       "entity" in {
-        val ast: Ast = Entity("a", Nil)
+        val ast: Ast = Entity("a", Nil, ByStrategy)
         Subject(Nil)(ast) match {
           case (at, att) =>
             at mustEqual ast
@@ -236,10 +237,10 @@ class StatefulTransformerSpec extends Spec {
         }
       }
       "properties" in {
-        val target: OnConflict.Target = OnConflict.Properties(List(Property(Ident("a"), "b")))
+        val target: OnConflict.Target = OnConflict.Properties(List(Property(Ident("a"), "b", ByStrategy)))
         Subject(Nil, Ident("a") -> Ident("a'"))(target) match {
           case (at, att) =>
-            at mustEqual OnConflict.Properties(List(Property(Ident("a'"), "b")))
+            at mustEqual OnConflict.Properties(List(Property(Ident("a'"), "b", ByStrategy)))
             att.state mustEqual List(Ident("a"))
         }
       }
@@ -301,10 +302,19 @@ class StatefulTransformerSpec extends Spec {
     }
 
     "property" in {
-      val ast: Ast = Property(Ident("a"), "b")
+      val ast: Ast = Property(Ident("a"), "b", ByStrategy)
       Subject(Nil, Ident("a") -> Ident("a'"))(ast) match {
         case (at, att) =>
-          at mustEqual Property(Ident("a'"), "b")
+          at mustEqual Property(Ident("a'"), "b", ByStrategy)
+          att.state mustEqual List(Ident("a"))
+      }
+    }
+
+    "property - fixed" in {
+      val ast: Ast = Property(Ident("a"), "b", Fixed)
+      Subject(Nil, Ident("a") -> Ident("a'"))(ast) match {
+        case (at, att) =>
+          at mustEqual Property(Ident("a'"), "b", Fixed)
           att.state mustEqual List(Ident("a"))
       }
     }
@@ -538,25 +548,25 @@ class StatefulTransformerSpec extends Spec {
 
     "block" in {
       val ast: Ast = Block(List(
-        Val(Ident("a"), Entity("a", Nil)),
-        Val(Ident("b"), Entity("b", Nil))
+        Val(Ident("a"), Entity("a", Nil, ByStrategy)),
+        Val(Ident("b"), Entity("b", Nil, ByStrategy))
       ))
-      Subject(Nil, Entity("a", Nil) -> Entity("b", Nil), Entity("b", Nil) -> Entity("c", Nil))(ast) match {
+      Subject(Nil, Entity("a", Nil, ByStrategy) -> Entity("b", Nil, ByStrategy), Entity("b", Nil, ByStrategy) -> Entity("c", Nil, ByStrategy))(ast) match {
         case (at, att) =>
           at mustEqual Block(List(
-            Val(Ident("a"), Entity("b", Nil)),
-            Val(Ident("b"), Entity("c", Nil))
+            Val(Ident("a"), Entity("b", Nil, ByStrategy)),
+            Val(Ident("b"), Entity("c", Nil, ByStrategy))
           ))
-          att.state mustEqual List(Entity("a", Nil), Entity("b", Nil))
+          att.state mustEqual List(Entity("a", Nil, ByStrategy), Entity("b", Nil, ByStrategy))
       }
     }
 
     "val" in {
-      val ast: Ast = Val(Ident("a"), Entity("a", Nil))
-      Subject(Nil, Entity("a", Nil) -> Entity("b", Nil))(ast) match {
+      val ast: Ast = Val(Ident("a"), Entity("a", Nil, ByStrategy))
+      Subject(Nil, Entity("a", Nil, ByStrategy) -> Entity("b", Nil, ByStrategy))(ast) match {
         case (at, att) =>
-          at mustEqual Val(Ident("a"), Entity("b", Nil))
-          att.state mustEqual List(Entity("a", Nil))
+          at mustEqual Val(Ident("a"), Entity("b", Nil, ByStrategy))
+          att.state mustEqual List(Entity("a", Nil, ByStrategy))
       }
     }
   }

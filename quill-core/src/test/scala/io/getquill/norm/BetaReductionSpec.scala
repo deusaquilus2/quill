@@ -1,17 +1,26 @@
 package io.getquill.norm
 
 import io.getquill.Spec
+import io.getquill.ast.Renameable.{ ByStrategy, Fixed }
 import io.getquill.ast._
 
 class BetaReductionSpec extends Spec {
 
   "simplifies the ast by applying functons" - {
     "tuple field" in {
-      val ast: Ast = Property(Tuple(List(Ident("a"))), "_1")
+      val ast: Ast = Property(Tuple(List(Ident("a"))), "_1", ByStrategy)
+      BetaReduction(ast) mustEqual Ident("a")
+    }
+    "tuple field - fixed property" in {
+      val ast: Ast = Property(Tuple(List(Ident("a"))), "_1", Fixed)
       BetaReduction(ast) mustEqual Ident("a")
     }
     "caseclass field" in {
-      val ast: Ast = Property(CaseClass(List(("foo", Ident("a")))), "foo")
+      val ast: Ast = Property(CaseClass(List(("foo", Ident("a")))), "foo", ByStrategy)
+      BetaReduction(ast) mustEqual Ident("a")
+    }
+    "caseclass field - fixed property" in {
+      val ast: Ast = Property(CaseClass(List(("foo", Ident("a")))), "foo", Fixed)
       BetaReduction(ast) mustEqual Ident("a")
     }
     "function apply" in {
@@ -28,7 +37,7 @@ class BetaReductionSpec extends Spec {
         Ident("a'")
     }
     "with inline" - {
-      val entity = Entity("a", Nil)
+      val entity = Entity("a", Nil, ByStrategy)
       val (a, b, c, d) = (Ident("a"), Ident("b"), Ident("c"), Ident("d"))
       val (c1, c2, c3) = (Constant(1), Constant(2), Constant(3))
 
@@ -151,19 +160,19 @@ class BetaReductionSpec extends Spec {
   }
 
   "treats duplicate aliases normally" in {
-    val property: Ast = Property(Tuple(List(Ident("a"), Ident("a"))), "_1")
+    val property: Ast = Property(Tuple(List(Ident("a"), Ident("a"))), "_1", ByStrategy)
     BetaReduction(property, Ident("a") -> Ident("a'")) mustEqual
       Ident("a'")
   }
 
   "reapplies the beta reduction if the structure changes" in {
-    val ast: Ast = Property(Ident("a"), "_1")
+    val ast: Ast = Property(Ident("a"), "_1", ByStrategy)
     BetaReduction(ast, Ident("a") -> Tuple(List(Ident("a'")))) mustEqual
       Ident("a'")
   }
 
   "reapplies the beta reduction if the structure changes caseclass" in {
-    val ast: Ast = Property(Ident("a"), "foo")
+    val ast: Ast = Property(Ident("a"), "foo", ByStrategy)
     BetaReduction(ast, Ident("a") -> CaseClass(List(("foo", Ident("a'"))))) mustEqual
       Ident("a'")
   }

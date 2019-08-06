@@ -3,6 +3,7 @@ package io.getquill.quotation
 import io.getquill.Spec
 import io.getquill.ast.Dynamic
 import io.getquill.ast.Property
+import io.getquill.ast.Renameable.{ ByStrategy, Fixed }
 import io.getquill.testContext.qr1
 import io.getquill.testContext.qrRegular
 
@@ -14,7 +15,10 @@ class IsDynamicSpec extends Spec {
         IsDynamic(Dynamic(1)) mustEqual true
       }
       "partially dynamic" in {
-        IsDynamic(Property(Dynamic(1), "a")) mustEqual true
+        IsDynamic(Property(Dynamic(1), "a", ByStrategy)) mustEqual true
+      }
+      "partially dynamic - fixed" in {
+        IsDynamic(Property(Dynamic(1), "a", Fixed)) mustEqual true
       }
     }
     "false" in {

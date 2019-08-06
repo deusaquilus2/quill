@@ -64,14 +64,14 @@ object NormalizeReturning {
   object NestedProperty {
     def unapply(ast: Property): Option[Ast] = {
       ast match {
-        case p @ Property(subAst, _) => Some(innerMost(subAst))
-        case _                       => None
+        case p @ Property(subAst, _, _) => Some(innerMost(subAst))
+        case _                          => None
       }
     }
 
     private def innerMost(ast: Ast): Ast = ast match {
-      case Property(inner, _) => innerMost(inner)
-      case other              => other
+      case Property(inner, _, _) => innerMost(inner)
+      case other                 => other
     }
   }
 

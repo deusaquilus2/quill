@@ -2,8 +2,20 @@ package io.getquill.norm
 
 import io.getquill.Spec
 import io.getquill.testContext._
+import org.scalactic.Equality
 
 class NormalizeAggregationIdentSpec extends Spec {
+
+  // TODO Back here
+
+  implicit def astEq[T <: io.getquill.ast.Ast](implicit tt: scala.reflect.runtime.universe.TypeTag[T]) =
+    new Equality[T] {
+      def areEqual(a: T, b: Any): Boolean =
+        b match {
+          case p: io.getquill.ast.Ast => io.getquill.norm.RenameProperties.keyTransform(p) == io.getquill.norm.RenameProperties.keyTransform(a)
+          case _                      => false
+        }
+    }
 
   "multiple select" in {
     val q = quote {
@@ -16,6 +28,8 @@ class NormalizeAggregationIdentSpec extends Spec {
         p => p._1 -> p._2.map(p => p.l).sum
       }
     }
-    Normalize(q.ast) mustEqual n.ast
+    println(pprint.apply(Normalize(q.ast)).render)
+
+    (Normalize(q.ast) mustEqual (n.ast))(astEq)
   }
 }

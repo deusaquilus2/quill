@@ -2,14 +2,8 @@ package io.getquill.norm
 
 import io.getquill.ast.Renameable.{ ByStrategy, Fixed, Internal }
 import io.getquill.ast._
-import io.getquill.norm.Replacements.pairsWithKeyTransform
 
 object RenameProperties extends StatelessTransformer {
-
-  def keyTransform(ast: Ast): Ast =
-    Transform(ast) {
-      case Property(a, b, _) => Property(keyTransform(a), b, ByStrategy)
-    }
 
   override def apply(q: Query): Query =
     applySchemaOnly(q)
@@ -38,14 +32,14 @@ object RenameProperties extends StatelessTransformer {
         applySchema(action) match {
           case (action, schema) =>
             val replace = replacements(alias, schema)
-            val bodyr = BetaReduction(body, pairsWithKeyTransform(replace: _*)(keyTransform(_)))
+            val bodyr = BetaReduction(body, replace: _*)
             (Returning(action, alias, bodyr), schema)
         }
       case ReturningGenerated(action: Action, alias, body) =>
         applySchema(action) match {
           case (action, schema) =>
             val replace = replacements(alias, schema)
-            val bodyr = BetaReduction(body, pairsWithKeyTransform(replace: _*)(keyTransform(_)))
+            val bodyr = BetaReduction(body, replace: _*)
             (ReturningGenerated(action, alias, bodyr), schema)
         }
       case OnConflict(a: Action, target, act) =>
@@ -61,8 +55,8 @@ object RenameProperties extends StatelessTransformer {
         val ar = a.map {
           case Assignment(alias, prop, value) =>
             val replace = replacements(alias, schema)
-            val propr = BetaReduction(prop, pairsWithKeyTransform(replace: _*)(keyTransform(_)))
-            val valuer = BetaReduction(value, pairsWithKeyTransform(replace: _*)(keyTransform(_)))
+            val propr = BetaReduction(prop, replace: _*)
+            val valuer = BetaReduction(value, replace: _*)
             Assignment(alias, propr, valuer)
         }
         (f(q, ar), schema)
@@ -108,7 +102,7 @@ object RenameProperties extends StatelessTransformer {
           case ((a, schemaA), (b, schemaB)) =>
             val replaceA = replacements(iA, schemaA)
             val replaceB = replacements(iB, schemaB)
-            val onr = BetaReduction(on, pairsWithKeyTransform(replaceA ++ replaceB: _*)(keyTransform(_)))
+            val onr = BetaReduction(on, replaceA ++ replaceB: _*)
             (Join(typ, a, b, iA, iB, onr), Tuple(List(schemaA, schemaB)))
         }
 
@@ -116,7 +110,7 @@ object RenameProperties extends StatelessTransformer {
         applySchema(a) match {
           case (a, schemaA) =>
             val replaceA = replacements(iA, schemaA)
-            val onr = BetaReduction(on, pairsWithKeyTransform(replaceA: _*)(keyTransform(_)))
+            val onr = BetaReduction(on, replaceA: _*)
             (FlatJoin(typ, a, iA, onr), schemaA)
         }
 
@@ -142,7 +136,7 @@ object RenameProperties extends StatelessTransformer {
             case ls       => Tuple(ls)
           }
         val replace = replacements(x, schema)
-        val pr = BetaReduction(p, pairsWithKeyTransform(replace: _*)(keyTransform(_)))
+        val pr = BetaReduction(p, replace: _*)
         val prr = apply(pr)
 
         (Map(Infix(parts, transformed.map(_._1), pure), x, prr), schema)
@@ -161,7 +155,7 @@ object RenameProperties extends StatelessTransformer {
     applySchema(q) match {
       case (q, schema) =>
         val replace = replacements(x, schema)
-        val pr = BetaReduction(p, pairsWithKeyTransform(replace: _*)(keyTransform(_)))
+        val pr = BetaReduction(p, replace: _*)
         val prr = apply(pr)
         (f(q, x, prr), schema)
     }

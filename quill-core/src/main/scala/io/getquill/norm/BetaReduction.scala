@@ -25,7 +25,7 @@ case class BetaReduction(replacements: Replacements)
         val newParams = params.map { p =>
           conflicts.getOrElse(p, p)
         }
-        val bodyr = BetaReduction(replacements.`new`(conflicts ++ params.zip(newParams))).apply(body)
+        val bodyr = BetaReduction(Replacements(conflicts ++ params.zip(newParams))).apply(body)
         apply(BetaReduction(replacements ++ newParams.zip(values).toMap).apply(bodyr))
 
       case Function(params, body) =>
@@ -35,16 +35,16 @@ case class BetaReduction(replacements: Replacements)
             case _              => p
           })
         }
-        Function(newParams, BetaReduction(replacements ++ params.zip(newParams))(body))
+        Function(newParams, BetaReduction(replacements ++ (params.zip(newParams)).toMap)(body))
 
       case Block(statements) =>
         apply {
           statements.reverse.tail.foldLeft((collection.Map[Ast, Ast](), statements.last)) {
             case ((map, stmt), line) =>
-              BetaReduction(replacements.`new`(map))(line) match {
+              BetaReduction(Replacements(map))(line) match {
                 case Val(name, body) =>
                   val newMap = map + (name -> body)
-                  val newStmt = BetaReduction(stmt, replacements.`new`(newMap))
+                  val newStmt = BetaReduction(stmt, Replacements(newMap))
                   (newMap, newStmt)
                 case other =>
                   (map, stmt)
@@ -122,11 +122,11 @@ case class BetaReduction(replacements: Replacements)
 object BetaReduction {
 
   def apply(ast: Ast, t: (Ast, Ast)*): Ast =
-    apply(ast, Replacements.simpleMap(t.toMap))
+    apply(ast, Replacements(t.toMap))
 
   def apply(ast: Ast, replacements: Replacements): Ast =
     BetaReduction(replacements).apply(ast) match {
       case `ast` => ast
-      case other => apply(other, replacements.empty)
+      case other => apply(other, Replacements.empty)
     }
 }

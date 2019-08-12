@@ -1,9 +1,25 @@
 package io.getquill.ast
 import io.getquill.NamingStrategy
+import io.getquill.ast.Renameable.ByStrategy
 
 //************************************************************
 
 sealed trait Ast {
+
+  /**
+   * Return a copy of this AST element with any opinions that it may have set to their neutral position.
+   * Return the object itself if it has no opinions.
+   */
+  def neutral: Ast = this
+
+  /**
+   * Set all opinions of this element and every element in the subtree to the neutral position.
+   */
+  final def neutralize: Ast = new StatelessTransformer {
+    override def apply(a: Ast) =
+      super.apply(a.neutral)
+  }.apply(this)
+
   override def toString = {
     import io.getquill.MirrorIdiom._
     import io.getquill.idiom.StatementInterpolator._
@@ -18,7 +34,10 @@ sealed trait Ast {
 
 sealed trait Query extends Ast
 
-case class Entity(name: String, properties: List[PropertyAlias], renameable: Renameable) extends Query
+case class Entity(name: String, properties: List[PropertyAlias], renameable: Renameable) extends Query {
+  override def neutral: Entity =
+    new Entity(name, properties, ByStrategy)
+}
 
 case class PropertyAlias(path: List[String], alias: String)
 
@@ -88,7 +107,10 @@ object Renameable {
   case object Internal extends Renameable
 }
 
-case class Property(ast: Ast, name: String, renameable: Renameable) extends Ast
+case class Property(ast: Ast, name: String, renameable: Renameable) extends Ast {
+  override def neutral: Property =
+    new Property(ast, name, ByStrategy)
+}
 
 sealed trait OptionOperation extends Ast
 case class OptionFlatten(ast: Ast) extends OptionOperation

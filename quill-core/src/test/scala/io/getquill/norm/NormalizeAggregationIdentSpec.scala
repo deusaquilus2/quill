@@ -12,7 +12,7 @@ class NormalizeAggregationIdentSpec extends Spec {
     new Equality[T] {
       def areEqual(a: T, b: Any): Boolean =
         b match {
-          case p: io.getquill.ast.Ast => io.getquill.norm.RenameProperties.keyTransform(p) == io.getquill.norm.RenameProperties.keyTransform(a)
+          case p: io.getquill.ast.Ast => p.neutralize == a.neutralize
           case _                      => false
         }
     }

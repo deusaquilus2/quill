@@ -3,7 +3,6 @@ package io.getquill.context.sql.norm
 import io.getquill.ast._
 import io.getquill.norm.BetaReduction
 import io.getquill.norm.Normalize
-import io.getquill.norm.Replacements.pairs
 
 object ExpandJoin {
 
@@ -22,17 +21,17 @@ object ExpandJoin {
       case Join(t, a: Join, b: Join, tA, tB, o) =>
         val (ar, at) = expandedTuple(a)
         val (br, bt) = expandedTuple(b)
-        val or = BetaReduction(o, pairs(tA -> at, tB -> bt))
+        val or = BetaReduction(o, tA -> at, tB -> bt)
         (Join(t, ar, br, tA, tB, or), Tuple(List(at, bt)))
 
       case Join(t, a: Join, b, tA, tB, o) =>
         val (ar, at) = expandedTuple(a)
-        val or = BetaReduction(o, pairs(tA -> at))
+        val or = BetaReduction(o, tA -> at)
         (Join(t, ar, b, tA, tB, or), Tuple(List(at, tB)))
 
       case Join(t, a, b: Join, tA, tB, o) =>
         val (br, bt) = expandedTuple(b)
-        val or = BetaReduction(o, pairs(tB -> bt))
+        val or = BetaReduction(o, tB -> bt)
         (Join(t, a, br, tA, tB, or), Tuple(List(tA, bt)))
 
       case q @ Join(t, a, b, tA, tB, on) =>

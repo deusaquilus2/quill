@@ -21,7 +21,7 @@ trait MirrorIdiomBase extends Idiom {
     (normalizedAst, stmt"${normalizedAst.token}")
   }
 
-  implicit def astTokenizer(implicit liftTokenizer: Tokenizer[Lift], strategy: NamingStrategy): Tokenizer[Ast] = Tokenizer[Ast] {
+  implicit def astTokenizer(implicit liftTokenizer: Tokenizer[Lift]): Tokenizer[Ast] = Tokenizer[Ast] {
     case ast: Query                => ast.token
     case ast: Function             => ast.token
     case ast: Value                => ast.token
@@ -45,7 +45,7 @@ trait MirrorIdiomBase extends Idiom {
     case ast: OnConflict.Existing  => ast.token
   }
 
-  implicit def ifTokenizer(implicit liftTokenizer: Tokenizer[Lift], strategy: NamingStrategy): Tokenizer[If] = Tokenizer[If] {
+  implicit def ifTokenizer(implicit liftTokenizer: Tokenizer[Lift]): Tokenizer[If] = Tokenizer[If] {
     case If(a, b, c) => stmt"if(${a.token}) ${b.token} else ${c.token}"
   }
 
@@ -53,21 +53,21 @@ trait MirrorIdiomBase extends Idiom {
     case Dynamic(tree) => stmt"${tree.toString.token}"
   }
 
-  implicit def blockTokenizer(implicit liftTokenizer: Tokenizer[Lift], strategy: NamingStrategy): Tokenizer[Block] = Tokenizer[Block] {
+  implicit def blockTokenizer(implicit liftTokenizer: Tokenizer[Lift]): Tokenizer[Block] = Tokenizer[Block] {
     case Block(statements) => stmt"{ ${statements.map(_.token).mkStmt("; ")} }"
   }
 
-  implicit def valTokenizer(implicit liftTokenizer: Tokenizer[Lift], strategy: NamingStrategy): Tokenizer[Val] = Tokenizer[Val] {
+  implicit def valTokenizer(implicit liftTokenizer: Tokenizer[Lift]): Tokenizer[Val] = Tokenizer[Val] {
     case Val(name, body) => stmt"val ${name.token} = ${body.token}"
   }
 
-  implicit def queryTokenizer(implicit liftTokenizer: Tokenizer[Lift], strategy: NamingStrategy): Tokenizer[Query] = Tokenizer[Query] {
+  implicit def queryTokenizer(implicit liftTokenizer: Tokenizer[Lift]): Tokenizer[Query] = Tokenizer[Query] {
 
-    case Entity(name, Nil, renameable) => stmt"querySchema(${s""""${renameable.fixedOr(name)(strategy.table(name))}"""".token})"
+    case Entity(name, Nil, _) => stmt"querySchema(${s""""$name"""".token})"
 
-    case Entity(name, prop, renameable) =>
+    case Entity(name, prop, _) =>
       val properties = prop.map(p => stmt"""_.${p.path.mkStmt(".")} -> "${p.alias.token}"""")
-      stmt"querySchema(${s""""${renameable.fixedOr(name)(strategy.table(name))}"""".token}, ${properties.token})"
+      stmt"querySchema(${s""""$name"""".token}, ${properties.token})"
 
     case Filter(source, alias, body) =>
       stmt"${source.token}.filter(${alias.token} => ${body.token})"
@@ -125,7 +125,7 @@ trait MirrorIdiomBase extends Idiom {
     case DescNullsLast        => stmt"Ord.descNullsLast"
   }
 
-  implicit def optionOperationTokenizer(implicit liftTokenizer: Tokenizer[Lift], strategy: NamingStrategy): Tokenizer[OptionOperation] = Tokenizer[OptionOperation] {
+  implicit def optionOperationTokenizer(implicit liftTokenizer: Tokenizer[Lift]): Tokenizer[OptionOperation] = Tokenizer[OptionOperation] {
     case OptionTableFlatMap(ast, alias, body) => stmt"${ast.token}.flatMap((${alias.token}) => ${body.token})"
     case OptionTableMap(ast, alias, body)     => stmt"${ast.token}.map((${alias.token}) => ${body.token})"
     case OptionTableExists(ast, alias, body)  => stmt"${ast.token}.exists((${alias.token}) => ${body.token})"
@@ -147,7 +147,7 @@ trait MirrorIdiomBase extends Idiom {
     case OptionNone                           => stmt"None"
   }
 
-  implicit def traversableOperationTokenizer(implicit liftTokenizer: Tokenizer[Lift], strategy: NamingStrategy): Tokenizer[TraversableOperation] = Tokenizer[TraversableOperation] {
+  implicit def traversableOperationTokenizer(implicit liftTokenizer: Tokenizer[Lift]): Tokenizer[TraversableOperation] = Tokenizer[TraversableOperation] {
     case MapContains(ast, body)  => stmt"${ast.token}.contains(${body.token})"
     case SetContains(ast, body)  => stmt"${ast.token}.contains(${body.token})"
     case ListContains(ast, body) => stmt"${ast.token}.contains(${body.token})"
@@ -160,11 +160,11 @@ trait MirrorIdiomBase extends Idiom {
     case FullJoin  => stmt"fullJoin"
   }
 
-  implicit def functionTokenizer(implicit liftTokenizer: Tokenizer[Lift], strategy: NamingStrategy): Tokenizer[Function] = Tokenizer[Function] {
+  implicit def functionTokenizer(implicit liftTokenizer: Tokenizer[Lift]): Tokenizer[Function] = Tokenizer[Function] {
     case Function(params, body) => stmt"(${params.token}) => ${body.token}"
   }
 
-  implicit def operationTokenizer(implicit liftTokenizer: Tokenizer[Lift], strategy: NamingStrategy): Tokenizer[Operation] = Tokenizer[Operation] {
+  implicit def operationTokenizer(implicit liftTokenizer: Tokenizer[Lift]): Tokenizer[Operation] = Tokenizer[Operation] {
     case UnaryOperation(op: PrefixUnaryOperator, ast)       => stmt"${op.token}${scopedTokenizer(ast)}"
     case UnaryOperation(op: PostfixUnaryOperator, ast)      => stmt"${scopedTokenizer(ast)}.${op.token}"
     case BinaryOperation(a, op @ SetOperator.`contains`, b) => SetContainsToken(scopedTokenizer(b), op.token, a.token)
@@ -176,12 +176,12 @@ trait MirrorIdiomBase extends Idiom {
     case o => stmt"${o.toString.token}"
   }
 
-  implicit def propertyTokenizer(implicit liftTokenizer: Tokenizer[Lift], strategy: NamingStrategy): Tokenizer[Property] = Tokenizer[Property] {
-    case Property(ExternalIdent(_), name, renameable) => stmt"${strategy.column(name).token}"
-    case Property(ref, name, renameable)              => stmt"${scopedTokenizer(ref)}.${strategy.column(name).token}"
+  implicit def propertyTokenizer(implicit liftTokenizer: Tokenizer[Lift]): Tokenizer[Property] = Tokenizer[Property] {
+    case Property(ExternalIdent(_), name, _) => stmt"${name.token}"
+    case Property(ref, name, _)              => stmt"${scopedTokenizer(ref)}.${name.token}"
   }
 
-  implicit def valueTokenizer(implicit astTokenizer: Tokenizer[Ast], strategy: NamingStrategy): Tokenizer[Value] = Tokenizer[Value] {
+  implicit val valueTokenizer: Tokenizer[Value] = Tokenizer[Value] {
     case Constant(v: String) => stmt""""${v.token}""""
     case Constant(())        => stmt"{}"
     case Constant(v)         => stmt"${v.toString.token}"
@@ -206,7 +206,7 @@ trait MirrorIdiomBase extends Idiom {
     case OnConflict.Existing(ident) => stmt"${ident.token}"
   }
 
-  implicit def actionTokenizer(implicit liftTokenizer: Tokenizer[Lift], strategy: NamingStrategy): Tokenizer[Action] = Tokenizer[Action] {
+  implicit def actionTokenizer(implicit liftTokenizer: Tokenizer[Lift]): Tokenizer[Action] = Tokenizer[Action] {
     case Update(query, assignments)             => stmt"${query.token}.update(${assignments.token})"
     case Insert(query, assignments)             => stmt"${query.token}.insert(${assignments.token})"
     case Delete(query)                          => stmt"${query.token}.delete"
@@ -216,7 +216,7 @@ trait MirrorIdiomBase extends Idiom {
     case c: OnConflict                          => stmt"${c.token}"
   }
 
-  implicit def conflictTokenizer(implicit liftTokenizer: Tokenizer[Lift], strategy: NamingStrategy): Tokenizer[OnConflict] = {
+  implicit def conflictTokenizer(implicit liftTokenizer: Tokenizer[Lift]): Tokenizer[OnConflict] = {
 
     def targetProps(l: List[Property]) = l.map(p => Transform(p) {
       case Ident(_) => Ident("_")
@@ -240,11 +240,11 @@ trait MirrorIdiomBase extends Idiom {
     }
   }
 
-  implicit def assignmentTokenizer(implicit liftTokenizer: Tokenizer[Lift], strategy: NamingStrategy): Tokenizer[Assignment] = Tokenizer[Assignment] {
+  implicit def assignmentTokenizer(implicit liftTokenizer: Tokenizer[Lift]): Tokenizer[Assignment] = Tokenizer[Assignment] {
     case Assignment(ident, property, value) => stmt"${ident.token} => ${property.token} -> ${value.token}"
   }
 
-  implicit def infixTokenizer(implicit liftTokenizer: Tokenizer[Lift], strategy: NamingStrategy): Tokenizer[Infix] = Tokenizer[Infix] {
+  implicit def infixTokenizer(implicit liftTokenizer: Tokenizer[Lift]): Tokenizer[Infix] = Tokenizer[Infix] {
     case Infix(parts, params, _) =>
       def tokenParam(ast: Ast) =
         ast match {
@@ -258,7 +258,7 @@ trait MirrorIdiomBase extends Idiom {
       stmt"""infix"${body.token}""""
   }
 
-  private def scopedTokenizer(ast: Ast)(implicit liftTokenizer: Tokenizer[Lift], strategy: NamingStrategy) =
+  private def scopedTokenizer(ast: Ast)(implicit liftTokenizer: Tokenizer[Lift]) =
     ast match {
       case _: Function        => stmt"(${ast.token})"
       case _: BinaryOperation => stmt"(${ast.token})"

@@ -23,7 +23,7 @@ class ExpandReturningSpec extends Spec {
       val list =
         ExpandReturning.apply(q.ast.asInstanceOf[Returning])(MirrorIdiom, Literal)
       list must matchPattern {
-        case List((Property(ExternalIdent("p"), "name", _)), (Property(ExternalIdent("p"), "age", _))) =>
+        case List((Property(ExternalIdent("p"), "name", _), _), (Property(ExternalIdent("p"), "age", _), _)) =>
       }
     }
 
@@ -34,7 +34,7 @@ class ExpandReturningSpec extends Spec {
       val list =
         ExpandReturning.apply(q.ast.asInstanceOf[Returning])(MirrorIdiom, Literal)
       list must matchPattern {
-        case List((Property(ExternalIdent("p"), "name", _)), (Property(ExternalIdent("p"), "age", _))) =>
+        case List((Property(ExternalIdent("p"), "name", _), _), (Property(ExternalIdent("p"), "age", _), _)) =>
       }
     }
   }

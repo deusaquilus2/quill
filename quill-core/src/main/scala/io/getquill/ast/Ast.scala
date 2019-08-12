@@ -34,10 +34,7 @@ sealed trait Ast {
 
 sealed trait Query extends Ast
 
-case class Entity(name: String, properties: List[PropertyAlias], renameable: Renameable) extends Query {
-  override def neutral: Entity =
-    new Entity(name, properties, ByStrategy)
-}
+case class Entity(name: String, properties: List[PropertyAlias], renameable: Renameable) extends Query
 
 case class PropertyAlias(path: List[String], alias: String)
 

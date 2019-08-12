@@ -87,7 +87,7 @@ class UnlimitedOptionalEmbeddedSpec extends Spec {
   }
 
   "action" - {
-    val resultString = """querySchema("OptEmd", _.e1.e1.e1.value -> "value111", _.e1.e1.e2.value -> "value112", """ +
+    val resultString = """`querySchema`("OptEmd", _.e1.e1.e1.value -> "value111", _.e1.e1.e2.value -> "value112", """ +
       """_.e1.e2.e1.value -> "value121", _.e1.e2.e2.value -> "value122", _.e2.e1.e1.value -> "value211", """ +
       """_.e2.e1.e2.value -> "value212", _.e2.e2.e1.value -> "value221", _.e2.e2.e2.value -> "value222").insert(""" +
       "v => v.e1.e1.e1.value -> ?, " +

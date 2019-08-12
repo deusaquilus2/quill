@@ -1,6 +1,8 @@
 package io.getquill.norm
 
 import io.getquill.Spec
+import io.getquill.ast.Renameable.Internal
+import io.getquill.ast.{ Ast, Property, Transform }
 import io.getquill.testContext.TestEntity
 import io.getquill.testContext.implicitOrd
 import io.getquill.testContext.qr1
@@ -10,6 +12,11 @@ import io.getquill.testContext.quote
 import io.getquill.testContext.unquote
 
 class ApplyMapSpec extends Spec {
+
+  def setTuplePropsInternal(ast: Ast) =
+    Transform(ast) {
+      case Property(ast, name, _) if (name.matches("_[0-9]*")) => Property(ast, name, Internal)
+    }
 
   "avoids applying the intermmediate map after a groupBy" - {
     "flatMap" in {
@@ -190,7 +197,7 @@ class ApplyMapSpec extends Spec {
         val n = quote {
           qr1.join(qr2).on((y, b) => y.s == b.s).map(t => (t._1.s, t._2))
         }
-        ApplyMap.unapply(q.ast) mustEqual Some(n.ast)
+        ApplyMap.unapply(q.ast) mustEqual Some(setTuplePropsInternal(n.ast))
       }
       "right" in {
         val q = quote {
@@ -199,7 +206,7 @@ class ApplyMapSpec extends Spec {
         val n = quote {
           qr1.join(qr2).on((a, y) => a.s == y.s).map(t => (t._1, t._2.s))
         }
-        ApplyMap.unapply(q.ast) mustEqual Some(n.ast)
+        ApplyMap.unapply(q.ast) mustEqual Some(setTuplePropsInternal(n.ast))
       }
       "both" in {
         val q = quote {
@@ -208,7 +215,7 @@ class ApplyMapSpec extends Spec {
         val n = quote {
           qr1.join(qr2).on((y, u) => y.s == u.s).map(t => (t._1.s, t._2.s))
         }
-        ApplyMap.unapply(q.ast) mustEqual Some(n.ast)
+        ApplyMap.unapply(q.ast) mustEqual Some(setTuplePropsInternal(n.ast))
       }
     }
   }

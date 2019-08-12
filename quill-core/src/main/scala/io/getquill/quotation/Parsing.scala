@@ -179,6 +179,9 @@ trait Parsing extends ValueComputation {
     case q"$pack.querySchema[$t](${ name: String }, ..$properties)" =>
       Entity(name, properties.map(propertyAliasParser(_)), Fixed)
 
+    case q"$pack.impliedQuerySchema[$t](${ name: String }, ..$properties)" =>
+      Entity(name, properties.map(propertyAliasParser(_)), ByStrategy)
+
     case q"$source.filter(($alias) => $body)" if (is[CoreDsl#Query[Any]](source)) =>
       Filter(astParser(source), identParser(alias), astParser(body))
 

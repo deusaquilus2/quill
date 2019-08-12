@@ -28,8 +28,6 @@ class NormalizeAggregationIdentSpec extends Spec {
         p => p._1 -> p._2.map(p => p.l).sum
       }
     }
-    println(pprint.apply(Normalize(q.ast)).render)
-
     (Normalize(q.ast) mustEqual (n.ast))(astEq)
   }
 }

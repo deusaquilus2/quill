@@ -64,7 +64,9 @@ trait DynamicQueryDsl {
   implicit def toQuoted[T <: Action[_]](q: DynamicAction[T]): Quoted[T] = q.q
 
   def dynamicQuery[T](implicit t: ClassTag[T]): DynamicEntityQuery[T] =
-    dynamicQuerySchema(t.runtimeClass.getName.split('.').last.split('$').last)
+    DynamicEntityQuery(splice[EntityQuery[T]](
+      Entity(t.runtimeClass.getName.split('.').last.split('$').last, Nil, ByStrategy)
+    ))
 
   case class DynamicAlias[T](property: Quoted[T] => Quoted[Any], name: String)
 

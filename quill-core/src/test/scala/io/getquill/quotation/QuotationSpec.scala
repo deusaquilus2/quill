@@ -63,13 +63,14 @@ class QuotationSpec extends Spec {
           }
           quote(unquote(q)).ast mustEqual Entity("SomeAlias", List(PropertyAlias(List("s"), "theS"), PropertyAlias(List("i"), "theI")), Fixed)
         }
-        // TODO Need cases fo sortBy, join, etc... i.e. the Intrnal cases. Also need to test with embedded objects
         "with only some properties renamed" in {
           val q = quote {
             querySchema[TestEntity]("SomeAlias", _.s -> "theS").filter(t => t.s == "s" && t.i == 1)
           }
-          quote(unquote(q)).ast mustEqual Filter(Entity("SomeAlias", List(PropertyAlias(List("s"), "theS")), Fixed), Ident("t"),
-            (Property(Ident("t"), "theS", Fixed) +==+ Constant("theS")) +&&+ (Property(Ident("t"), "i", ByStrategy) +==+ Constant(1)))
+          quote(unquote(q)).ast mustEqual (
+            Filter(Entity("SomeAlias", List(PropertyAlias(List("s"), "theS")), Fixed), Ident("t"),
+              (Property(Ident("t"), "s", ByStrategy) +==+ Constant("s")) +&&+ (Property(Ident("t"), "i", ByStrategy) +==+ Constant(1)))
+          )
         }
       }
       "filter" in {
@@ -1706,7 +1707,7 @@ class QuotationSpec extends Spec {
           }
       }
       quote(unquote(q)).ast.body mustEqual
-        BinaryOperation(Property(Ident("t"), "_1", ByStrategy), NumericOperator.`+`, Property(Ident("t"), "_2", Internal))
+        BinaryOperation(Property(Ident("t"), "_1", Internal), NumericOperator.`+`, Property(Ident("t"), "_2", Internal))
     }
     "nested" in {
       val q = quote {
@@ -1718,9 +1719,9 @@ class QuotationSpec extends Spec {
       quote(unquote(q)).ast.body mustEqual
         BinaryOperation(
           BinaryOperation(
-            Property(Property(Ident("t"), "_1", Internal), "_1", ByStrategy),
+            Property(Property(Ident("t"), "_1", Internal), "_1", Internal),
             NumericOperator.`+`,
-            Property(Property(Ident("t"), "_1", Internal), "_2", ByStrategy)
+            Property(Property(Ident("t"), "_1", Internal), "_2", Internal)
           ),
           NumericOperator.`+`,
           Property(Ident("t"), "_2", Internal)

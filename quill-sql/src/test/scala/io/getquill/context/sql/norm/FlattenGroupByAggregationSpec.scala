@@ -5,7 +5,7 @@ import io.getquill.ast.Aggregation
 import io.getquill.ast.AggregationOperator
 import io.getquill.ast.Ident
 import io.getquill.ast.Property
-import io.getquill.ast.Renameable.Internal
+import io.getquill.ast.Renameable.ByStrategy
 import io.getquill.context.sql.testContext._
 
 class FlattenGroupByAggregationSpec extends Spec {
@@ -17,7 +17,7 @@ class FlattenGroupByAggregationSpec extends Spec {
           e.map(_.i).max
       }
       FlattenGroupByAggregation(Ident("e"))(q.ast.body) mustEqual
-        Aggregation(AggregationOperator.max, Property(Ident("e"), "i", Internal))
+        Aggregation(AggregationOperator.max, Property(Ident("e"), "i", ByStrategy))
     }
     "nested infix" in {
       val q = quote {

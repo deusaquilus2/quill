@@ -1,8 +1,6 @@
 package io.getquill.norm
 
 import io.getquill.Spec
-import io.getquill.ast.Renameable.Internal
-import io.getquill.ast.{ Ast, Property, Transform }
 import io.getquill.testContext.TestEntity
 import io.getquill.testContext.implicitOrd
 import io.getquill.testContext.qr1
@@ -12,11 +10,6 @@ import io.getquill.testContext.quote
 import io.getquill.testContext.unquote
 
 class ApplyMapSpec extends Spec {
-
-  def setTuplePropsInternal(ast: Ast) =
-    Transform(ast) {
-      case Property(ast, name, _) if (name.matches("_[0-9]*")) => Property(ast, name, Internal)
-    }
 
   "avoids applying the intermmediate map after a groupBy" - {
     "flatMap" in {

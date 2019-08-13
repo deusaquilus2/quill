@@ -167,7 +167,7 @@ trait SqlIdiom extends Idiom {
   protected def tokenizeTable(strategy: NamingStrategy, table: String, renameable: Renameable) =
     renameable match {
       case Fixed => table
-      case _     => strategy.column(table)
+      case _     => strategy.table(table)
     }
 
   protected def tokenizeAlias(strategy: NamingStrategy, table: String) =
@@ -398,8 +398,6 @@ trait SqlIdiom extends Idiom {
   protected def actionAstTokenizer(implicit astTokenizer: Tokenizer[Ast], strategy: NamingStrategy) =
     Tokenizer.withFallback[Ast](SqlIdiom.this.astTokenizer(_, strategy)) {
       case q: Query => astTokenizer.token(q)
-      // TODO should isEmpty etc.. HAVE to be Internal? Are there actual collisions
-      // these have with legit properties?
       case Property(Property(_, name, renameable), "isEmpty", _) => stmt"${renameable.fixedOr(name)(tokenizeColumn(strategy, name, renameable)).token} IS NULL"
       case Property(Property(_, name, renameable), "isDefined", _) => stmt"${renameable.fixedOr(name)(tokenizeColumn(strategy, name, renameable)).token} IS NOT NULL"
       case Property(Property(_, name, renameable), "nonEmpty", _) => stmt"${renameable.fixedOr(name)(tokenizeColumn(strategy, name, renameable)).token} IS NOT NULL"

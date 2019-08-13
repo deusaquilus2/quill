@@ -41,7 +41,7 @@ class SqlIdiomNamingSpec extends Spec {
       db.run(query[SomeEntity]).string mustEqual
         """SELECT "X"."SOME_COLUMN" FROM "SOME_ENTITY" "X""""
     }
-    "specific table strategy" in {
+    "specific table strategy - dynamic" in {
       val db = new SqlMirrorContext(MirrorSqlDialect, CustomTableStrategy)
       import db._
 
@@ -52,7 +52,18 @@ class SqlIdiomNamingSpec extends Spec {
       db.run(q.dynamic).string mustEqual
         "SELECT t.some_column FROM t_someentity t"
     }
-    "specific column strategy" in {
+    "specific table strategy" in {
+      val db = new SqlMirrorContext(MirrorSqlDialect, CustomTableStrategy)
+      import db._
+
+      val q = quote {
+        query[SomeEntity].map(t => t.someColumn)
+      }
+
+      db.run(q).string mustEqual
+        "SELECT t.some_column FROM t_someentity t"
+    }
+    "specific column strategy - dynamic" in {
       val db = new SqlMirrorContext(MirrorSqlDialect, CustomColumnStrategy)
       import db._
 
@@ -61,6 +72,17 @@ class SqlIdiomNamingSpec extends Spec {
       }
 
       db.run(q.dynamic).string mustEqual
+        "SELECT t.c_somecolumn FROM some_entity t"
+    }
+    "specific column strategy" in {
+      val db = new SqlMirrorContext(MirrorSqlDialect, CustomColumnStrategy)
+      import db._
+
+      val q = quote {
+        query[SomeEntity].map(t => t.someColumn)
+      }
+
+      db.run(q).string mustEqual
         "SELECT t.c_somecolumn FROM some_entity t"
     }
     "apply strategy to select indent" in {

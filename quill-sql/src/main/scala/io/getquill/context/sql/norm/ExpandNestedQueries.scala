@@ -15,16 +15,32 @@ import io.getquill.context.sql.SqlQuery
 import io.getquill.context.sql.TableContext
 import io.getquill.context.sql.UnaryOperationSqlQuery
 import io.getquill.context.sql.FlatJoinContext
+
+import scala.collection.mutable
 import scala.collection.mutable.LinkedHashSet
 
 object ExpandNestedQueries {
 
+  object PropertySet {
+    def empty = new PropertySet(LinkedHashSet.empty)
+    def apply(references: List[Property]): PropertySet = {
+      val kv = new mutable.LinkedHashMap[Property, Property]() ++ references.map(ref => (ref.neutralize, ref))
+      PropertySet(LinkedHashSet.empty ++ kv.valuesIterator)
+    }
+  }
+  case class PropertySet private (references: LinkedHashSet[Property]) {
+    def ++(newReferences: Traversable[Property]): PropertySet =
+      PropertySet(references.toList ++ newReferences)
+
+    def toList = references.toList
+  }
+
   def apply(q: SqlQuery, references: List[Property]): SqlQuery =
-    apply(q, LinkedHashSet.empty ++ references)
+    apply(q, PropertySet(references))
 
   // Using LinkedHashSet despite the fact that it is mutable because it has better characteristics then ListSet.
   // Also this collection is strictly internal to ExpandNestedQueries and exposed anywhere else.
-  private def apply(q: SqlQuery, references: LinkedHashSet[Property]): SqlQuery =
+  private def apply(q: SqlQuery, references: PropertySet): SqlQuery =
     q match {
       case q: FlattenSqlQuery =>
         expandNested(q.copy(select = expandSelect(q.select, references)))
@@ -53,7 +69,7 @@ object ExpandNestedQueries {
       case _: TableContext | _: InfixContext => s
     }
 
-  private def expandSelect(select: List[SelectValue], references: LinkedHashSet[Property]) = {
+  private def expandSelect(select: List[SelectValue], references: PropertySet) = {
 
     object TupleIndex {
       def unapply(s: String): Option[Int] =
@@ -69,7 +85,7 @@ object ExpandNestedQueries {
         Some(s"${alias.getOrElse("")}_${idx + 1}")
 
       ref match {
-        // TODO With properties marked Internal, is this really needed? we know know it's not renameable because it's marked Internal
+        // Note: Marked tupled indexes should be renameable: Internal
         case Property(ast: Property, TupleIndex(idx), _) =>
           expandReference(ast) match {
             case SelectValue(Tuple(elems), alias, c) =>
@@ -83,7 +99,6 @@ object ExpandNestedQueries {
               // Alias is the plain name of the column, not using the name strategy.
               // The clauses in `SqlIdiom` that use `Tokenizer[SelectValue]` select the
               // alias field when it's value is Some(T).
-              // TODO Should aliases follow column naming conventions?
               SelectValue(Property(ast, name, renameable), Some(s"${nested.getOrElse("")}$name"), c)
           }
         case Property(_, TupleIndex(idx), _) =>
@@ -110,7 +125,7 @@ object ExpandNestedQueries {
   }
 
   private def references(alias: String, asts: List[Ast]) =
-    LinkedHashSet.empty ++ (References(State(Ident(alias), Nil))(asts)(_.apply)._2.state.references)
+    PropertySet(References(State(Ident(alias), Nil))(asts)(_.apply)._2.state.references)
 }
 
 case class State(ident: Ident, references: List[Property])

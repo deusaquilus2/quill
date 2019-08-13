@@ -98,14 +98,14 @@ class RenamePropertiesOverrideSpec extends Spec {
           e.flatMap(t => qr2.filter(u => u.s == t.s))
         }
         testContextUpper.run(q).string mustEqual
-          "SELECT u.S, u.I, u.L, u.O FROM test_entity t, TestEntity2 u WHERE u.S = t.field_s"
+          "SELECT u.S, u.I, u.L, u.O FROM test_entity t, TESTENTITY2 u WHERE u.S = t.field_s"
       }
       "transitive" in {
         val q = quote {
           e.flatMap(t => qr2.map(u => t)).map(t => t.s)
         }
         testContextUpper.run(q.dynamic).string mustEqual
-          "SELECT t.field_s FROM test_entity t, TestEntity2 u"
+          "SELECT t.field_s FROM test_entity t, TESTENTITY2 u"
       }
       "with filter" in {
         val q = quote {
@@ -117,7 +117,7 @@ class RenamePropertiesOverrideSpec extends Spec {
           }
         }
         testContextUpper.run(q).string mustEqual
-          "SELECT a.field_s, a.field_i, a.L, a.O, b.S, b.I, b.L, b.O FROM test_entity a, TestEntity2 b WHERE a.field_s = b.S"
+          "SELECT a.field_s, a.field_i, a.L, a.O, b.S, b.I, b.L, b.O FROM test_entity a, TESTENTITY2 b WHERE a.field_s = b.S"
       }
     }
     "concatMap" in {
@@ -260,21 +260,21 @@ class RenamePropertiesOverrideSpec extends Spec {
           e.join(f).on((a, b) => a.s == b.s).map(t => t._1.s)
         }
         testContextUpper.run(q).string mustEqual
-          "SELECT a.field_s FROM test_entity a INNER JOIN (SELECT t.S FROM TestEntity t WHERE t.I = 1) AS t ON a.field_s = t.S"
-      } ///comment
+          "SELECT a.field_s FROM test_entity a INNER JOIN (SELECT t.S FROM TESTENTITY t WHERE t.I = 1) AS t ON a.field_s = t.S"
+      }
       "left" in {
         val q = quote {
           e.leftJoin(f).on((a, b) => a.s == b.s).map(t => t._1.s)
         }
         testContextUpper.run(q).string mustEqual
-          "SELECT a.field_s FROM test_entity a LEFT JOIN (SELECT t.S FROM TestEntity t WHERE t.I = 1) AS t ON a.field_s = t.S"
+          "SELECT a.field_s FROM test_entity a LEFT JOIN (SELECT t.S FROM TESTENTITY t WHERE t.I = 1) AS t ON a.field_s = t.S"
       }
       "right" in {
         val q = quote {
           f.rightJoin(e).on((a, b) => a.s == b.s).map(t => t._2.s)
         }
         testContextUpper.run(q).string mustEqual
-          "SELECT b.field_s FROM (SELECT t.S FROM TestEntity t WHERE t.I = 1) AS t RIGHT JOIN test_entity b ON t.S = b.field_s"
+          "SELECT b.field_s FROM (SELECT t.S FROM TESTENTITY t WHERE t.I = 1) AS t RIGHT JOIN test_entity b ON t.S = b.field_s"
       }
       "flat inner" in {
         val q = quote {
@@ -284,7 +284,7 @@ class RenamePropertiesOverrideSpec extends Spec {
           } yield (x.s, x.i)
         }
         testContextUpper.run(q).string mustEqual
-          "SELECT b.field_s, b.field_i FROM TestEntity2 a INNER JOIN test_entity b ON a.S = b.field_s"
+          "SELECT b.field_s, b.field_i FROM TESTENTITY2 a INNER JOIN test_entity b ON a.S = b.field_s"
       }
       "flat left" in {
         val q = quote {
@@ -294,7 +294,7 @@ class RenamePropertiesOverrideSpec extends Spec {
           } yield x.map(x => x.i -> x.s)
         }
         testContextUpper.run(q).string mustEqual
-          "SELECT b.field_i, b.field_s FROM TestEntity2 a LEFT JOIN test_entity b ON a.S = b.field_s"
+          "SELECT b.field_i, b.field_s FROM TESTENTITY2 a LEFT JOIN test_entity b ON a.S = b.field_s"
       }
       "flat right" in {
         val q = quote {
@@ -304,7 +304,7 @@ class RenamePropertiesOverrideSpec extends Spec {
           } yield x.map(x => x.i -> x.s)
         }
         testContextUpper.run(q).string mustEqual
-          "SELECT b.field_i, b.field_s FROM TestEntity2 a RIGHT JOIN test_entity b ON a.S = b.field_s"
+          "SELECT b.field_i, b.field_s FROM TESTENTITY2 a RIGHT JOIN test_entity b ON a.S = b.field_s"
       }
     }
 

@@ -9,8 +9,8 @@ object Messages {
       !Option(System.getProperty("quill.macro.log")).filterNot(_.isEmpty).map(_.toLowerCase).contains("false")
   }
 
-  private val traceEnabled = false
-  private val traceColors = false
+  private val traceEnabled = true
+  private val traceColors = true
 
   def fail(msg: String) =
     throw new IllegalStateException(msg)

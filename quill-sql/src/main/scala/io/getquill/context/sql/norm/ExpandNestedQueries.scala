@@ -21,10 +21,29 @@ import scala.collection.mutable.LinkedHashSet
 
 object ExpandNestedQueries {
 
+  /**
+   * Similar to the `Renameables` in `BetaReduction`, this set must keep track of unique `Property` AST objects
+   * <b>in order</b> but ignoring any opinions they might have (i.e. the `renameable` property). This is needed
+   * because during the expansion of inner queries, `SelectValue` aliases need to be generated from Properties
+   * that are potentially the same thing but have different naming.
+   */
   object PropertySet {
     def empty = new PropertySet(LinkedHashSet.empty)
     def apply(references: List[Property]): PropertySet = {
+      /**
+       * Upon creation of the `PropertySet`, neutralize all the properties (i.e. remove any opinions)
+       * and throw them as keys into a map that can preserve order. This will de-dupe any properties
+       * that are the same but with different opinions (e.g. `Property(Ident("a"), "b", ByStrategy)` and
+       * `Property(Ident("a"), "b", ByStrategy)` fixed.
+       */
       val kv = new mutable.LinkedHashMap[Property, Property]() ++ references.map(ref => (ref.neutralize, ref))
+
+      val newSet = LinkedHashSet.empty ++ kv.valuesIterator
+      val oldSet = LinkedHashSet.empty ++ references
+
+      if (newSet != oldSet)
+        println(s"*********** Different Found Between Old Set:\n${oldSet}\nand New Set:\n${newSet}")
+
       PropertySet(LinkedHashSet.empty ++ kv.valuesIterator)
     }
   }
@@ -58,7 +77,16 @@ object ExpandNestedQueries {
         q.copy(from = from)
     }
 
-  private def expandContext(s: FromContext, asts: List[Ast]): FromContext =
+  private def expandContext(s: FromContext, asts: List[Ast]): FromContext = {
+    println(
+      s"""
+        |===== Expanding Context =====:
+        |${pprint.apply(s, height = Integer.MAX_VALUE)}
+        |===== ASTs =====:
+        |${pprint.apply(asts, height = Integer.MAX_VALUE)}
+      """.stripMargin
+    )
+
     s match {
       case QueryContext(q, alias) =>
         QueryContext(apply(q, references(alias, asts)), alias)
@@ -68,6 +96,7 @@ object ExpandNestedQueries {
         FlatJoinContext(t, expandContext(a, asts :+ on), on)
       case _: TableContext | _: InfixContext => s
     }
+  }
 
   private def expandSelect(select: List[SelectValue], references: PropertySet) = {
 
@@ -119,8 +148,18 @@ object ExpandNestedQueries {
     }
 
     references.toList match {
-      case Nil  => select
-      case refs => refs.map(expandReference)
+      case Nil => select
+      case refs => refs.map(r => {
+        println(
+          s"""
+            |Expanding Ref:
+            |${pprint.apply(r, height = Integer.MAX_VALUE)}
+            |Into:
+            |${pprint.apply(expandReference(r), height = Integer.MAX_VALUE)}
+          """.stripMargin
+        )
+        expandReference(r)
+      })
     }
   }
 

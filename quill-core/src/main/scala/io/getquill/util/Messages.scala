@@ -1,30 +1,53 @@
 package io.getquill.util
 
 import io.getquill.AstPrinter
-
 import scala.reflect.macros.blackbox.{ Context => MacroContext }
 
 object Messages {
 
-  private val debugEnabled = {
-    !sys.env.get("quill.macro.log").filterNot(_.isEmpty).map(_.toLowerCase).contains("false") &&
-      !Option(System.getProperty("quill.macro.log")).filterNot(_.isEmpty).map(_.toLowerCase).contains("false")
+  private def variable(propName: String, envName: String, default: String) =
+    Option(System.getProperty(propName)).orElse(sys.env.get(envName)).getOrElse(default)
+
+  private val debugEnabled = variable("quill.macro.log", "quill_macro_log", "true").toBoolean
+  private val traceEnabled = variable("quill.trace.enabled", "quill_trace_enabled", "false").toBoolean
+  private val traceColors = variable("quill.trace.colors", "quill_trace_colors", "false").toBoolean
+  private val traceOpinions = variable("quill.trace.opinions", "quill_trace_opinions", "false").toBoolean
+  private val traceAstSimple = variable("quill.trace.ast.simple", "quill_trace_ast_simple", "false").toBoolean
+  private val traces: List[TraceType] =
+    variable("quill.trace.types", "quill_trace_types", "standard")
+      .split(",")
+      .toList
+      .map(_.trim)
+      .flatMap(trace => TraceType.values.filter(traceType => trace == traceType.value))
+
+  def tracesEnabled(tt: TraceType) =
+    traceEnabled && traces.contains(tt)
+
+  sealed trait TraceType { def value: String }
+  object TraceType {
+    case object Normalizations extends TraceType { val value = "norm" }
+    case object Standard extends TraceType { val value = "standard" }
+    case object NestedQueryExpansion extends TraceType { val value = "nest" }
+
+    def values: List[TraceType] = List(Standard, Normalizations, NestedQueryExpansion)
   }
 
-  private val traceEnabled = false
-  private val traceColors = false
-  private val traceOpinions = false
-
-  val qprint = new AstPrinter(traceOpinions)
+  val qprint = new AstPrinter(traceOpinions, traceAstSimple)
 
   def fail(msg: String) =
     throw new IllegalStateException(msg)
 
-  def trace[T](label: String) =
+  def trace[T](label: String, numIndent: Int = 0, traceType: TraceType = TraceType.Standard) =
     (v: T) =>
       {
-        if (traceEnabled)
-          println(s"$label\n${{ if (traceColors) qprint.apply(v).render else qprint.apply(v).plainText }.split("\n").map("    " + _).mkString("\n")}")
+        import TraceType._
+        val indent = (0 to numIndent).map(_ => "").mkString("  ")
+        if (traceEnabled && (traceType == Standard || (traceType == Normalizations && tracesEnabled(Normalizations))))
+          println(s"$indent$label\n${
+            {
+              if (traceColors) qprint.apply(v).render else qprint.apply(v).plainText
+            }.split("\n").map(s"$indent  " + _).mkString("\n")
+          }")
         v
       }
 

@@ -152,6 +152,12 @@ class ComposeableTraitsJdbcCodegen(
     packagePrefix:   String
   ) = this(Seq(connectionMaker), packagePrefix, false)
 
+  override def defineSingleTableName(gen: CodeEmitter): Option[String] =
+    gen.querySchemaTables match {
+      case Seq(schemaTable) => Some(schemaTable.table.name + "Extensions")
+      case _ => None
+    }
+
   override def makeGenerators: Seq[ContextifiedUnitGenerator] = new MultiGeneratorFactory(generatorMaker).apply
   override def generatorMaker = new SingleGeneratorFactory[ContextifiedUnitGenerator] {
     override def apply(emitterSettings: EmitterSettings[JdbcTableMeta, JdbcColumnMeta]): ContextifiedUnitGenerator =
@@ -159,7 +165,7 @@ class ComposeableTraitsJdbcCodegen(
   }
 
   override def packagingStrategy: PackagingStrategy =
-    PackagingStrategy.ByPackageHeader.TablePerSchema(packagePrefix)
+    PackagingStrategy.ByPackage.FilePerSchema(packagePrefix)
       .copy(fileNamingStrategy =
         new BySomeTableData[ContextifiedUnitGenerator](gen =>
           Paths.get(gen.packageName.getOrElse(gen.defaultNamespace), gen.traitName)))

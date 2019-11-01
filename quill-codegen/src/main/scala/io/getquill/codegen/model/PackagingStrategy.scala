@@ -14,7 +14,7 @@ object PackagingStrategy {
       )
   }
 
-  object ByPackageHeader {
+  object ByPackage {
     private def packageByNamespace(prefix: String) = PackageHeaderByNamespace(prefix, _.table.namespace)
 
     /**
@@ -23,7 +23,7 @@ object PackagingStrategy {
      * you want to minimize the footprint of your imports (i.e. since each file is a seperate table you
      * can be sure to just imports the exact tables needed for every source file).
      */
-    def TablePerFile(packagePrefix: String = "") =
+    def FilePerTable(packagePrefix: String = "") =
       PackagingStrategy(
         DoNotGroup,
         packageByNamespace(packagePrefix),
@@ -37,7 +37,7 @@ object PackagingStrategy {
      * the ComposeableTraitsGen that creates Traits representing database schemas that can
      * be composed with Contexts.
      */
-    def TablePerSchema(packagePrefix: String = "") =
+    def FilePerSchema(packagePrefix: String = "") =
       PackagingStrategy(
         GroupByPackage,
         packageByNamespace(packagePrefix),
@@ -46,7 +46,7 @@ object PackagingStrategy {
       )
   }
 
-  def NoPackageCombined =
+  def OneBigStringPerPackage =
     PackagingStrategy(
       GroupByPackage,
       NoPackage,
@@ -54,12 +54,12 @@ object PackagingStrategy {
       ByPackageName
     )
 
-  def NoPackageSeparate =
+  def OneBigString =
     PackagingStrategy(
       DoNotGroup,
       NoPackage,
       NoPackage,
-      ByPackageName
+      ByDefaultName
     )
 }
 

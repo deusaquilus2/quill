@@ -31,8 +31,8 @@ libraryDependencies += "io.getquill" %% "quill-codegen-jdbc" % "3.1.1-SNAPSHOT"
 This code generator generates simple case classes, each representing a table
 in a database. It does not generate Quill `querySchema` objects. 
 Create one or multiple CodeGeneratorConfig objects
-and call the `.writeFiles` or `.writeStrings` methods
-on the code generator to generate the code.
+and call the `.writeAllFiles` or `.writeStrings` methods
+on the code generator to generate the code (these return Scala `Future` objects so you will need to `Await` them).
 
 Given the following schema:
 ````sql
@@ -56,11 +56,20 @@ create table public.Address (
 You can invoke the SimpleJdbcCodegen like so:
 
 ````scala
-val gen = new SimpleJdbcCodegen(snakecaseConfig, "com.my.project") {
+import io.getquill.codegen.model.SnakeCaseNames
+import io.getquill.codegen.jdbc.SimpleJdbcCodegen
+import scala.concurrent.Await
+import scala.concurrent.duration.Duration
+
+val gen = new SimpleJdbcCodegen(dataSource, "com.my.project") {
     override def nameParser = SnakeCaseNames
 }
-gen.writeFiles("src/main/scala/com/my/project")
+Await.ready(gen.writeAllFiles("src/main/scala/com/my/project"), Duration.Inf)
 ````
+> Where `dataSource` can be one of:
+> - A string pointing to a data-source prefix in application.conf (i.e. a Typesafe config)
+> - A `com.typesafe.config.Config` object
+> - A `javax.sql.DataSource` object.
 
 You can parse column and table names using either the `SnakeCaseNames` or the and the `LiteralNames` parser
 which are used with the respective Quill Naming Strategies. They cannot be customized further with this code generator.
@@ -111,14 +120,25 @@ Here is a example of how you could use the `ComposeableTraitsJdbcCodegen` in ord
 `first_name` and `last_name` properties with `first` and `last`.
 
 ````scala
-val gen = new ComposeableTraitsJdbcCodegen(snakecaseConfig,"com.my.project") {
-  override def namingStrategy: EntityNamingStrategy =
-    CustomStrategy(
+import io.getquill.codegen.jdbc.ComposeableTraitsJdbcCodegen
+import io.getquill.codegen.model.CustomNames
+import scala.concurrent.Await
+import scala.concurrent.duration.Duration
+
+val gen = new ComposeableTraitsJdbcCodegen(dataSource,"com.my.project") {
+  // The CustomNames name parser allows you to specify customizations for property names. 
+  // It also tells the Quill Code Generator to create querySchema objects. 
+  override def nameParser: NameParser =
+    CustomNames(
       col => col.columnName.toLowerCase.replace("_name", "")
     )
 }
-gen.writeFiles("src/main/scala/com/my/project")
+Await.ready(gen.writeAllFiles("src/main/scala/com/my/project"), Duration.Inf)
 ````
+> Where `dataSource` can be one of:
+> - A string pointing to a data-source prefix in application.conf (i.e. a Typesafe config)
+> - A `com.typesafe.config.Config` object
+> - A `javax.sql.DataSource` object.
  
 
 The following schema should be generated as a result.
@@ -206,19 +226,32 @@ rename them using a custom `namingStrategy` causing this to happen.
 Here is an example of how that is done:
 
 ````scala
+import io.getquill.codegen.model.{CustomNames, NameParser}
+import io.getquill.codegen.jdbc.ComposeableTraitsJdbcCodegen
+import scala.concurrent.Await
+import scala.concurrent.duration.Duration
+
 val gen = new ComposeableTraitsJdbcCodegen(twoSchemaConfig, "com.my.project") {
-  override def namingStrategy: EntityNamingStrategy = CustomStrategy()
-  override val namespacer: Namespacer =
-    ts => if (ts.tableSchem.toLowerCase == "alpha" || ts.tableSchem.toLowerCase == "bravo") "common" else ts.tableSchem.toLowerCase
-    
-  // Be sure to set the querySchemaNaming correctly so that the different
-  // querySchemas generated won't all be called '.query' in the common object (which would
-  // case an un-compile-able schema to be generated).
+  // This tells the Quill Code Generator to create querySchema objects.
+  override def nameParser: NameParser = CustomNames()
+
+  // Treat tables from the `alpha` and `bravo` schema as though they are in the same schema (and call it `common`).
+  // Treat everything else as thought it were in it's own independent schema.
+  override val namespacer: Namespacer[JdbcTableMeta] =
+    (ts: JdbcTableMeta) =>
+      if (ts.tableSchem.exists(tss => tss == "alpha" || tss == "bravo")) "common"
+      else ts.tableSchem.getOrElse(defaultNamespace)  
+
+  // Since we merged everything in `alpha` and `bravo` into a "virtual" schema called `common`, we need the actual
+  // querySchema defs for them to have different names. Otherwise, how do we know which is which?
   override def querySchemaNaming: QuerySchemaNaming = `[namespace][Table]`
 }
 
-gen.writeFiles("src/main/scala/com/my/project")
+Await.ready(gen.writeAllFiles("src/main/scala/com/my/project"), Duration.Inf)
 ````
+>  Be sure to set the querySchemaNaming correctly so that the different
+>  querySchemas generated won't all be called '.query' in the common object (which would
+>  case an un-compile-able schema to be generated).
 
 The following will then be generated. Note how `numTrinkets` is a `Long` (i.e. an SQL `bigint`) type and `trinketType` is a `String`
 (i.e. an SQL varchar),

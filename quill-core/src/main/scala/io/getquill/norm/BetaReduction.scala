@@ -11,6 +11,10 @@ case class BetaReduction(replacements: Replacements)
       case ast if replacements.contains(ast) =>
         BetaReduction(replacements - ast - replacements(ast))(replacements(ast))
 
+      case If(Constant(true), thenClause, elseClause) => apply(thenClause)
+
+      case If(Constant(false), thenClause, elseClause) => apply(thenClause)
+
       case Property(Tuple(values), name) =>
         apply(values(name.drop(1).toInt - 1))
 

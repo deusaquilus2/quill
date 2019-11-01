@@ -42,5 +42,5 @@ trait JdbcCodeGeneratorComponents extends CodeGeneratorComponents {
 
   def typer: Typer = new DefaultJdbcTyper(unrecognizedTypeStrategy, numericPreference)
   def schemaReader: SchemaReader = new DefaultJdbcSchemaReader(databaseType)
-  def packagingStrategy: PackagingStrategy = PackagingStrategy.ByPackageHeader.TablePerFile(packagePrefix)
+  def packagingStrategy: PackagingStrategy = PackagingStrategy.ByPackage.FilePerTable(packagePrefix)
 }

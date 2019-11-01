@@ -19,6 +19,8 @@ trait Generator {
   private val logger = Logger(LoggerFactory.getLogger(classOf[Generator]))
 
   def defaultNamespace: String
+  def querySchemaType: QuerySchemaType = QuerySchema
+
   def filter(tc: RawSchema[TableMeta, ColumnMeta]): Boolean = true
 
   /**
@@ -51,7 +53,45 @@ trait Generator {
       emitters
     }
   }
+
   def makeGenerators = new MultiGeneratorFactory(generatorMaker).apply
+
+  def defineSingleTableName(gen: CodeEmitter): Option[String] =
+    gen.querySchemaTables match {
+      case Seq(schemaTable) => Some(schemaTable.table.name)
+      case _ => None
+    }
+
+  def defineFileName(fileNamingStrategy: FileNamingStrategy, gen: CodeEmitter): Path =
+    (packagingStrategy.fileNamingStrategy, gen.codeWrapper, defineSingleTableName(gen)) match {
+      case (ByPackageObjectStandardName, _, _) =>
+        Paths.get("package")
+
+      // When the user wants to group tables by package, and use a standard package heading,
+      // create a new package with the same name. For example say you have a
+      // public.Person table (in schema.table notation) if a namespacer that
+      // returns 'public' is used. The resulting file will be public/PublicExtensions.scala
+      // which will have a Quill Context named 'Public'
+      case (ByPackageName, PackageHeader(packageName), _) =>
+        Paths.get(packageName, packageName)
+
+      case (ByPackageName, _, _) =>
+        Paths.get(gen.packageName.getOrElse(gen.defaultNamespace))
+
+      case (ByTable, PackageHeader(packageName), Some(tableName)) =>
+        Paths.get(packageName, tableName)
+
+      // First case classes table name or first Query Schemas table name, or default if both empty
+      case (ByTable, _, Some(tableName)) =>
+        Paths.get(gen.packageName.getOrElse(gen.defaultNamespace), tableName)
+
+      case (ByDefaultName, _, _) =>
+        Paths.get(gen.defaultNamespace)
+
+      // Looks like 'Method' needs to be explicitly here since it doesn't understand Gen type annotation is actually SingleUnitCodegen
+      case (strategy: BySomeTableData[_], _, _) if (strategy.tt.tpe <:< scala.reflect.runtime.universe.typeTag[Generator#CodeEmitter].tpe) =>
+        strategy.asInstanceOf[BySomeTableData[CodeEmitter]].namer(gen)
+    }
 
   def writeAllFiles(localtion: String): Future[Seq[Path]] =
     Future.sequence(writeFiles(localtion))
@@ -62,47 +102,8 @@ trait Generator {
     def makeGenWithCorrespondingFile(gens: Seq[CodeEmitter]) = {
 
       gens.map(gen => {
-        def DEFAULT_NAME = gen.defaultNamespace
-
-        def tableName =
-          gen.caseClassTables.headOption
-            .orElse(gen.querySchemaTables.headOption)
-            .map(_.table.name)
-            .getOrElse(DEFAULT_NAME)
-
-        val fileName: Path =
-          (packagingStrategy.fileNamingStrategy, gen.codeWrapper) match {
-            case (ByPackageObjectStandardName, _) =>
-              Paths.get("package")
-
-            // When the user wants to group tables by package, and use a standard package heading,
-            // create a new package with the same name. For example say you have a
-            // public.Person table (in schema.table notation) if a namespacer that
-            // returns 'public' is used. The resulting file will be public/PublicExtensions.scala
-            // which will have a Quill Context named 'Public'
-            case (ByPackageName, PackageHeader(packageName)) =>
-              Paths.get(packageName, packageName)
-
-            case (ByPackageName, _) =>
-              Paths.get(gen.packageName.getOrElse(DEFAULT_NAME))
-
-            case (ByTable, PackageHeader(packageName)) =>
-              Paths.get(packageName, tableName)
-
-            // First case classes table name or first Query Schemas table name, or default if both empty
-            case (ByTable, _) =>
-              Paths.get(gen.packageName.getOrElse(DEFAULT_NAME), tableName)
-
-            case (ByDefaultName, _) =>
-              Paths.get(DEFAULT_NAME)
-
-            // Looks like 'Method' needs to be explicitly here since it doesn't understand Gen type annotation is actually SingleUnitCodegen
-            case (strategy: BySomeTableData[_], _) if (strategy.tt.tpe <:< scala.reflect.runtime.universe.typeTag[Generator#CodeEmitter].tpe) =>
-              strategy.asInstanceOf[BySomeTableData[CodeEmitter]].namer(gen)
-          }
-
+        val fileName = defineFileName(packagingStrategy.fileNamingStrategy, gen)
         val fileWithExtension = fileName.resolveSibling(fileName.getFileName + ".scala")
-        val loc = Paths.get(location)
 
         (gen, Paths.get(location, fileWithExtension.toString))
       })
@@ -142,6 +143,10 @@ trait Generator {
     val querySchemaTables: Seq[TableStereotype[TableMeta, ColumnMeta]] = if (nameParser.generateQuerySchemas) emitterSettings.querySchemaTables else Seq()
     override def codeWrapper: CodeWrapper = emitterSettings.codeWrapper
 
+    sealed trait TableName
+    case class SingleTable(name: String) extends TableName
+    case object MultiTable extends TableName
+
     /**
      * Use this when the term for a particular schema is undefined but you need to have one
      * e.g. if you are writing to a file.
@@ -178,6 +183,7 @@ trait Generator {
     class CombinedTableSchemasGen(
       tableColumns:      TableStereotype[TableMeta, ColumnMeta],
       querySchemaNaming: QuerySchemaNaming
+
     ) extends AbstractCombinedTableSchemasGen with ObjectGen {
 
       override def code: String = surroundByObject(body)
@@ -191,10 +197,16 @@ trait Generator {
       // bar = querySchema(...)
       def body: String = {
         val schemas = tableColumns.table.meta.map(schema =>
-          s"def ${querySchemaNaming(schema)} = " + indent(QuerySchema(tableColumns, schema).code)).mkString("\n\n")
+          schemaDef(schema) + indent(QuerySchema(tableColumns, schema).code)).mkString("\n\n")
 
         Seq(imports, schemas).pruneEmpty.mkString("\n\n")
       }
+
+      def schemaDef(schema: TableMeta) =
+        querySchemaType match {
+          case QuerySchema => s"def ${querySchemaNaming(schema)} = "
+          case SchemaMeta  => s"implicit val ${querySchemaNaming(schema)} = "
+        }
 
       def QuerySchema = new QuerySchemaGen(_, _)
       class QuerySchemaGen(val tableColumns: TableStereotype[TableMeta, ColumnMeta], schema: TableMeta) extends AbstractQuerySchemaGen with CaseClassNaming[TableMeta, ColumnMeta] {
@@ -204,18 +216,34 @@ trait Generator {
             (tableColumns.columns.map(QuerySchemaMapping(_).code).mkString(",\n"))
           )
 
-        override def code: String = s"""
-          |quote {
-          |  ${indent(querySchema)}
-          |}
-          """.stripMargin.trimFront
+        override def code: String =
+          querySchemaType match {
+            case QuerySchema => quotedQuerySchema
+            case SchemaMeta => schemaMeta
+          }
 
-        def querySchema: String = s"""
-          |querySchema[${actualCaseClassName}](
-          |  ${indent("\"" + fullTableName + "\"")}${ifMembers(",")}
-          |  ${indent(members)}
-          |)
-          """.stripMargin.trimFront
+        def schemaMeta: String =
+          s"""
+             |schemaMeta[${actualCaseClassName}](
+             |  ${indent("\"" + fullTableName + "\"")}${ifMembers(",")}
+             |  ${indent(members)}
+             |)
+             """.stripMargin.trimFront
+
+        def quotedQuerySchema: String =
+          s"""
+             |quote {
+             |  ${indent(querySchema)}
+             |}
+             """.stripMargin.trimFront
+
+        def querySchema: String =
+          s"""
+             |querySchema[${actualCaseClassName}](
+             |  ${indent("\"" + fullTableName + "\"")}${ifMembers(",")}
+             |  ${indent(members)}
+             |)
+             """.stripMargin.trimFront
 
         override def tableName: String = schema.tableName
         override def schemaName: Option[String] = schema.tableSchem

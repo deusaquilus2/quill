@@ -11,6 +11,10 @@ trait HasBasicMeta {
   type ColumnMeta <: BasicColumnMeta
 }
 
+sealed trait QuerySchemaType
+case object SchemaMeta extends QuerySchemaType
+case object QuerySchema extends QuerySchemaType
+
 trait CodeGeneratorComponents extends HasBasicMeta with QuerySchemaNaming {
 
   type ConnectionMaker

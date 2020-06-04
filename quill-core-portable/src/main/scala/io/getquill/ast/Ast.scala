@@ -33,6 +33,15 @@ sealed trait Ast {
 
 //************************************************************
 
+// This represents a simplified Sql-Type. Since it applies to all dialects, it is called
+// Quill-Application-Type hence Quat.
+sealed trait Quat
+object Quat {
+  case class CaseClass(fields: List[(String, Quat)]) extends Quat
+  case class Tuple(fields: List[Quat]) extends Quat
+  object Value extends Quat
+}
+
 sealed trait Query extends Ast
 
 /**
@@ -146,11 +155,11 @@ case class Infix(parts: List[String], params: List[Ast], pure: Boolean)
 
 case class Function(params: List[Ident], body: Ast) extends Ast
 
-case class Ident(name: String) extends Ast {
+case class Ident(name: String,  quat: Quat) extends Ast {
   def visibility: Visibility = Visibility.Visible
 
   override def neutral: Ident =
-    new Ident(name) {
+    new Ident(name,  quat: Quat) {
       override def visibility: Visibility = Visibility.neutral
     }
 
@@ -183,22 +192,22 @@ case class Ident(name: String) extends Ast {
  * needs to be marked invisible.
  */
 object Ident {
-  def apply(name: String) = new Ident(name)
-  def unapply(p: Ident) = Some((p.name))
+  def apply(name: String, quat: Quat) = new Ident(name, quat)
+  def unapply(p: Ident) = Some((p.name, p.quat))
 
   object Opinionated {
-    def apply(name: String, visibilityNew: Visibility) =
-      new Ident(name) {
+    def apply(name: String, quat: Quat, visibilityNew: Visibility) =
+      new Ident(name, quat) {
         override def visibility: Visibility = visibilityNew
       }
     def unapply(p: Ident) =
-      Some((p.name, p.visibility))
+      Some((p.name, p.quat, p.visibility))
   }
 }
 
 // Like identity but is but defined in a clause external to the query. Currently this is used
 // for 'returning' clauses to define properties being returned.
-case class ExternalIdent(name: String) extends Ast {
+case class ExternalIdent(name: String, quat: Quat) extends Ast {
   def renameable: Renameable = Renameable.neutral
 
   override def equals(that: Any) =
@@ -211,16 +220,16 @@ case class ExternalIdent(name: String) extends Ast {
 }
 
 object ExternalIdent {
-  def apply(name: String) = new ExternalIdent(name)
-  def unapply(e: ExternalIdent) = Some(e.name)
+  def apply(name: String, quat: Quat) = new ExternalIdent(name, quat)
+  def unapply(e: ExternalIdent) = Some((e.name, e.quat))
 
   object Opinionated {
-    def apply(name: String, rename: Renameable) =
-      new ExternalIdent(name) {
+    def apply(name: String, quat: Quat, rename: Renameable) =
+      new ExternalIdent(name, quat) {
         override def renameable: Renameable = rename
       }
 
-    def unapply(e: ExternalIdent) = Some((e.name, e.renameable))
+    def unapply(e: ExternalIdent) = Some((e.name, e.quat, e.renameable))
   }
 }
 

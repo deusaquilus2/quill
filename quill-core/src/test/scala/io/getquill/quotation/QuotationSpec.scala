@@ -1146,7 +1146,7 @@ class QuotationSpec extends Spec {
               infix"$a || #$b".pure.as[String]
           }
           quote(unquote(q)).ast must matchPattern {
-            case Function(_, Infix(List("", " || dyn"), List(Ident("a")), true)) =>
+            case Function(_, Infix(List("", " || dyn"), List(Ident("a", Quat.Value)), true)) =>
           }
         }
         "at the end" in {
@@ -1156,7 +1156,7 @@ class QuotationSpec extends Spec {
               infix"$a || #$b".as[String]
           }
           quote(unquote(q)).ast must matchPattern {
-            case Function(_, Infix(List("", " || dyn"), List(Ident("a")), false)) =>
+            case Function(_, Infix(List("", " || dyn"), List(Ident("a", Quat.Value)), false)) =>
           }
         }
         "at the beginning - pure" in {
@@ -1166,7 +1166,7 @@ class QuotationSpec extends Spec {
               infix"#$a || $b".pure.as[String]
           }
           quote(unquote(q)).ast must matchPattern {
-            case Function(_, Infix(List("dyn || ", ""), List(Ident("b")), true)) =>
+            case Function(_, Infix(List("dyn || ", ""), List(Ident("b", Quat.Value)), true)) =>
           }
         }
         "at the beginning" in {
@@ -1176,7 +1176,7 @@ class QuotationSpec extends Spec {
               infix"#$a || $b".as[String]
           }
           quote(unquote(q)).ast must matchPattern {
-            case Function(_, Infix(List("dyn || ", ""), List(Ident("b")), false)) =>
+            case Function(_, Infix(List("dyn || ", ""), List(Ident("b", Quat.Value)), false)) =>
           }
         }
         "only" in {

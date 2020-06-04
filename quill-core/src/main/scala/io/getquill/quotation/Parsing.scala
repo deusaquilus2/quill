@@ -350,10 +350,11 @@ trait Parsing extends ValueComputation {
   }
 
   val identParser: Parser[Ident] = Parser[Ident] {
-    case t: ValDef                        => identClean(Ident(t.name.decodedName.toString))
-    case c.universe.Ident(TermName(name)) => identClean(Ident(name))
-    case q"$cls.this.$i"                  => identClean(Ident(i.decodedName.toString))
-    case c.universe.Bind(TermName(name), c.universe.Ident(termNames.WILDCARD)) =>
+    // TODO Check to see that all these conditions work
+    case t: ValDef                        => identClean(Ident(t.name.decodedName.toString, inferQuat(t.tpe)))
+    case id @ c.universe.Ident(TermName(name)) => identClean(Ident(name), inferQuat(id.tpe))
+    case q"$cls.this.$i"                  => identClean(Ident(i.decodedName.toString, inferQuat(i.tpe)))
+    case c.universe.Bind(TermName(name), c.universe.Ident(termNames.WILDCARD, Quat.Value)) =>
       identClean(Ident(name))
   }
   private def identClean(x: Ident): Ident = x.copy(name = x.name.replace("$", ""))
@@ -682,6 +683,47 @@ trait Parsing extends ValueComputation {
       case TypeRef(_, cls, args) if (cls.isClass) => Some((cls.asClass, args))
       case _                                      => None
     }
+  }
+
+  def inferQuat(tpe: Type): Quat = {
+
+    //case TypeRef(_, cls, _)) =>
+
+    def caseClassConstructorArgs(tpe: Type) = {
+      val constructor =
+        tpe.members.collect {
+          case m: MethodSymbol if m.isPrimaryConstructor => m
+        }.head
+
+      // TODO Only one constructor param list supported so far
+      constructor.paramLists(0).map { param =>
+        (param.name.toString, param.typeSignature.asSeenFrom(tpe, tpe.typeSymbol))
+      }
+    }
+
+    object CaseClassBaseType {
+      def unapply(tpe: Type): Option[(String, List[(String, Type)])] =
+        if (tpe.widen.typeSymbol.isClass && tpe.widen.typeSymbol.asClass.isCaseClass)
+          Some((tpe.widen.typeSymbol.name.toString, caseClassConstructorArgs(tpe.widen)))
+        else
+          None
+    }
+
+
+    def parseType(tpe: Type) =
+      tpe match {
+        // For tuples
+        case CaseClassBaseType(name, fields) if (name.startsWith("scala.Tuple")) =>
+          Quat.Tuple(fields.map { case (_, fieldType) => parseType(fieldType) })
+        // For other types of case classes
+        case CaseClassBaseType(name, fields) =>
+          Quat.CaseClass(fields.map { case (fieldName, fieldType) => (fieldName, parseType(fieldType)) })
+        // Otherwise it's a terminal value
+        case _ =>
+          Quat.Value
+      }
+
+    parseType(tpe)
   }
 
   /**

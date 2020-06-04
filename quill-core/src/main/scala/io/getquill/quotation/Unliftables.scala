@@ -195,11 +195,18 @@ trait Unliftables {
     case q"$pack.Tuple.apply(${ a: List[Ast] })" => Tuple(a)
     case q"$pack.CaseClass.apply(${ values: List[(String, Ast)] })" => CaseClass(values)
   }
+
+  implicit val quatUnliftable: Unliftable[Quat] = Unliftable[Quat] {
+    case q"$pack.Quat.CaseClass.apply(${ fields: List[(String, Quat)] })" => Quat.CaseClass(fields)
+    case q"$pack.Quat.Tuple.apply(${ fields: List[Quat] })" => Quat.Tuple(fields)
+    case q"$pack.Quat.Value" => Quat.Value
+  }
+
   implicit val identUnliftable: Unliftable[Ident] = Unliftable[Ident] {
-    case q"$pack.Ident.apply(${ a: String })" => Ident(a)
+    case q"$pack.Ident.apply(${ a: String }, ${ quat: Quat })" => Ident(a, quat)
   }
   implicit val externalIdentUnliftable: Unliftable[ExternalIdent] = Unliftable[ExternalIdent] {
-    case q"$pack.ExternalIdent.apply(${ a: String })" => ExternalIdent(a)
+    case q"$pack.ExternalIdent.apply(${ a: String }, ${ quat: Quat })" => ExternalIdent(a, quat)
   }
 
   implicit val liftUnliftable: Unliftable[Lift] = Unliftable[Lift] {

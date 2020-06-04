@@ -122,7 +122,7 @@ private class ExpandSelect(selectValues: List[SelectValue], references: LinkedHa
                   case OrderedSelect(o, SelectValue(ast, alias, c)) =>
                     OrderedSelect(o, SelectValue(ast, concat(alias, idx), c))
                 }
-            case pp @ Property.Opinionated(_, name, renameable, visible) =>
+            case pp @ Property.Opinionated(_, name, renameable, visible) => // TODO Propagate the Quat.Value from the property when Properties implement Quats
               select match {
                 case List(OrderedSelect(o, SelectValue(cc: CaseClass, alias, c))) =>
                   // Currently case class element name is not being appended. Need to change that in order to ensure
@@ -138,7 +138,7 @@ private class ExpandSelect(selectValues: List[SelectValue], references: LinkedHa
                     OrderedSelect(o, SelectValue(Property.Opinionated(i, name, renameable, visible), Some(name), c))
                 case other =>
                   trace"Reference is unidentified: $other returning:" andReturn
-                    OrderedSelect(Integer.MAX_VALUE, SelectValue(Ident.Opinionated(name, visible), Some(expandColumn(name, renameable)), false))
+                    OrderedSelect(Integer.MAX_VALUE, SelectValue(Ident.Opinionated(name, Quat.Value, visible), Some(expandColumn(name, renameable)), false))
               }
           }
 
@@ -154,7 +154,7 @@ private class ExpandSelect(selectValues: List[SelectValue], references: LinkedHa
 
       def deAliasWhenUneeded(os: OrderedSelect) =
         os match {
-          case OrderedSelect(_, sv @ SelectValue(Property(Ident(_), propName), Some(alias), _)) if (propName == alias) =>
+          case OrderedSelect(_, sv @ SelectValue(Property(Ident(_, _), propName), Some(alias), _)) if (propName == alias) =>
             trace"Detected select value with un-needed alias: $os removing it:" andReturn
               os.copy(selectValue = sv.copy(alias = None))
           case _ => os

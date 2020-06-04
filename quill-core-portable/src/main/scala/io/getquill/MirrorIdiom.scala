@@ -211,7 +211,7 @@ trait MirrorIdiomBase extends Idiom {
   }
 
   implicit val identTokenizer: Tokenizer[Ident] = Tokenizer[Ident] {
-    case Ident.Opinionated(name, visibility) => stmt"${bracketIfHidden(name, visibility).token}"
+    case Ident.Opinionated(name, quat, visibility) => stmt"${bracketIfHidden(name, visibility).token}"
   }
 
   implicit val typeTokenizer: Tokenizer[ExternalIdent] = Tokenizer[ExternalIdent] {
@@ -239,7 +239,7 @@ trait MirrorIdiomBase extends Idiom {
   implicit def conflictTokenizer(implicit externalTokenizer: Tokenizer[External]): Tokenizer[OnConflict] = {
 
     def targetProps(l: List[Property]) = l.map(p => Transform(p) {
-      case Ident(_) => Ident("_")
+      case Ident(_, quat) => Ident("_", quat)
     })
 
     implicit val conflictTargetTokenizer = Tokenizer[OnConflict.Target] {

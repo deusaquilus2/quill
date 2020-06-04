@@ -93,8 +93,8 @@ object NormalizeReturning {
         val matchedProps =
           CollectAst(body) {
             //case prop @ NestedProperty(`returningIdent`) => prop
-            case prop @ NestedProperty(Ident(name)) if (name == returningIdent.name)         => prop
-            case prop @ NestedProperty(ExternalIdent(name)) if (name == returningIdent.name) => prop
+            case prop @ NestedProperty(Ident(name, quat)) if (name == returningIdent.name)         => prop
+            case prop @ NestedProperty(ExternalIdent(name, quat)) if (name == returningIdent.name) => prop
           }
 
         if (matchedProps.exists(matchedProp => isSameProperties(p1, matchedProp)))

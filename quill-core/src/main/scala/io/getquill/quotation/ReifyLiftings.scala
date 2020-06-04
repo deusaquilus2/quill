@@ -36,11 +36,11 @@ trait ReifyLiftings {
 
     private def unparse(ast: Ast): Tree =
       ast match {
-        case Property(Ident(alias), name) => q"${TermName(alias)}.${TermName(name)}"
+        case Property(Ident(alias, _), name) => q"${TermName(alias)}.${TermName(name)}"
         case Property(nested, name)       => q"${unparse(nested)}.${TermName(name)}"
-        case OptionTableMap(ast2, Ident(alias), body) =>
+        case OptionTableMap(ast2, Ident(alias, _), body) =>
           q"${unparse(ast2)}.map((${TermName(alias)}: ${tq""}) => ${unparse(body)})"
-        case OptionMap(ast2, Ident(alias), body) =>
+        case OptionMap(ast2, Ident(alias, _), body) =>
           q"${unparse(ast2)}.map((${TermName(alias)}: ${tq""}) => ${unparse(body)})"
         case CaseClassValueLift(_, v: Tree) => v
         case other                          => c.fail(s"Unsupported AST: $other")

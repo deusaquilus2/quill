@@ -185,8 +185,8 @@ trait SqlIdiom extends Idiom {
         case selectValue =>
           val value =
             selectValue match {
-              case SelectValue(Ident("?"), _, _)  => "?".token
-              case SelectValue(Ident(name), _, _) => stmt"${strategy.default(name).token}.*"
+              case SelectValue(Ident("?", _), _, _)  => "?".token
+              case SelectValue(Ident(name, _), _, _) => stmt"${strategy.default(name).token}.*"
               case SelectValue(ast, _, _)         => ast.token
             }
           selectValue.concat match {
@@ -197,7 +197,7 @@ trait SqlIdiom extends Idiom {
 
     val customAstTokenizer =
       Tokenizer.withFallback[Ast](SqlIdiom.this.astTokenizer(_, strategy)) {
-        case Aggregation(op, Ident(_) | Tuple(_)) => stmt"${op.token}(*)"
+        case Aggregation(op, Ident(_, _) | Tuple(_)) => stmt"${op.token}(*)"
         case Aggregation(op, Distinct(ast))       => stmt"${op.token}(DISTINCT ${ast.token})"
         case ast @ Aggregation(op, _: Query)      => scopedTokenizer(ast)
         case Aggregation(op, ast)                 => stmt"${op.token}(${ast.token})"
@@ -356,13 +356,13 @@ trait SqlIdiom extends Idiom {
           // The exception to this is when a Query inside of a RETURNING clause is used. In that case, assume
           // that there is an alias for the inserted table (i.e. `INSERT ... as theAlias values ... RETURNING`)
           // and the instances of ExternalIdent use it.
-          case (ExternalIdent(_), prefix) =>
+          case (ExternalIdent(_, _), prefix) =>
             stmt"${
               actionAlias.map(alias => stmt"${scopedTokenizer(alias)}.").getOrElse(stmt"")
             }${tokenizePrefixedProperty(name, prefix, strategy, renameable)}"
 
           // In the rare case that the Ident is invisible, do not show it. See the Ident documentation for more info.
-          case (Ident.Opinionated(_, Hidden), prefix) =>
+          case (Ident.Opinionated(_, _, Hidden), prefix) =>
             stmt"${tokenizePrefixedProperty(name, prefix, strategy, renameable)}"
 
           // The normal case where `Property(Property(Ident("realTable"), embeddedTableAlias), realPropertyAlias)`

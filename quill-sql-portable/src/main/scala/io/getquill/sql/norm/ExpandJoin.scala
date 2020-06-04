@@ -10,9 +10,9 @@ object ExpandJoin {
 
   def expand(q: Ast, id: Option[Ident]) =
     Transform(q) {
-      case q @ Join(_, _, _, Ident(a), Ident(b), _) =>
+      case q @ Join(_, _, _, Ident(a, _), Ident(b, _), _) =>
         val (qr, tuple) = expandedTuple(q)
-        Map(qr, id.getOrElse(Ident(s"$a$b")), tuple)
+        Map(qr, id.getOrElse(Ident(s"$a$b", _)), tuple)
     }
 
   private def expandedTuple(q: Join): (Join, Tuple) =

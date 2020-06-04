@@ -86,11 +86,11 @@ object SqlQuery {
 
   private def flattenContexts(query: Ast): (List[FromContext], Ast) =
     query match {
-      case FlatMap(q @ (_: Query | _: Infix), Ident(alias), p: Query) =>
+      case FlatMap(q @ (_: Query | _: Infix), Ident(alias, _), p: Query) =>
         val source = this.source(q, alias)
         val (nestedContexts, finalFlatMapBody) = flattenContexts(p)
         (source +: nestedContexts, finalFlatMapBody)
-      case FlatMap(q @ (_: Query | _: Infix), Ident(alias), p: Infix) =>
+      case FlatMap(q @ (_: Query | _: Infix), Ident(alias, _), p: Infix) =>
         fail(s"Infix can't be use as a `flatMap` body. $query")
       case other =>
         (List.empty, other)
@@ -142,22 +142,22 @@ object SqlQuery {
 
     finalFlatMapBody match {
 
-      case ConcatMap(q, Ident(alias), p) =>
+      case ConcatMap(q, Ident(alias, _), p) =>
         FlattenSqlQuery(
           from = source(q, alias) :: Nil,
           select = selectValues(p).map(_.copy(concat = true))
         )
 
-      case Map(GroupBy(q, x @ Ident(alias), g), a, p) =>
+      case Map(GroupBy(q, x @ Ident(alias, _), g), a, p) =>
         val b = base(q, alias)
         val select = BetaReduction(p, a -> Tuple(List(g, x)))
         val flattenSelect = FlattenGroupByAggregation(x)(select)
         b.copy(groupBy = Some(g), select = this.selectValues(flattenSelect))
 
-      case GroupBy(q, Ident(alias), p) =>
+      case GroupBy(q, Ident(alias, _), p) =>
         fail("A `groupBy` clause must be followed by `map`.")
 
-      case Map(q, Ident(alias), p) =>
+      case Map(q, Ident(alias, _), p) =>
         val b = base(q, alias)
         val agg = b.select.collect {
           case s @ SelectValue(_: Aggregation, _, _) => s
@@ -170,7 +170,7 @@ object SqlQuery {
             select = selectValues(p)
           )
 
-      case Filter(q, Ident(alias), p) =>
+      case Filter(q, Ident(alias, _), p) =>
         val b = base(q, alias)
         if (b.where.isEmpty)
           b.copy(where = Some(p))
@@ -181,7 +181,7 @@ object SqlQuery {
             select = select(alias)
           )
 
-      case SortBy(q, Ident(alias), p, o) =>
+      case SortBy(q, Ident(alias, _), p, o) =>
         val b = base(q, alias)
         val criterias = orderByCriterias(p, o)
         if (b.orderBy.isEmpty)

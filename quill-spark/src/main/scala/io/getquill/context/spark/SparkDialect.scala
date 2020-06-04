@@ -14,7 +14,7 @@ import io.getquill.ast.CaseClass
 import io.getquill.context.spark.norm.EscapeQuestionMarks
 import io.getquill.context.sql.{ FlattenSqlQuery, SelectValue, SqlQuery }
 import io.getquill.context.sql.idiom.SqlIdiom
-import io.getquill.context.sql.norm.SqlNormalize
+import io.getquill.context.sql.norm.{ ExpandNestedQueries, SqlNormalize }
 import io.getquill.idiom.StatementInterpolator._
 import io.getquill.idiom.Token
 import io.getquill.util.Messages.trace
@@ -104,7 +104,7 @@ trait SparkIdiom extends SqlIdiom with CannotReturn { self =>
   override def concatFunction = "explode"
 
   override implicit def identTokenizer(implicit astTokenizer: Tokenizer[Ast], strategy: NamingStrategy): Tokenizer[Ident] = Tokenizer[Ident] {
-    case Ident(name) =>
+    case Ident(name, _) =>
       if (multipleSelect)
         stmt"struct(${name.token}.*)"
       else
@@ -126,7 +126,7 @@ trait SparkIdiom extends SqlIdiom with CannotReturn { self =>
     }
 
   override implicit def selectValueTokenizer(implicit astTokenizer: Tokenizer[Ast], strategy: NamingStrategy): Tokenizer[SelectValue] = Tokenizer[SelectValue] {
-    case SelectValue(Ident(name), _, _) =>
+    case SelectValue(Ident(name, _), _, _) =>
       if (multipleSelect)
         stmt"struct(${strategy.default(name).token}.*)"
       else

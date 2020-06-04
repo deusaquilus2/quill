@@ -7,6 +7,7 @@ import io.getquill.ast.{ CaseClass, Ident }
 
 object AliasNestedQueryColumns {
 
+  // TODO Can the SqlQuery itself have a Quat? Then we KNOW how the fields are supposed to be aliased
   def apply(q: SqlQuery): SqlQuery =
     q match {
       case q: FlattenSqlQuery =>

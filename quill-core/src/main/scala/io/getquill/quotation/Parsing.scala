@@ -19,7 +19,7 @@ import io.getquill.ast.Visibility.{ Hidden, Visible }
 import io.getquill.util.Interleave
 import io.getquill.{ Query => DslQuery, Update => DslUpdate, Insert => DslInsert, Delete => DslDelete }
 
-trait Parsing extends ValueComputation {
+trait Parsing extends ValueComputation with InferQuat {
   this: Quotation =>
 
   import c.universe.{ Ident => _, Constant => _, Function => _, If => _, Block => _, _ }
@@ -115,15 +115,15 @@ trait Parsing extends ValueComputation {
 
   val liftParser: Parser[Lift] = Parser[Lift] {
 
-    case q"$pack.liftScalar[$t]($value)($encoder)"          => ScalarValueLift(value.toString, value, encoder)
-    case q"$pack.liftCaseClass[$t]($value)"                 => CaseClassValueLift(value.toString, value)
+    case q"$pack.liftScalar[$t]($value)($encoder)"          => ScalarValueLift(value.toString, value, encoder, inferQuat(q"$t".tpe))
+    case q"$pack.liftCaseClass[$t]($value)"                 => CaseClassValueLift(value.toString, value, inferQuat(q"$t".tpe))
 
-    case q"$pack.liftQueryScalar[$t, $u]($value)($encoder)" => ScalarQueryLift(value.toString, value, encoder)
-    case q"$pack.liftQueryCaseClass[$t, $u]($value)"        => CaseClassQueryLift(value.toString, value)
+    case q"$pack.liftQueryScalar[$u, $t]($value)($encoder)" => ScalarQueryLift(value.toString, value, encoder, inferQuat(q"$t".tpe))
+    case q"$pack.liftQueryCaseClass[$u, $t]($value)"        => CaseClassQueryLift(value.toString, value, inferQuat(q"$t".tpe))
 
     // Unused, it's here only to make eclipse's presentation compiler happy :(
-    case q"$pack.lift[$t]($value)"                          => ScalarValueLift(value.toString, value, q"null")
-    case q"$pack.liftQuery[$t, $u]($value)"                 => ScalarQueryLift(value.toString, value, q"null")
+    case q"$pack.lift[$t]($value)"                          => ScalarValueLift(value.toString, value, q"null", inferQuat(q"$t".tpe))
+    case q"$pack.liftQuery[$t, $u]($value)"                 => ScalarQueryLift(value.toString, value, q"null", inferQuat(q"$t".tpe))
   }
 
   val quotedAstParser: Parser[Ast] = Parser[Ast] {
@@ -684,46 +684,6 @@ trait Parsing extends ValueComputation {
       case TypeRef(_, cls, args) if (cls.isClass) => Some((cls.asClass, args))
       case _                                      => None
     }
-  }
-
-  def inferQuat(tpe: Type): Quat = {
-
-    //case TypeRef(_, cls, _)) =>
-
-    def caseClassConstructorArgs(tpe: Type) = {
-      val constructor =
-        tpe.members.collect {
-          case m: MethodSymbol if m.isPrimaryConstructor => m
-        }.head
-
-      // TODO Quat Only one constructor param list supported so far? Have an error for that?
-      constructor.paramLists(0).map { param =>
-        (param.name.toString, param.typeSignature.asSeenFrom(tpe, tpe.typeSymbol))
-      }
-    }
-
-    object CaseClassBaseType {
-      def unapply(tpe: Type): Option[(String, List[(String, Type)])] =
-        if (tpe.widen.typeSymbol.isClass && tpe.widen.typeSymbol.asClass.isCaseClass)
-          Some((tpe.widen.typeSymbol.name.toString, caseClassConstructorArgs(tpe.widen)))
-        else
-          None
-    }
-
-    def parseType(tpe: Type): Quat =
-      tpe match {
-        // For tuples
-        case CaseClassBaseType(name, fields) if (name.startsWith("scala.Tuple")) =>
-          Quat.Tuple(fields.map { case (_, fieldType) => parseType(fieldType) })
-        // For other types of case classes
-        case CaseClassBaseType(name, fields) =>
-          Quat.CaseClass(fields.map { case (fieldName, fieldType) => (fieldName, parseType(fieldType)) })
-        // Otherwise it's a terminal value
-        case _ =>
-          Quat.Value
-      }
-
-    parseType(tpe)
   }
 
   /**

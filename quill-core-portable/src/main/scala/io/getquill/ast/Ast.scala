@@ -475,14 +475,14 @@ sealed trait Lift extends External {
 sealed trait ScalarLift extends Lift {
   val encoder: Any
 }
-case class ScalarValueLift(name: String, value: Any, encoder: Any)
+case class ScalarValueLift(name: String, value: Any, encoder: Any, quat: Quat)
   extends ScalarLift
-case class ScalarQueryLift(name: String, value: Any, encoder: Any)
+case class ScalarQueryLift(name: String, value: Any, encoder: Any, quat: Quat)
   extends ScalarLift
 
 sealed trait CaseClassLift extends Lift
-case class CaseClassValueLift(name: String, value: Any) extends CaseClassLift
-case class CaseClassQueryLift(name: String, value: Any) extends CaseClassLift
+case class CaseClassValueLift(name: String, value: Any, quat: Quat) extends CaseClassLift
+case class CaseClassQueryLift(name: String, value: Any, quat: Quat) extends CaseClassLift
 
 /***********************************************************************/
 /*                      New for ProtoQuill                             */

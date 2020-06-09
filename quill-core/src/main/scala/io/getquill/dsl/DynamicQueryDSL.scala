@@ -162,7 +162,7 @@ trait DynamicQueryDsl {
     }
 
   protected def spliceLift[O](o: O)(implicit enc: Encoder[O]) =
-    splice[O](ScalarValueLift("o", o, enc))
+    splice[O](ScalarValueLift("o", o, enc, Quat.Value)) // TODO Quat parse quat from O
 
   object DynamicQuery {
     def apply[T](p: Quoted[Query[T]]) =

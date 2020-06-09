@@ -176,13 +176,13 @@ trait Parsing extends ValueComputation {
 
     case q"$pack.query[$t]" =>
       // Unused, it's here only to make eclipse's presentation compiler happy
-      Entity("unused", Nil)
+      Entity("unused", Nil, inferQuat(q"$t".tpe))
 
     case q"$pack.querySchema[$t](${ name: String }, ..$properties)" =>
-      Entity.Opinionated(name, properties.map(propertyAliasParser(_)), Fixed)
+      Entity.Opinionated(name, properties.map(propertyAliasParser(_)), inferQuat(q"$t".tpe), Fixed)
 
     case q"$pack.impliedQuerySchema[$t](${ name: String }, ..$properties)" =>
-      Entity(name, properties.map(propertyAliasParser(_)))
+      Entity(name, properties.map(propertyAliasParser(_)), inferQuat(q"$t".tpe))
 
     case q"$source.filter(($alias) => $body)" if (is[DslQuery[Any]](source)) =>
       Filter(astParser(source), identParser(alias), astParser(body))

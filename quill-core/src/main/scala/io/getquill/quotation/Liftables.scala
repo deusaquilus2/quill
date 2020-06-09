@@ -116,22 +116,22 @@ trait Liftables {
   }
 
   implicit val queryLiftable: Liftable[Query] = Liftable[Query] {
-    case Entity.Opinionated(a, b, renameable) => q"$pack.Entity.Opinionated($a, $b, $renameable)"
-    case Filter(a, b, c)                      => q"$pack.Filter($a, $b, $c)"
-    case Map(a, b, c)                         => q"$pack.Map($a, $b, $c)"
-    case FlatMap(a, b, c)                     => q"$pack.FlatMap($a, $b, $c)"
-    case ConcatMap(a, b, c)                   => q"$pack.ConcatMap($a, $b, $c)"
-    case SortBy(a, b, c, d)                   => q"$pack.SortBy($a, $b, $c, $d)"
-    case GroupBy(a, b, c)                     => q"$pack.GroupBy($a, $b, $c)"
-    case Aggregation(a, b)                    => q"$pack.Aggregation($a, $b)"
-    case Take(a, b)                           => q"$pack.Take($a, $b)"
-    case Drop(a, b)                           => q"$pack.Drop($a, $b)"
-    case Union(a, b)                          => q"$pack.Union($a, $b)"
-    case UnionAll(a, b)                       => q"$pack.UnionAll($a, $b)"
-    case Join(a, b, c, d, e, f)               => q"$pack.Join($a, $b, $c, $d, $e, $f)"
-    case FlatJoin(a, b, c, d)                 => q"$pack.FlatJoin($a, $b, $c, $d)"
-    case Distinct(a)                          => q"$pack.Distinct($a)"
-    case Nested(a)                            => q"$pack.Nested($a)"
+    case Entity.Opinionated(a, b, quat, renameable) => q"$pack.Entity.Opinionated($a, $b, $quat, $renameable)"
+    case Filter(a, b, c)                            => q"$pack.Filter($a, $b, $c)"
+    case Map(a, b, c)                               => q"$pack.Map($a, $b, $c)"
+    case FlatMap(a, b, c)                           => q"$pack.FlatMap($a, $b, $c)"
+    case ConcatMap(a, b, c)                         => q"$pack.ConcatMap($a, $b, $c)"
+    case SortBy(a, b, c, d)                         => q"$pack.SortBy($a, $b, $c, $d)"
+    case GroupBy(a, b, c)                           => q"$pack.GroupBy($a, $b, $c)"
+    case Aggregation(a, b)                          => q"$pack.Aggregation($a, $b)"
+    case Take(a, b)                                 => q"$pack.Take($a, $b)"
+    case Drop(a, b)                                 => q"$pack.Drop($a, $b)"
+    case Union(a, b)                                => q"$pack.Union($a, $b)"
+    case UnionAll(a, b)                             => q"$pack.UnionAll($a, $b)"
+    case Join(a, b, c, d, e, f)                     => q"$pack.Join($a, $b, $c, $d, $e, $f)"
+    case FlatJoin(a, b, c, d)                       => q"$pack.FlatJoin($a, $b, $c, $d)"
+    case Distinct(a)                                => q"$pack.Distinct($a)"
+    case Nested(a)                                  => q"$pack.Nested($a)"
   }
 
   implicit val propertyAliasLiftable: Liftable[PropertyAlias] = Liftable[PropertyAlias] {

@@ -222,7 +222,7 @@ object RenameProperties extends StatelessTransformer {
             List(PropertyAlias(aliasPath.diff(path), alias))
           else
             List()
-      }))
+      }, e.quat)) // TOTO Quat: rename the properties of the entity's quat here per renaming of the schema
 
     def subSchemaOrEmpty(path: List[String]): Schema =
       trace"Creating sub-schema for entity $e at path $path will be" andReturn {
@@ -415,7 +415,7 @@ object RenameProperties extends StatelessTransformer {
   private def replacements(base: Ast, schema: Schema): List[(Ast, Ast)] =
     schema match {
       // The entity renameable property should already have been marked as Fixed
-      case EntitySchema(Entity(entity, properties)) =>
+      case EntitySchema(Entity(entity, properties, _)) =>
         //trace"%4 Entity Schema: " andReturn
         properties.flatMap {
           // A property alias means that there was either a querySchema(tableName, _.propertyName -> PropertyAlias)

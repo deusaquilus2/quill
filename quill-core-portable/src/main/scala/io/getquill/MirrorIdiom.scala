@@ -71,9 +71,9 @@ trait MirrorIdiomBase extends Idiom {
 
   implicit def queryTokenizer(implicit externalTokenizer: Tokenizer[External]): Tokenizer[AstQuery] = Tokenizer[AstQuery] {
 
-    case Entity.Opinionated(name, Nil, renameable) => stmt"${tokenizeName("querySchema", renameable).token}(${s""""$name"""".token})"
+    case Entity.Opinionated(name, Nil, _, renameable) => stmt"${tokenizeName("querySchema", renameable).token}(${s""""$name"""".token})"
 
-    case Entity.Opinionated(name, prop, renameable) =>
+    case Entity.Opinionated(name, prop, _, renameable) =>
       val properties = prop.map(p => stmt"""_.${p.path.mkStmt(".")} -> "${p.alias.token}"""")
       stmt"${tokenizeName("querySchema", renameable).token}(${s""""$name"""".token}, ${properties.token})"
 

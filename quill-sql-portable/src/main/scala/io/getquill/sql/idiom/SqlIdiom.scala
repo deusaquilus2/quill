@@ -402,7 +402,7 @@ trait SqlIdiom extends Idiom {
 
   implicit def defaultAstTokenizer(implicit astTokenizer: Tokenizer[Ast], strategy: NamingStrategy): Tokenizer[Action] = {
     val insertEntityTokenizer = Tokenizer[Entity] {
-      case Entity.Opinionated(name, _, renameable) => stmt"INTO ${tokenizeTable(strategy, name, renameable).token}"
+      case Entity.Opinionated(name, _, _, renameable) => stmt"INTO ${tokenizeTable(strategy, name, renameable).token}"
     }
     actionTokenizer(insertEntityTokenizer)(actionAstTokenizer, strategy)
   }
@@ -497,7 +497,7 @@ trait SqlIdiom extends Idiom {
   }
 
   implicit def entityTokenizer(implicit astTokenizer: Tokenizer[Ast], strategy: NamingStrategy): Tokenizer[Entity] = Tokenizer[Entity] {
-    case Entity.Opinionated(name, _, renameable) => tokenizeTable(strategy, name, renameable).token
+    case Entity.Opinionated(name, _, _, renameable) => tokenizeTable(strategy, name, renameable).token
   }
 
   protected def scopedTokenizer(ast: Ast)(implicit tokenizer: Tokenizer[Ast]) =

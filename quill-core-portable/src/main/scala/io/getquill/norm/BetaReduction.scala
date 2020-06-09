@@ -20,7 +20,7 @@ case class BetaReduction(replacements: Replacements)
 
       case FunctionApply(Function(params, body), values) =>
         val conflicts = values.flatMap(CollectAst.byType[Ident]).map { i =>
-          i -> Ident(s"tmp_${i.name}")
+          i -> Ident(s"tmp_${i.name}", i.quat)
         }.toMap[Ast, Ast]
         val newParams = params.map { p =>
           conflicts.getOrElse(p, p)

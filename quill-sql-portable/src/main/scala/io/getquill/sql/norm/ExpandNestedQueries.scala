@@ -91,7 +91,7 @@ class ExpandNestedQueries(strategy: NamingStrategy) {
     }
 
   private def references(alias: String, asts: List[Ast]) =
-    LinkedHashSet.empty ++ (References(State(Ident(alias), Nil))(asts)(_.apply)._2.state.references)
+    LinkedHashSet.empty ++ (References(State(Ident(alias, Quat.Value), Nil))(asts)(_.apply)._2.state.references) // TODO scrap this whole thing with quats
 }
 
 case class State(ident: Ident, references: List[Property])

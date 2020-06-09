@@ -1,8 +1,9 @@
 package io.getquill.context.sql.idiom
 
 import io.getquill.ast._
+import io.getquill.ast.Implicits._
 import io.getquill.context.sql._
-import io.getquill.quotation.FreeVariables
+import io.getquill.quotation.{ FreeVariables }
 
 case class Error(free: List[Ident], ast: Ast)
 case class InvalidSqlQuery(errors: List[Error]) {
@@ -50,7 +51,7 @@ object VerifySqlQuery {
 
     verifyFlatJoins(query)
 
-    val aliases = query.from.flatMap(this.aliases).map(Ident(_)) :+ Ident("*") :+ Ident("?")
+    val aliases = query.from.flatMap(this.aliases).map(IdentName(_)) :+ IdentName("*") :+ IdentName("?")
 
     def verifyAst(ast: Ast) = {
       val freeVariables =
@@ -61,9 +62,9 @@ object VerifySqlQuery {
           case Aggregation(_, _: Ident) => None
           case ast: Ident               => Some(ast)
         }).flatten
-      (freeVariables ++ freeIdents) match {
+      (freeVariables ++ freeIdents.map(_.idName)) match {
         case Nil  => None
-        case free => Some(Error(free, ast))
+        case free => Some(Error(free.map(f => Ident(f.name, Quat.Value)), ast)) // TODO Quat Should this be a Error of VIdent
       }
     }
 

@@ -8,6 +8,7 @@ import io.getquill.{ Literal, PseudoAst }
 
 case class OrderByCriteria(ast: Ast, ordering: PropertyOrdering)
 
+// TODO Quat fromContext should have an alias that it gets from the AST entity
 sealed trait FromContext
 case class TableContext(entity: Entity, alias: String) extends FromContext
 case class QueryContext(query: SqlQuery, alias: String) extends FromContext
@@ -112,7 +113,8 @@ object SqlQuery {
 
   private def flatten(sources: List[FromContext], finalFlatMapBody: Ast, alias: String): FlattenSqlQuery = {
 
-    def select(alias: String) = SelectValue(Ident(alias), None) :: Nil
+    // TODO Quat take from finalFlatMapBody, that should have the correct value
+    def select(alias: String) = SelectValue(Ident(alias, Quat.Value), None) :: Nil
 
     def base(q: Ast, alias: String) = {
       def nest(ctx: FromContext) = FlattenSqlQuery(from = sources :+ ctx, select = select(alias))
@@ -132,7 +134,8 @@ object SqlQuery {
             }
           FlattenSqlQuery(
             from = ctx :: Nil,
-            select = aliases(ctx).map(a => SelectValue(Ident(a), None))
+            // TODO Quat take from finalFlatMapBody
+            select = aliases(ctx).map(a => SelectValue(Ident(a, Quat.Value), None))
           )
         case q @ (_: Map | _: Filter | _: Entity) => flatten(sources, q, alias)
         case q if (sources == Nil)                => flatten(sources, q, alias)
@@ -201,7 +204,8 @@ object SqlQuery {
           case other =>
             FlattenSqlQuery(
               from = QueryContext(apply(q), alias) :: Nil,
-              select = List(SelectValue(Aggregation(op, Ident("*"))))
+              // TODO Quat get from finalFlatMapBody
+              select = List(SelectValue(Aggregation(op, Ident("*", Quat.Value))))
             )
         }
 

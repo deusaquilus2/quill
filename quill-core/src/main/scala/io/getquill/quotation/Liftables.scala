@@ -190,11 +190,10 @@ trait Liftables {
     case CaseClass(a) => q"$pack.CaseClass($a)"
   }
 
-
   implicit val quatLiftable: Liftable[Quat] = Liftable[Quat] {
     case Quat.CaseClass(fields) => q"$pack.Quat.CaseClass($fields)"
-    case Quat.Tuple(fields) => q"$pack.Quat.Tuple($fields)"
-    case Quat.Value => q"$pack.Quat.Value"
+    case Quat.Tuple(fields)     => q"$pack.Quat.Tuple($fields)"
+    case Quat.Value             => q"$pack.Quat.Value"
   }
 
   implicit val identLiftable: Liftable[Ident] = Liftable[Ident] {

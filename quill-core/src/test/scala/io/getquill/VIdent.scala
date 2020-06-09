@@ -1,7 +1,6 @@
 package io.getquill
 
-import io.getquill.ast.{Ast, Ident, Quat}
-
+import io.getquill.ast.{ Ast, Ident, Quat }
 
 /**
  * For unit tests that do not care about the `Quat` of an ident, use this class to construct
@@ -11,7 +10,7 @@ object VIdent {
   def unapply(id: Ast): Option[String] =
     id match {
       case Ident(name, _) => Some(name)
-      case _ => None
+      case _              => None
     }
 
   def apply(value: String) =

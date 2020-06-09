@@ -135,7 +135,7 @@ trait DynamicQueryDsl {
           }
 
         PropertyAlias(
-          path(alias.property(splice[T](Ident("v"))).ast),
+          path(alias.property(splice[T](Ident("v", Quat.Value))).ast), // TODO Parse quat from T type and alias name
           alias.name
         )
       }
@@ -146,10 +146,10 @@ trait DynamicQueryDsl {
 
   private[this] val nextIdentId = new DynamicVariable(0)
 
-  private[this] def withFreshIdent[R](f: Ident => R): R = {
+  private[this] def withFreshIdent[R](f: Ident => R)(quat: Quat): R = {
     val idx = nextIdentId.value
     nextIdentId.withValue(idx + 1) {
-      f(Ident(s"v$idx"))
+      f(Ident(s"v$idx", quat))
     }
   }
 
@@ -182,7 +182,7 @@ trait DynamicQueryDsl {
     ) =
       withFreshIdent { v =>
         r(t(q.ast, v, f(splice(v)).ast))
-      }
+      }(Quat.Value) // TODO Quat should be parsed from V type
 
     protected[this] def transformOpt[O, R, D <: DynamicQuery[T]](
       opt:  Option[O],
@@ -308,7 +308,7 @@ trait DynamicQueryDsl {
     ): DynamicQuery[R] =
       withFreshIdent { v =>
         dyn(FlatJoin(tpe, q.ast, v, on(splice(v)).ast))
-      }
+      }(Quat.Value) // Quat TODO Parse from R
 
     def join[A >: T](on: Quoted[A] => Quoted[Boolean]): DynamicQuery[A] =
       flatJoin(InnerJoin, on)
@@ -353,8 +353,8 @@ trait DynamicQueryDsl {
       withFreshIdent { iA =>
         withFreshIdent { iB =>
           dyn(Join(tpe, q1.ast, q2.ast, iA, iB, f(splice(iA), splice(iB)).ast))
-        }
-      }
+        }(Quat.Value) // Quat TODO Parse from B
+      }(Quat.Value) // Quat TODO Parse from A
     }
   }
 
@@ -391,7 +391,7 @@ trait DynamicQueryDsl {
     ): List[Assignment] =
       l.collect {
         case s: DynamicSetValue[_, _] =>
-          val v = Ident("v")
+          val v = Ident("v", Quat.Value) // TODO Quat get from S
           Assignment(v, s.property(splice(v)).ast, s.value.ast)
       }
 
@@ -440,17 +440,17 @@ trait DynamicQueryDsl {
 
     def returning[R](f: Quoted[E] => Quoted[R]): DynamicActionReturning[E, R] =
       withFreshIdent { v =>
-        DynamicActionReturning(splice(Returning(q.ast, v, f(splice(v)).ast)))
-      }
+        DynamicActionReturning[E, R](splice(Returning(q.ast, v, f(splice(v)).ast)))
+      } { Quat.Value } // TODO Quat should be parsed from R type
 
     def returningGenerated[R](
       f: Quoted[E] => Quoted[R]
     ): DynamicActionReturning[E, R] =
       withFreshIdent { v =>
-        DynamicActionReturning(
+        DynamicActionReturning[E, R](
           splice(ReturningGenerated(q.ast, v, f(splice(v)).ast))
         )
-      }
+      } { Quat.Value } // TODO Quat should be parsed from R type
 
     def onConflictIgnore: DynamicInsert[E] =
       dyn(
@@ -464,7 +464,7 @@ trait DynamicQueryDsl {
     def onConflictIgnore(
       targets: (Quoted[E] => Quoted[Any])*
     ): DynamicInsert[E] = {
-      val v = splice[E](Ident("v"))
+      val v = splice[E](Ident("v", Quat.Value)) // TODO Quat parse from E
       val properties =
         targets.toList.map { f =>
           f(v).ast match {

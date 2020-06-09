@@ -92,13 +92,18 @@ object ApplyMap {
         val er = BetaReduction(e, d -> c)
         Some(Distinct(Map(SortBy(a, b, er, f), b, c)))
 
+      // people.map(person => person.contact).groupBy(contact => contact.name) [String, Contact] =>
+      //   people.groupBy(person => contact.name[contact -> person.contact]).map(x: (String, Query[Person]) => (x._1, x._2.map(person => person.contact))) [String, Contact] =>
+      // contact.type == people.map(person => person.contact).type
+
       // a.map(b => c).groupBy(d => e) =>
       //    a.groupBy(b => e[d := c]).map(x => (x._1, x._2.map(b => c)))
+      // x._2.map(b => c).type == d.type
       case GroupBy(DetachableMap(a, b, c), d, e) =>
-        val er = BetaReduction(e, d -> c)
-        val x = Ident("x")
-        val x1 = Property(Ident("x"), "_1") // These introduced property should not be renamed
-        val x2 = Property(Ident("x"), "_2") // due to any naming convention.
+        val er = BetaReduction(e, d -> c) // TODO GroupBy Quat needs to be typed as a Tuple2(d.quat, e.quat) d is an ident so it's quat is already known, e.quat is not known yet
+        val x = Ident("x", Quat.Tuple( /*e.type*/ Quat.Value, /*d.type*/ Quat.Value)) // TODO Quat: do c.quat when adding quats to all entities
+        val x1 = Property(Ident("x", d.quat), "_1") // TODO Quat: do c.quat when adding quats to all entities // These introduced property should not be renamed
+        val x2 = Property(Ident("x", Quat.Value), "_2") // TODO Quat: do c.quat when adding quats to all entities // due to any naming convention.
         val body = Tuple(List(x1, Map(x2, b, c)))
         Some(Map(GroupBy(a, b, er), x, body))
 
@@ -121,7 +126,7 @@ object ApplyMap {
       //    a.*join(d).on((b, e) => on[iA := c, iB := f]).map(t => (c[b := t._1], f[e := t._2]))
       case Join(tpe, DetachableMap(a, b, c), DetachableMap(d, e, f), iA, iB, on) =>
         val onr = BetaReduction(on, iA -> c, iB -> f)
-        val t = Ident("t")
+        val t = Ident("t", Quat.Tuple(Quat.Value, Quat.Value)) // TODO Quat: (c.quat, f.quat) update One and Two Quats with the quats from b and e quats. Simple since they are idents!
         val t1 = BetaReduction(c, b -> Property(t, "_1"))
         val t2 = BetaReduction(f, e -> Property(t, "_2"))
         Some(Map(Join(tpe, a, d, b, e, onr), t, Tuple(List(t1, t2))))
@@ -130,16 +135,20 @@ object ApplyMap {
       //    a.*join(b).on((iA, c) => on[iB := d]).map(t => (t._1, d[c := t._2]))
       case Join(tpe, a, DetachableMap(b, c, d), iA, iB, on) =>
         val onr = BetaReduction(on, iB -> d)
-        val t = Ident("t")
+        val t = Ident("t", Quat.Tuple(Quat.Value, Quat.Value)) // TODO Quat
         val t1 = Property(t, "_1")
         val t2 = BetaReduction(d, c -> Property(t, "_2"))
         Some(Map(Join(tpe, a, b, iA, c, onr), t, Tuple(List(t1, t2))))
 
+      // people.map(person => contact).*join(addresses).on((contact, address) => on) // (Contact, Address)
+      //    people.*join(addresses).on((person, address) => on[person := contact]).map(t => (contact[person := t._1], t._2))
+
       // a.map(b => c).*join(d).on((iA, iB) => on)
       //    a.*join(d).on((b, iB) => on[iA := c]).map(t => (c[b := t._1], t._2))
+      // a.QT.type == b.type == iA.type ==
       case Join(tpe, DetachableMap(a, b, c), d, iA, iB, on) =>
         val onr = BetaReduction(on, iA -> c)
-        val t = Ident("t")
+        val t = Ident("t", Quat.Tuple(Quat.Value, Quat.Value)) // TODO Quat:
         val t1 = BetaReduction(c, b -> Property(t, "_1"))
         val t2 = Property(t, "_2")
         Some(Map(Join(tpe, a, d, b, iB, onr), t, Tuple(List(t1, t2))))

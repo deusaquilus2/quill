@@ -39,6 +39,9 @@ sealed trait Quat
 object Quat {
   case class CaseClass(fields: List[(String, Quat)]) extends Quat
   case class Tuple(fields: List[Quat]) extends Quat
+  object Tuple {
+    def apply(fields: Quat*) = new Quat.Tuple(fields.toList)
+  }
   object Value extends Quat
 }
 
@@ -155,11 +158,11 @@ case class Infix(parts: List[String], params: List[Ast], pure: Boolean)
 
 case class Function(params: List[Ident], body: Ast) extends Ast
 
-case class Ident(name: String,  quat: Quat) extends Ast {
+case class Ident(name: String, quat: Quat) extends Ast {
   def visibility: Visibility = Visibility.Visible
 
   override def neutral: Ident =
-    new Ident(name,  quat: Quat) {
+    new Ident(name, quat: Quat) {
       override def visibility: Visibility = Visibility.neutral
     }
 

@@ -1,7 +1,7 @@
 package io.getquill.quotation
 
 import scala.reflect.macros.whitebox.Context
-import io.getquill.ast.Ast
+import io.getquill.ast.{ Ast, Quat }
 import io.getquill.ast.Function
 import io.getquill.ast.FunctionApply
 import io.getquill.ast.Ident
@@ -13,7 +13,7 @@ object Rebind {
     import c.universe.{ Function => _, Ident => _, _ }
 
     def toIdent(s: Symbol) =
-      Ident(s.name.decodedName.toString)
+      Ident(s.name.decodedName.toString, Quat.Value) // TODO Quat get from symbol type?
 
     def paramIdents(method: MethodSymbol) =
       method.paramLists.flatten.map(toIdent)

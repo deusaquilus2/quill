@@ -1,6 +1,7 @@
 package io.getquill.norm
 
 import io.getquill.ast._
+import io.getquill.ast.Implicits._
 import io.getquill.norm.capture.AvoidAliasConflict
 
 /**
@@ -45,7 +46,7 @@ object NormalizeReturning {
    */
   private def dealiasBody(body: Ast, alias: Ident): Ast =
     Transform(body) {
-      case q: Query => AvoidAliasConflict.sanitizeQuery(q, Set(alias))
+      case q: Query => AvoidAliasConflict.sanitizeQuery(q, Set(alias.idName))
     }
 
   private def apply(e: Action, body: Ast, returningIdent: Ident): Action = e match {

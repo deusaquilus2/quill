@@ -26,7 +26,7 @@ trait Parsing extends ValueComputation {
 
   // Variables that need to be sanitized out in various places due to internal conflicts with the way
   // macros hard handeled in MetaDsl
-  private[getquill] val dangerousVariables = Set("v").map(Ident(_))
+  private[getquill] val dangerousVariables: Set[IdentName] = Set(IdentName("v"))
 
   case class Parser[T](p: PartialFunction[Tree, T])(implicit ct: ClassTag[T]) {
 
@@ -74,12 +74,12 @@ trait Parsing extends ValueComputation {
   }
 
   val valParser: Parser[Val] = Parser[Val] {
-    case q"val $name: $typ = $body" => Val(ident(name), astParser(body))
+    case q"val $name: $typ = $body" => Val(ident(name, inferQuat(q"$typ".tpe)), astParser(body))
   }
 
   val patMatchValParser: Parser[Val] = Parser[Val] {
     case q"$mods val $name: $typ = ${ patMatchParser(value) }" =>
-      Val(ident(name), value)
+      Val(ident(name, inferQuat(q"$typ".tpe)), value)
   }
 
   val patMatchParser: Parser[Ast] = Parser[Ast] {
@@ -350,15 +350,16 @@ trait Parsing extends ValueComputation {
   }
 
   val identParser: Parser[Ident] = Parser[Ident] {
-    // TODO Check to see that all these conditions work
-    case t: ValDef                        => identClean(Ident(t.name.decodedName.toString, inferQuat(t.tpe)))
-    case id @ c.universe.Ident(TermName(name)) => identClean(Ident(name), inferQuat(id.tpe))
-    case q"$cls.this.$i"                  => identClean(Ident(i.decodedName.toString, inferQuat(i.tpe)))
-    case c.universe.Bind(TermName(name), c.universe.Ident(termNames.WILDCARD, Quat.Value)) =>
-      identClean(Ident(name))
+    // TODO Check to see that all these conditions workk
+    case t: ValDef =>
+      identClean(Ident(t.name.decodedName.toString, inferQuat(t.symbol.typeSignature)))
+    case id @ c.universe.Ident(TermName(name)) => identClean(Ident(name, inferQuat(id.symbol.typeSignature)))
+    case t @ q"$cls.this.$i"                   => identClean(Ident(i.decodedName.toString, inferQuat(t.symbol.typeSignature)))
+    case t @ c.universe.Bind(TermName(name), c.universe.Ident(termNames.WILDCARD)) =>
+      identClean(Ident(name, inferQuat(t.symbol.typeSignature))) // TODO Quat what is the type of this thing? In what cases does it happen? Do we need to do something more clever with the tree and get a TypeRef?
   }
   private def identClean(x: Ident): Ident = x.copy(name = x.name.replace("$", ""))
-  private def ident(x: TermName): Ident = identClean(Ident(x.decodedName.toString))
+  private def ident(x: TermName, quat: Quat): Ident = identClean(Ident(x.decodedName.toString, quat))
 
   /**
    * In order to guarentee consistent behavior across multiple databases, we have begun to explicitly to null-check
@@ -695,7 +696,7 @@ trait Parsing extends ValueComputation {
           case m: MethodSymbol if m.isPrimaryConstructor => m
         }.head
 
-      // TODO Only one constructor param list supported so far
+      // TODO Quat Only one constructor param list supported so far? Have an error for that?
       constructor.paramLists(0).map { param =>
         (param.name.toString, param.typeSignature.asSeenFrom(tpe, tpe.typeSymbol))
       }
@@ -709,8 +710,7 @@ trait Parsing extends ValueComputation {
           None
     }
 
-
-    def parseType(tpe: Type) =
+    def parseType(tpe: Type): Quat =
       tpe match {
         // For tuples
         case CaseClassBaseType(name, fields) if (name.startsWith("scala.Tuple")) =>
@@ -1002,7 +1002,7 @@ trait Parsing extends ValueComputation {
       }
       Assignment(i1, astParser(prop), valueAst)
     // Unused, it's here only to make eclipse's presentation compiler happy
-    case astParser(ast) => Assignment(Ident("unused"), Ident("unused"), Constant("unused"))
+    case astParser(ast) => Assignment(Ident("unused", Quat.Value), Ident("unused", Quat.Value), Constant("unused"))
   }
 
   val conflictParser: Parser[Ast] = Parser[Ast] {

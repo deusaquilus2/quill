@@ -197,8 +197,8 @@ trait MirrorIdiomBase extends Idiom {
     }
 
   implicit def propertyTokenizer(implicit externalTokenizer: Tokenizer[External]): Tokenizer[Property] = Tokenizer[Property] {
-    case Property.Opinionated(ExternalIdent(_), name, renameable, visibility) => stmt"${bracketIfHidden(tokenizeName(name, renameable), visibility).token}"
-    case Property.Opinionated(ref, name, renameable, visibility)              => stmt"${scopedTokenizer(ref)}.${bracketIfHidden(tokenizeName(name, renameable), visibility).token}"
+    case Property.Opinionated(ExternalIdent(_, _), name, renameable, visibility) => stmt"${bracketIfHidden(tokenizeName(name, renameable), visibility).token}"
+    case Property.Opinionated(ref, name, renameable, visibility)                 => stmt"${scopedTokenizer(ref)}.${bracketIfHidden(tokenizeName(name, renameable), visibility).token}"
   }
 
   implicit val valueTokenizer: Tokenizer[Value] = Tokenizer[Value] {

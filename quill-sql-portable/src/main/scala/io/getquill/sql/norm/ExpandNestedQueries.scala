@@ -29,13 +29,13 @@ class ExpandNestedQueries(strategy: NamingStrategy) {
   private def apply(q: SqlQuery, references: LinkedHashSet[Property]): SqlQuery =
     q match {
       case q: FlattenSqlQuery =>
-        val expand = expandNested(q.copy(select = ExpandSelect(q.select, references, strategy)))
+        val expand = expandNested(q.copy(select = ExpandSelect(q.select, references, strategy))(q.quat))
         trace"Expanded Nested Query $q into $expand".andLog()
         expand
       case SetOperationSqlQuery(a, op, b) =>
-        SetOperationSqlQuery(apply(a, references), op, apply(b, references))
+        SetOperationSqlQuery(apply(a, references), op, apply(b, references))(q.quat)
       case UnaryOperationSqlQuery(op, q) =>
-        UnaryOperationSqlQuery(op, apply(q, references))
+        UnaryOperationSqlQuery(op, apply(q, references))(q.quat)
     }
 
   private def expandNested(q: FlattenSqlQuery): SqlQuery =
@@ -62,7 +62,7 @@ class ExpandNestedQueries(strategy: NamingStrategy) {
           orderBy = orderBy.map(ob => ob.copy(ast = replaceProps(ob.ast))),
           limit = replacePropsOption(limit),
           offset = replacePropsOption(offset)
-        )
+        )(q.quat)
 
     }
 

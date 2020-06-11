@@ -105,13 +105,13 @@ object Entity {
 
 case class PropertyAlias(path: List[String], alias: String)
 
-case class Filter(query: Ast, alias: Ident, body: Ast) extends Query { def quat = body.quat }
+case class Filter(query: Ast, alias: Ident, body: Ast) extends Query { def quat = query.quat }
 
 case class Map(query: Ast, alias: Ident, body: Ast) extends Query { def quat = body.quat }
 
 case class FlatMap(query: Ast, alias: Ident, body: Ast) extends Query { def quat = body.quat }
 
-case class ConcatMap(query: Ast, alias: Ident, body: Ast) extends Query { def quat = body.quat }
+case class ConcatMap(query: Ast, alias: Ident, body: Ast) extends Query { def quat = body.quat } // TODO Quat check out if quat is supposed to come from the query or the body?
 
 case class SortBy(query: Ast, alias: Ident, criterias: Ast, ordering: Ast)
   extends Query { def quat = query.quat }

@@ -38,11 +38,11 @@ object MySparkExample {
       for {
         l <- liftQuery(lots)
         //(p, a) <- join.join { case (p, a) => l.afk == a.id && l.pfk == p.id } // should be possible with joinOn
-        (p, a) <- join.join(tup => tup match { case (p, a) => l.afk == a.id && l.pfk == p.id })
+        (pp, aa) <- join.join(tup => tup match { case (p, a) => l.afk == a.id && l.pfk == p.id })
 
-      } yield (a.fk, a, p.id, l.name)
+      } yield (aa.fk, aa, pp.id, l.name)
     }
-    run(q).show() //hellohellohello
+    run(q).show() //helloooooo
   }
 }
 

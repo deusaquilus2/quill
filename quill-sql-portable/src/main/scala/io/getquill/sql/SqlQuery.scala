@@ -150,19 +150,20 @@ object SqlQuery {
       }
     }
 
+    val quat = finalFlatMapBody.quat
     finalFlatMapBody match {
 
       case ConcatMap(q, Ident(alias, _), p) =>
         FlattenSqlQuery(
           from = source(q, alias) :: Nil,
           select = selectValues(p).map(_.copy(concat = true))
-        )(q.quat)
+        )(quat)
 
       case Map(GroupBy(q, x @ Ident(alias, _), g), a, p) =>
         val b = base(q, alias)
         val select = BetaReduction(p, a -> Tuple(List(g, x)))
         val flattenSelect = FlattenGroupByAggregation(x)(select)
-        b.copy(groupBy = Some(g), select = this.selectValues(flattenSelect))(q.quat)
+        b.copy(groupBy = Some(g), select = this.selectValues(flattenSelect))(quat)
 
       case GroupBy(q, Ident(alias, _), p) =>
         fail("A `groupBy` clause must be followed by `map`.")
@@ -173,77 +174,76 @@ object SqlQuery {
           case s @ SelectValue(_: Aggregation, _, _) => s
         }
         if (!b.distinct && agg.isEmpty)
-          b.copy(select = selectValues(p))(q.quat)
+          b.copy(select = selectValues(p))(quat)
         else
           FlattenSqlQuery(
             from = QueryContext(apply(q), alias) :: Nil,
             select = selectValues(p)
-          )(q.quat)
+          )(quat)
 
       case Filter(q, Ident(alias, _), p) =>
         val b = base(q, alias)
         if (b.where.isEmpty)
-          b.copy(where = Some(p))(q.quat)
+          b.copy(where = Some(p))(quat)
         else
           FlattenSqlQuery(
             from = QueryContext(apply(q), alias) :: Nil,
             where = Some(p),
             select = select(alias)
-          )(q.quat)
+          )(quat)
 
       case SortBy(q, Ident(alias, _), p, o) =>
         val b = base(q, alias)
         val criterias = orderByCriterias(p, o)
         if (b.orderBy.isEmpty)
-          b.copy(orderBy = criterias)(q.quat)
+          b.copy(orderBy = criterias)(quat)
         else
           FlattenSqlQuery(
             from = QueryContext(apply(q), alias) :: Nil,
             orderBy = criterias,
             select = select(alias)
-          )(q.quat)
+          )(quat)
 
       case Aggregation(op, q: Query) =>
         val b = flatten(q, alias)
         b.select match {
           case head :: Nil if !b.distinct =>
-            b.copy(select = List(head.copy(ast = Aggregation(op, head.ast))))(q.quat)
+            b.copy(select = List(head.copy(ast = Aggregation(op, head.ast))))(quat)
           case other =>
             FlattenSqlQuery(
               from = QueryContext(apply(q), alias) :: Nil,
-              // TODO Quat get from finalFlatMapBody
-              select = List(SelectValue(Aggregation(op, Ident("*", Quat.Value))))
-            )(q.quat)
+              select = List(SelectValue(Aggregation(op, Ident("*", quat)))) // Quat of a * aggregation is same as for the entire query
+            )(quat)
         }
 
       case Take(q, n) =>
         val b = base(q, alias)
         if (b.limit.isEmpty)
-          b.copy(limit = Some(n))(q.quat)
+          b.copy(limit = Some(n))(quat)
         else
           FlattenSqlQuery(
             from = QueryContext(apply(q), alias) :: Nil,
             limit = Some(n),
             select = select(alias)
-          )(q.quat)
+          )(quat)
 
       case Drop(q, n) =>
         val b = base(q, alias)
         if (b.offset.isEmpty && b.limit.isEmpty)
-          b.copy(offset = Some(n))(q.quat)
+          b.copy(offset = Some(n))(quat)
         else
           FlattenSqlQuery(
             from = QueryContext(apply(q), alias) :: Nil,
             offset = Some(n),
             select = select(alias)
-          )(q.quat)
+          )(quat)
 
       case Distinct(q: Query) =>
         val b = base(q, alias)
-        b.copy(distinct = true)(q.quat)
+        b.copy(distinct = true)(quat)
 
       case other =>
-        FlattenSqlQuery(from = sources :+ source(other, alias), select = select(alias))(other.quat)
+        FlattenSqlQuery(from = sources :+ source(other, alias), select = select(alias))(quat)
     }
   }
 

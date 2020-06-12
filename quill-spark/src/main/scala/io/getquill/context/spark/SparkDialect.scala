@@ -14,7 +14,7 @@ import io.getquill.ast.CaseClass
 import io.getquill.context.spark.norm.EscapeQuestionMarks
 import io.getquill.context.sql.{ FlattenSqlQuery, SelectValue, SqlQuery }
 import io.getquill.context.sql.idiom.SqlIdiom
-import io.getquill.context.sql.norm.{ ExpandNestedQueries, SqlNormalize }
+import io.getquill.context.sql.norm.SqlNormalize
 import io.getquill.idiom.StatementInterpolator._
 import io.getquill.idiom.Token
 import io.getquill.util.Messages.trace
@@ -138,7 +138,7 @@ trait SparkIdiom extends SqlIdiom with CannotReturn { self =>
   override implicit def propertyTokenizer(implicit astTokenizer: Tokenizer[Ast], strategy: NamingStrategy): Tokenizer[Property] = {
     def path(ast: Ast): Token =
       ast match {
-        case Ident(name) => name.token
+        case Ident(name, _) => name.token
         case Property.Opinionated(a, b, renameable, _) =>
           stmt"${path(a)}.${renameable.fixedOr(b.token)(strategy.column(b).token)}"
         case other =>

@@ -16,7 +16,7 @@ object NestImpureMappedInfix extends StatelessTransformer {
   // Are there any impure infixes that exist inside the specified ASTs
   def hasInfix(asts: Ast*): Boolean =
     asts.exists(ast => CollectAst(ast) {
-      case i @ Infix(_, _, false) => i
+      case i @ Infix(_, _, false, _) => i
     }.nonEmpty)
 
   // Continue exploring into the Map to see if there are additional impure infix clauses inside.
@@ -41,7 +41,7 @@ object NestImpureMappedInfix extends StatelessTransformer {
             case (_, i) => Property(x, s"_${i + 1}") // mappings of nested-query tuple properties should not be renamed
           }))
 
-      case m @ Map(_, x, i @ Infix(_, _, false)) =>
+      case m @ Map(_, x, i @ Infix(_, _, false, _)) =>
         Map(Nested(applyInside(m)), x, Property(x, "_1"))
 
       case m @ Map(_, x, Property(prop, _)) if hasInfix(prop) =>

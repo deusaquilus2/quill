@@ -282,16 +282,16 @@ trait Parsing extends ValueComputation with InferQuat {
 
   val infixParser: Parser[Ast] = Parser[Ast] {
     case q"$infix.pure.as[$t]" =>
-      combinedInfixParser(true)(infix)
+      combinedInfixParser(true, inferQuat(q"$t".tpe))(infix)
     case q"$infix.as[$t]" =>
-      combinedInfixParser(false)(infix)
+      combinedInfixParser(false, inferQuat(q"$t".tpe))(infix)
     case `impureInfixParser`(value) =>
       value
   }
 
-  val impureInfixParser = combinedInfixParser(false)
+  val impureInfixParser = combinedInfixParser(false, Quat.Value) // TODO Quat in what cases does this come up?
 
-  def combinedInfixParser(infixIsPure: Boolean): Parser[Ast] = Parser[Ast] {
+  def combinedInfixParser(infixIsPure: Boolean, quat: Quat): Parser[Ast] = Parser[Ast] {
     case q"$pack.InfixInterpolator(scala.StringContext.apply(..${ parts: List[String] })).infix(..$params)" =>
       if (parts.find(_.endsWith("#")).isDefined) {
         val elements =
@@ -331,7 +331,7 @@ trait Parsing extends ValueComputation with InferQuat {
           """)
         }
       } else
-        Infix(parts, params.map(astParser(_)), infixIsPure)
+        Infix(parts, params.map(astParser(_)), infixIsPure, quat)
   }
 
   val functionParser: Parser[Function] = Parser[Function] {

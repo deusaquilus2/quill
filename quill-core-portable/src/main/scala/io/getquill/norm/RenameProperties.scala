@@ -353,7 +353,7 @@ object RenameProperties extends StatelessTransformer {
       case Map(q: Operation, x, p) if x == p =>
         (Map(apply(q), x, p), TupleSchema.empty)
 
-      case Map(Infix(parts, params, pure), x, p) =>
+      case Map(Infix(parts, params, pure, quat), x, p) =>
 
         val transformed =
           params.map {
@@ -380,7 +380,7 @@ object RenameProperties extends StatelessTransformer {
         val prr = apply(pr)
         traceDifferent(pr, prr)
 
-        (Map(Infix(parts, transformed.map(_._1), pure), x, prr), schema)
+        (Map(Infix(parts, transformed.map(_._1), pure, quat), x, prr), schema)
 
       case q =>
         (q, TupleSchema.empty)

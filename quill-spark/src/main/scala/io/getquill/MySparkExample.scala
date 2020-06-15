@@ -42,7 +42,7 @@ object MySparkExample {
 
       } yield (aa.fk, aa, pp.id, l.name)
     }
-    run(q).show() //hellooooooooooooooo
+    run(q).show() //helloooooooooooooooo
   }
 }
 

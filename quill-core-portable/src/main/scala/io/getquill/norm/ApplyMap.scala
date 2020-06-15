@@ -105,7 +105,6 @@ object ApplyMap {
         val er = BetaReduction(e, d -> c)
         Some(Distinct(Map(SortBy(a, b, er, f), b, c)))
 
-
       // === Conceptual Example ===
       // Instead of transforming spirit into gin and the bottling the join, bottle the
       // spirit first, then have the spirit transform into gin inside of the bottles.
@@ -138,7 +137,6 @@ object ApplyMap {
       //    a.nested.map(b => c)
       case Nested(DetachableMap(a, b, c)) =>
         Some(Map(Nested(a), b, c))
-
 
       // === Conceptual Example ===
       // Instead of combining gin and tonic, pour spirit and water into a cup and transform both

@@ -2,6 +2,19 @@ package io.getquill.norm
 
 import io.getquill.ast._
 
+/**
+ * Notes for the conceptual examples below. Gin and Tonic were used as prototypical
+ * examples of things that "are joined". In the table form, they are alude to the following
+ * tonics is Query[Tonic], tonic is Tonic
+ * gins is Query[Gin], is Gin
+ * waters is Query[Water], water is Water
+ *
+ * ginifySpirit is some f:Spirit => Gin
+ * tonicfyWater is some f:Tonic => Water
+ * bottleGin is some f:Gin => Bottle
+ * Additionally Map(a,b,c).quat is the same as c.quat. The former
+ * is used in most examples with DetachableMap
+ */
 object ApplyMap {
 
   private def isomorphic(e: Ast, c: Ast, alias: Ident) =
@@ -92,18 +105,22 @@ object ApplyMap {
         val er = BetaReduction(e, d -> c)
         Some(Distinct(Map(SortBy(a, b, er, f), b, c)))
 
-      // people.map(person => person.contact).groupBy(contact => contact.name) [String, Contact] =>
-      //   people.groupBy(person => contact.name[contact -> person.contact]).map(x: (String, Query[Person]) => (x._1, x._2.map(person => person.contact))) [String, Contact] =>
-      // contact.type == people.map(person => person.contact).type
+
+      // === Conceptual Example ===
+      // Instead of transforming spirit into gin and the bottling the join, bottle the
+      // spirit first, then have the spirit transform into gin inside of the bottles.
+      //
+      // spirits.map(spirit => ginifySpirit).groupBy(gin => bottleGin) =>
+      //    spirits.groupBy(spirit => bottleGin[gin := ginifySprit]).map(x: Tuple[(Bottle, Spirit)] => (x._1, x._2.map(spirit => ginifySpirit))) :Tuple[(Bottle, Gin)]
 
       // a.map(b => c).groupBy(d => e) =>
       //    a.groupBy(b => e[d := c]).map(x => (x._1, x._2.map(b => c)))
       // x._2.map(b => c).type == d.type
       case GroupBy(DetachableMap(a, b, c), d, e) =>
-        val er = BetaReduction(e, d -> c) // TODO GroupBy Quat needs to be typed as a Tuple2(d.quat, e.quat) d is an ident so it's quat is already known, e.quat is not known yet
-        val x = Ident("x", Quat.Tuple( /*e.type*/ Quat.Value, /*d.type*/ Quat.Value)) // TODO Quat: do c.quat when adding quats to all entities
-        val x1 = Property(Ident("x", d.quat), "_1") // TODO Quat: do c.quat when adding quats to all entities // These introduced property should not be renamed
-        val x2 = Property(Ident("x", Quat.Value), "_2") // TODO Quat: do c.quat when adding quats to all entities // due to any naming convention.
+        val er = BetaReduction(e, d -> c)
+        val x = Ident("x", Quat.Tuple(e.quat, c.quat))
+        val x1 = Property(Ident("x", e.quat), "_1")
+        val x2 = Property(Ident("x", c.quat), "_2")
         val body = Tuple(List(x1, Map(x2, b, c)))
         Some(Map(GroupBy(a, b, er), x, body))
 
@@ -122,33 +139,52 @@ object ApplyMap {
       case Nested(DetachableMap(a, b, c)) =>
         Some(Map(Nested(a), b, c))
 
+
+      // === Conceptual Example ===
+      // Instead of combining gin and tonic, pour spirit and water into a cup and transform both
+      // the spirit into gin, and the water into tonic inside of the cup.
+      //
+      // spirits.map(spirit => ginifySpririt).join(waters.map(water => tonicfyWater)).on((gin, tonic) => on)
+      //    spirits.join(waters).on((spirit, water) => on[gin := ginifySpirit, tonic := tonicfyWater]).map(t:Tuple[(Gin, Tonic)] => (ginifySpirit[spirit := t._1], tonicfyWater[water := t._2]))
+
       // a.map(b => c).*join(d.map(e => f)).on((iA, iB) => on)
       //    a.*join(d).on((b, e) => on[iA := c, iB := f]).map(t => (c[b := t._1], f[e := t._2]))
       case Join(tpe, DetachableMap(a, b, c), DetachableMap(d, e, f), iA, iB, on) =>
         val onr = BetaReduction(on, iA -> c, iB -> f)
-        val t = Ident("t", Quat.Tuple(Quat.Value, Quat.Value)) // TODO Quat: (c.quat, f.quat) update One and Two Quats with the quats from b and e quats. Simple since they are idents!
+        val t = Ident("t", Quat.Tuple(c.quat, f.quat))
         val t1 = BetaReduction(c, b -> Property(t, "_1"))
         val t2 = BetaReduction(f, e -> Property(t, "_2"))
         Some(Map(Join(tpe, a, d, b, e, onr), t, Tuple(List(t1, t2))))
+
+      // === Conceptual Example ===
+      // Instead of combining gin and tonic, pour gin and water into a cup and transform the water
+      // into gin inside of the cup.
+      //
+      // gins.join(waters.map(water => tonicfyWater).on((gin, tonic) => on)
+      //    gins.join(water).on((gin, water) => on[water := tonicfyWater]).map(t:Tuple[(Gin, Water)] => t._1, tonicfyWater[water := t._2]) :Tuple[(Gin, Water)]
 
       // a.*join(b.map(c => d)).on((iA, iB) => on)
       //    a.*join(b).on((iA, c) => on[iB := d]).map(t => (t._1, d[c := t._2]))
       case Join(tpe, a, DetachableMap(b, c, d), iA, iB, on) =>
         val onr = BetaReduction(on, iB -> d)
-        val t = Ident("t", Quat.Tuple(Quat.Value, Quat.Value)) // TODO Quat
+        val t = Ident("t", Quat.Tuple(a.quat, d.quat))
         val t1 = Property(t, "_1")
         val t2 = BetaReduction(d, c -> Property(t, "_2"))
         Some(Map(Join(tpe, a, b, iA, c, onr), t, Tuple(List(t1, t2))))
 
-      // people.map(person => contact).*join(addresses).on((contact, address) => on) // (Contact, Address)
-      //    people.*join(addresses).on((person, address) => on[person := contact]).map(t => (contact[person := t._1], t._2))
+      // === Conceptual Example ===
+      // Instead of combining gin and tonic, pour raw spirit with tonic in a cup and transform the spirit
+      // inside of the tup into tonic.
+      //
+      // spirits.map(spirit => ginifySpirit).join(tonics).on((gin, tonic) => on)
+      //    spirits.join(tonics).on((spirit, tonic) => on[gin := ginifySpirit]).map(t:Tuple[(Spririt, Tonic)] => (ginifySpirit[spirit := t._1], t._2)) :Tuple[(Gin, Tonic)]
 
       // a.map(b => c).*join(d).on((iA, iB) => on)
       //    a.*join(d).on((b, iB) => on[iA := c]).map(t => (c[b := t._1], t._2))
-      // a.QT.type == b.type == iA.type ==
+      // Quat Equivalence: a.quat == b.quat == iA.quat
       case Join(tpe, DetachableMap(a, b, c), d, iA, iB, on) =>
         val onr = BetaReduction(on, iA -> c)
-        val t = Ident("t", Quat.Tuple(Quat.Value, Quat.Value)) // TODO Quat:
+        val t = Ident("t", Quat.Tuple(c.quat, d.quat))
         val t1 = BetaReduction(c, b -> Property(t, "_1"))
         val t2 = Property(t, "_2")
         Some(Map(Join(tpe, a, d, b, iB, onr), t, Tuple(List(t1, t2))))

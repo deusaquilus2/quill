@@ -8,7 +8,6 @@ import io.getquill.{ Literal, PseudoAst }
 
 case class OrderByCriteria(ast: Ast, ordering: PropertyOrdering)
 
-// TODO Quat fromContext should have an alias that it gets from the AST entity
 sealed trait FromContext { def quat: Quat }
 case class TableContext(entity: Entity, alias: String) extends FromContext { def quat = entity.quat }
 case class QueryContext(query: SqlQuery, alias: String) extends FromContext { def quat = query.quat }
@@ -121,28 +120,27 @@ object SqlQuery {
   private def flatten(sources: List[FromContext], finalFlatMapBody: Ast, alias: String): FlattenSqlQuery = {
 
     // TODO Quat take from finalFlatMapBody, that should have the correct value
-    def select(alias: String) = SelectValue(Ident(alias, Quat.Value), None) :: Nil
+    def select(alias: String, quat: Quat) = SelectValue(Ident(alias, quat), None) :: Nil
 
     def base(q: Ast, alias: String) = {
-      def nest(ctx: FromContext) = FlattenSqlQuery(from = sources :+ ctx, select = select(alias))(q.quat)
+      def nest(ctx: FromContext) = FlattenSqlQuery(from = sources :+ ctx, select = select(alias, q.quat))(q.quat)
       q match {
         case Map(_: GroupBy, _, _) => nest(source(q, alias))
         case NestedNest(q)         => nest(QueryContext(apply(q), alias))
         case q: ConcatMap          => nest(QueryContext(apply(q), alias))
         case Join(tpe, a, b, iA, iB, on) =>
           val ctx = source(q, alias)
-          def aliases(ctx: FromContext): List[String] =
+          def aliases(ctx: FromContext): List[(String, Quat)] =
             ctx match {
-              case TableContext(_, alias)   => alias :: Nil
-              case QueryContext(_, alias)   => alias :: Nil
-              case InfixContext(_, alias)   => alias :: Nil
+              case TableContext(_, alias)   => (alias, ctx.quat) :: Nil
+              case QueryContext(_, alias)   => (alias, ctx.quat) :: Nil
+              case InfixContext(_, alias)   => (alias, ctx.quat) :: Nil
               case JoinContext(_, a, b, _)  => aliases(a) ::: aliases(b)
               case FlatJoinContext(_, a, _) => aliases(a)
             }
           FlattenSqlQuery(
             from = ctx :: Nil,
-            // TODO Quat take from finalFlatMapBody
-            select = aliases(ctx).map(a => SelectValue(Ident(a, Quat.Value), None))
+            select = aliases(ctx).map { case (a, quat) => SelectValue(Ident(a, quat), None) }
           )(q.quat)
         case q @ (_: Map | _: Filter | _: Entity) => flatten(sources, q, alias)
         case q if (sources == Nil)                => flatten(sources, q, alias)
@@ -189,7 +187,7 @@ object SqlQuery {
           FlattenSqlQuery(
             from = QueryContext(apply(q), alias) :: Nil,
             where = Some(p),
-            select = select(alias)
+            select = select(alias, quat)
           )(quat)
 
       case SortBy(q, Ident(alias, _), p, o) =>
@@ -201,7 +199,7 @@ object SqlQuery {
           FlattenSqlQuery(
             from = QueryContext(apply(q), alias) :: Nil,
             orderBy = criterias,
-            select = select(alias)
+            select = select(alias, quat)
           )(quat)
 
       case Aggregation(op, q: Query) =>
@@ -224,7 +222,7 @@ object SqlQuery {
           FlattenSqlQuery(
             from = QueryContext(apply(q), alias) :: Nil,
             limit = Some(n),
-            select = select(alias)
+            select = select(alias, quat)
           )(quat)
 
       case Drop(q, n) =>
@@ -235,7 +233,7 @@ object SqlQuery {
           FlattenSqlQuery(
             from = QueryContext(apply(q), alias) :: Nil,
             offset = Some(n),
-            select = select(alias)
+            select = select(alias, quat)
           )(quat)
 
       case Distinct(q: Query) =>
@@ -243,7 +241,7 @@ object SqlQuery {
         b.copy(distinct = true)(quat)
 
       case other =>
-        FlattenSqlQuery(from = sources :+ source(other, alias), select = select(alias))(quat)
+        FlattenSqlQuery(from = sources :+ source(other, alias), select = select(alias, quat))(quat)
     }
   }
 

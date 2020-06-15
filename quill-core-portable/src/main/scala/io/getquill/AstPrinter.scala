@@ -43,11 +43,7 @@ class AstPrinter(traceOpinions: Boolean, traceAstSimple: Boolean) extends pprint
       Tree.Literal("" + past) // Do not blow up if it is null
 
     case i: Ident =>
-      Tree.Apply("Id", List[Tree](treeify(i.name), i.quat match {
-        case Quat.CaseClass(fields) => Tree.Literal(s"CC(${fields.map(_._1).mkString(",")})")
-        case Quat.Tuple(fields)     => Tree.Literal(s"Tup${fields.length}")
-        case Quat.Value             => Tree.Literal("V")
-      }).iterator)
+      Tree.Apply("Id", List[Tree](treeify(i.name), Tree.Literal(i.quat.shortString)).iterator)
 
     case s: ScalarValueLift => Tree.Apply("ScalarValueLift", List(treeify("..." + s.name.reverse.take(15).reverse)).iterator)
 

@@ -200,6 +200,7 @@ trait Unliftables {
     case q"$pack.Quat.CaseClass.apply(${ fields: List[(String, Quat)] })" => Quat.CaseClass(fields)
     case q"$pack.Quat.Tuple.apply(${ fields: List[Quat] })" => Quat.Tuple(fields)
     case q"$pack.Quat.Value" => Quat.Value
+    case q"$pack.Quat.Error(${ msg: String })" => Quat.Error(msg)
   }
 
   implicit val identUnliftable: Unliftable[Ident] = Unliftable[Ident] {

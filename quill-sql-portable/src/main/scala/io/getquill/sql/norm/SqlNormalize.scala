@@ -14,33 +14,37 @@ object SqlNormalize {
 
 class SqlNormalize(concatBehavior: ConcatBehavior, equalityBehavior: EqualityBehavior) {
 
+  private def demarcate(heading: String) =
+    ((ast: Ast) => title(heading)(ast))
+      .andThen(CheckQuats(heading).apply _)
+
   private val normalize =
     (identity[Ast] _)
-      .andThen(title("original"))
+      .andThen(demarcate("original"))
       .andThen(DemarcateExternalAliases.apply _)
-      .andThen(title("DemarcateReturningAliases"))
+      .andThen(demarcate("DemarcateReturningAliases"))
       .andThen(new FlattenOptionOperation(concatBehavior).apply _)
-      .andThen(title("FlattenOptionOperation"))
+      .andThen(demarcate("FlattenOptionOperation"))
       .andThen(new SimplifyNullChecks(equalityBehavior).apply _)
-      .andThen(title("SimplifyNullChecks"))
+      .andThen(demarcate("SimplifyNullChecks"))
       .andThen(Normalize.apply _)
-      .andThen(title("Normalize"))
+      .andThen(demarcate("Normalize"))
       // Need to do RenameProperties before ExpandJoin which normalizes-out all the tuple indexes
       // on which RenameProperties relies
       .andThen(RenameProperties.apply _)
-      .andThen(title("RenameProperties"))
+      .andThen(demarcate("RenameProperties"))
       .andThen(ExpandDistinct.apply _)
-      .andThen(title("ExpandDistinct"))
+      .andThen(demarcate("ExpandDistinct"))
       .andThen(NestImpureMappedInfix.apply _)
-      .andThen(title("NestMappedInfix"))
+      .andThen(demarcate("NestMappedInfix"))
       .andThen(Normalize.apply _)
-      .andThen(title("Normalize"))
+      .andThen(demarcate("Normalize"))
       .andThen(ExpandJoin.apply _)
-      .andThen(title("ExpandJoin"))
+      .andThen(demarcate("ExpandJoin"))
       .andThen(ExpandMappedInfix.apply _)
-      .andThen(title("ExpandMappedInfix"))
+      .andThen(demarcate("ExpandMappedInfix"))
       .andThen(Normalize.apply _)
-      .andThen(title("Normalize"))
+      .andThen(demarcate("Normalize"))
 
   def apply(ast: Ast) = normalize(ast)
 }

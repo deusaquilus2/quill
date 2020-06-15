@@ -126,6 +126,8 @@ trait SparkIdiom extends SqlIdiom with CannotReturn { self =>
     }
 
   override implicit def selectValueTokenizer(implicit astTokenizer: Tokenizer[Ast], strategy: NamingStrategy): Tokenizer[SelectValue] = Tokenizer[SelectValue] {
+    case SelectValue(Ident(name, _), Some(alias), _) if (multipleSelect) =>
+      stmt"struct(${strategy.default(name).token}.*) AS ${alias.token}"
     case SelectValue(Ident(name, _), _, _) =>
       if (multipleSelect)
         stmt"struct(${strategy.default(name).token}.*)"

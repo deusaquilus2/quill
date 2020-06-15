@@ -38,14 +38,42 @@ sealed trait Ast {
 
 // This represents a simplified Sql-Type. Since it applies to all dialects, it is called
 // Quill-Application-Type hence Quat.
-sealed trait Quat
+sealed trait Quat {
+  def shortString: String = this match {
+    case Quat.CaseClass(fields) => s"CC(${
+      fields.map {
+        case (k, v) => k + (v match {
+          case Quat.Value => ""
+          case other      => ":" + other.shortString
+        })
+      }.mkString(",")
+    })"
+    case Quat.Tuple(fields) => s"Tup(${
+      fields.zipWithIndex.map {
+        case (ast, i) => s"_${i + 1}" + (ast match {
+          case Quat.Value => ""
+          case other      => ":" + other.shortString
+        })
+      }.mkString(",")
+    })"
+    case Quat.Value      => "V"
+    case Quat.Error(msg) => s"QError(${msg.take(20)})"
+  }
+}
 object Quat {
-  case class CaseClass(fields: List[(String, Quat)]) extends Quat
-  case class Tuple(fields: List[Quat]) extends Quat
+  case class CaseClass(fields: List[(String, Quat)]) extends Quat {
+    override def toString: String = s"case class (${fields.map { case (k, v) => s"${k}:${v}" }.mkString(", ")})"
+  }
+  case class Tuple(fields: List[Quat]) extends Quat {
+    override def toString: String = s"Tuple(${fields.mkString(",")})"
+  }
   object Tuple {
     def apply(fields: Quat*) = new Quat.Tuple(fields.toList)
   }
-  object Value extends Quat
+  object Value extends Quat {
+    override def toString: String = "QV"
+  }
+  case class Error(msg: String) extends Quat
 }
 
 sealed trait Query extends Ast
@@ -294,9 +322,12 @@ case class Property(ast: Ast, name: String) extends Ast {
 
   def quat =
     (ast.quat, name) match {
-      case (Quat.Tuple(fields), TupleIndex(i)) => fields(i) // TODO Quat does this not match in certain cases? Which ones?
-      case (Quat.CaseClass(fields), fieldName) => fields.find(_._1 == fieldName).head._2 // TODO Quat does this not match in certain cases? Which ones?
-      case _                                   => Quat.Value
+      case (tup @ Quat.Tuple(fields), TupleIndex(i)) =>
+        fields.applyOrElse(i, (i: Int) => Quat.Error(s"Index ${i} does not exist in the SQL-level ${tup}")) // TODO Quat does this not match in certain cases? Which ones?
+      case (cc @ Quat.CaseClass(fields), fieldName) =>
+        fields.find(_._1 == fieldName).headOption.map(_._2).getOrElse(Quat.Error(s"The field ${fieldName} does not exist in the SQL-level ${cc}")) // TODO Quat does this not match in certain cases? Which ones?
+      case _ =>
+        Quat.Value
     }
 
   // Properties that are 'Hidden' are used for embedded objects whose path should not be expressed

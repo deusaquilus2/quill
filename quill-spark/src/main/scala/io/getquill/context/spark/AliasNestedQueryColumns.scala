@@ -22,7 +22,8 @@ object AliasNestedQueryColumns {
             case Quat.Tuple(fields) =>
               ((0 until fields.length), q.select) match {
                 case ZipMatch(indexesAndSelects) =>
-                  indexesAndSelects.map { case (idx, select) => select.copy(alias = Some(s"_${idx + 1}")) }
+                  val ret = indexesAndSelects.map { case (idx, select) => select.copy(alias = Some(s"_${idx + 1}")) }
+                  ret
                 case _ =>
                   q.select
               }

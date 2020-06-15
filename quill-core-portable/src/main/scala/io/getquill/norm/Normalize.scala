@@ -6,7 +6,7 @@ import io.getquill.ast.StatelessTransformer
 import io.getquill.norm.capture.AvoidCapture
 import io.getquill.ast.Action
 import io.getquill.util.Interpolator
-import io.getquill.util.Messages.{ TraceType, trace }
+import io.getquill.util.Messages.{ TraceType, title, trace }
 import io.getquill.util.Messages.TraceType.Normalizations
 
 import scala.annotation.tailrec
@@ -29,26 +29,30 @@ object Normalize extends StatelessTransformer {
   private def traceNorm[T](label: String) =
     trace[T](s"${label} (Normalize)", 1, Normalizations)
 
+  private def demarcate(heading: String) =
+    ((ast: Query) => title(heading)(ast))
+      .andThen(CheckQuats(heading).apply _)
+
   @tailrec
   private def norm(q: Query): Query =
     q match {
       case NormalizeNestedStructures(query) =>
-        traceNorm("NormalizeNestedStructures")(query)
+        demarcate("NormalizeNestedStructures")(query)
         norm(query)
       case ApplyMap(query) =>
-        traceNorm("ApplyMap")(query)
+        demarcate("ApplyMap")(query)
         norm(query)
       case SymbolicReduction(query) =>
-        traceNorm("SymbolicReduction")(query)
+        demarcate("SymbolicReduction")(query)
         norm(query)
       case AdHocReduction(query) =>
-        traceNorm("AdHocReduction")(query)
+        demarcate("AdHocReduction")(query)
         norm(query)
       case OrderTerms(query) =>
-        traceNorm("OrderTerms")(query)
+        demarcate("OrderTerms")(query)
         norm(query)
       case NormalizeAggregationIdent(query) =>
-        traceNorm("NormalizeAggregationIdent")(query)
+        demarcate("NormalizeAggregationIdent")(query)
         norm(query)
       case other =>
         other

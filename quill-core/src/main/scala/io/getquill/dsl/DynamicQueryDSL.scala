@@ -5,6 +5,7 @@ import io.getquill.ast.Renameable.Fixed
 import scala.language.implicitConversions
 import scala.language.experimental.macros
 import io.getquill.ast._
+import io.getquill.quotation.InferQuatRuntime
 
 import scala.reflect.macros.whitebox.{ Context => MacroContext }
 import io.getquill.util.Messages._
@@ -12,7 +13,8 @@ import io.getquill.util.Messages._
 import scala.annotation.tailrec
 import scala.util.DynamicVariable
 import scala.reflect.ClassTag
-import io.getquill.{ Query, Action => DslAction, ActionReturning, EntityQuery, Ord, Update, Delete, Insert }
+import scala.reflect.runtime.universe.TypeTag
+import io.getquill.{ ActionReturning, Delete, EntityQuery, Insert, Ord, Query, Update, Action => DslAction }
 
 class DynamicQueryDslMacro(val c: MacroContext) {
   import c.universe._
@@ -67,10 +69,10 @@ trait DynamicQueryDsl {
     q.q
   implicit def toQuoted[T <: DslAction[_]](q: DynamicAction[T]): Quoted[T] = q.q
 
-  def dynamicQuery[T](implicit t: ClassTag[T]): DynamicEntityQuery[T] =
+  def dynamicQuery[T](implicit t: ClassTag[T], tt: TypeTag[T]): DynamicEntityQuery[T] =
     DynamicEntityQuery(
       splice[EntityQuery[T]](
-        Entity(t.runtimeClass.getName.split('.').last.split('$').last, Nil, Quat.Value) // TODO Quat parse quat from T classtag here
+        Entity(t.runtimeClass.getName.split('.').last.split('$').last, Nil, InferQuatRuntime.of[T])
       )
     )
 
@@ -99,12 +101,12 @@ trait DynamicQueryDsl {
   def setValue[T, U](
     property: Quoted[T] => Quoted[U],
     value:    U
-  )(implicit enc: Encoder[U]): DynamicSet[T, U] =
+  )(implicit enc: Encoder[U], tt: TypeTag[U]): DynamicSet[T, U] =
     set[T, U](property, spliceLift(value))
 
   def setOpt[T, U](property: Quoted[T] => Quoted[U], value: Option[U])(
     implicit
-    enc: Encoder[U]
+    enc: Encoder[U], tt: TypeTag[U]
   ): DynamicSet[T, U] =
     value match {
       case Some(v) => setValue(property, v)
@@ -117,13 +119,13 @@ trait DynamicQueryDsl {
   def setValue[T, U](
     property: String,
     value:    U
-  )(implicit enc: Encoder[U]): DynamicSet[T, U] =
+  )(implicit enc: Encoder[U], tt: TypeTag[U]): DynamicSet[T, U] =
     set(property, spliceLift(value))
 
   def dynamicQuerySchema[T](
     entity:  String,
     columns: DynamicAlias[T]*
-  ): DynamicEntityQuery[T] = {
+  )(implicit tt: TypeTag[T]): DynamicEntityQuery[T] = {
     val aliases =
       columns.map { alias =>
         @tailrec def path(ast: Ast, acc: List[String] = Nil): List[String] =
@@ -135,12 +137,12 @@ trait DynamicQueryDsl {
           }
 
         PropertyAlias(
-          path(alias.property(splice[T](Ident("v", Quat.Value))).ast), // TODO Parse quat from T type and alias name
+          path(alias.property(splice[T](Ident("v", InferQuatRuntime.of[T]))).ast),
           alias.name
         )
       }
     DynamicEntityQuery(
-      splice[EntityQuery[T]](Entity.Opinionated(entity, aliases.toList, Quat.Value, Fixed)) // TODO Parse quat from T type and alias name
+      splice[EntityQuery[T]](Entity.Opinionated(entity, aliases.toList, InferQuatRuntime.of[T], Fixed))
     )
   }
 
@@ -161,8 +163,8 @@ trait DynamicQueryDsl {
       override def ast = a
     }
 
-  protected def spliceLift[O](o: O)(implicit enc: Encoder[O]) =
-    splice[O](ScalarValueLift("o", o, enc, Quat.Value)) // TODO Quat parse quat from O
+  protected def spliceLift[O](o: O)(implicit enc: Encoder[O], tt: TypeTag[O]) =
+    splice[O](ScalarValueLift("o", o, enc, InferQuatRuntime.of[O]))
 
   object DynamicQuery {
     def apply[T](p: Quoted[Query[T]]) =
@@ -175,21 +177,21 @@ trait DynamicQueryDsl {
 
     protected[getquill] def q: Quoted[Query[T]]
 
-    protected[this] def transform[U, V, R](
+    protected[this] def transform[U, V: TypeTag, R](
       f: Quoted[U] => Quoted[V],
       t: (Ast, Ident, Ast) => Ast,
       r: Ast => R                 = dyn _
     ) =
       withFreshIdent { v =>
         r(t(q.ast, v, f(splice(v)).ast))
-      }(Quat.Value) // TODO Quat should be parsed from V type
+      }(InferQuatRuntime.of[V])
 
     protected[this] def transformOpt[O, R, D <: DynamicQuery[T]](
       opt:  Option[O],
       f:    (Quoted[T], Quoted[O]) => Quoted[R],
       t:    (Quoted[T] => Quoted[R]) => D,
       thiz: D
-    )(implicit enc: Encoder[O]) =
+    )(implicit enc: Encoder[O], tt: TypeTag[O]) =
       opt match {
         case Some(o) =>
           t(v => f(v, spliceLift(o)))
@@ -197,10 +199,10 @@ trait DynamicQueryDsl {
           thiz
       }
 
-    def map[R](f: Quoted[T] => Quoted[R]): DynamicQuery[R] =
+    def map[R: TypeTag](f: Quoted[T] => Quoted[R]): DynamicQuery[R] =
       transform(f, Map)
 
-    def flatMap[R](f: Quoted[T] => Quoted[Query[R]]): DynamicQuery[R] =
+    def flatMap[R: TypeTag](f: Quoted[T] => Quoted[Query[R]]): DynamicQuery[R] =
       transform(f, FlatMap)
 
     def filter(f: Quoted[T] => Quoted[Boolean]): DynamicQuery[T] =
@@ -211,7 +213,7 @@ trait DynamicQueryDsl {
 
     def filterOpt[O](opt: Option[O])(
       f: (Quoted[T], Quoted[O]) => Quoted[Boolean]
-    )(implicit enc: Encoder[O]): DynamicQuery[T] =
+    )(implicit enc: Encoder[O], tt: TypeTag[O]): DynamicQuery[T] =
       transformOpt(opt, f, filter, this)
 
     def filterIf(
@@ -222,12 +224,12 @@ trait DynamicQueryDsl {
 
     def concatMap[R, U](
       f: Quoted[T] => Quoted[U]
-    )(implicit ev: U => Iterable[R]): DynamicQuery[R] =
+    )(implicit ev: U => Iterable[R], tt: TypeTag[U]): DynamicQuery[R] =
       transform(f, ConcatMap)
 
     def sortBy[R](
       f: Quoted[T] => Quoted[R]
-    )(implicit ord: Ord[R]): DynamicQuery[T] =
+    )(implicit ord: Ord[R], tt: TypeTag[R]): DynamicQuery[T] =
       transform(f, SortBy(_, _, _, ord.ord))
 
     def take(n: Quoted[Int]): DynamicQuery[T] =
@@ -263,7 +265,7 @@ trait DynamicQueryDsl {
     def union[U >: T](q2: Quoted[Query[U]]): DynamicQuery[U] =
       dyn(Union(q.ast, q2.ast))
 
-    def groupBy[R](f: Quoted[T] => Quoted[R]): DynamicQuery[(R, Query[T])] =
+    def groupBy[R](f: Quoted[T] => Quoted[R])(implicit tt: TypeTag[R]): DynamicQuery[(R, Query[T])] =
       transform(f, GroupBy)
 
     private def aggregate(op: AggregationOperator) =
@@ -302,25 +304,25 @@ trait DynamicQueryDsl {
     ): DynamicJoinQuery[A, B, (Option[A], Option[B])] =
       DynamicJoinQuery(FullJoin, q, q2)
 
-    private[this] def flatJoin[R](
+    private[this] def flatJoin[R: TypeTag](
       tpe: JoinType,
       on:  Quoted[T] => Quoted[Boolean]
     ): DynamicQuery[R] =
       withFreshIdent { v =>
         dyn(FlatJoin(tpe, q.ast, v, on(splice(v)).ast))
-      }(Quat.Value) // TODO Quat Parse from R
+      }(InferQuatRuntime.of[R])
 
-    def join[A >: T](on: Quoted[A] => Quoted[Boolean]): DynamicQuery[A] =
+    def join[A >: T](on: Quoted[A] => Quoted[Boolean])(implicit tt: TypeTag[A]): DynamicQuery[A] =
       flatJoin(InnerJoin, on)
 
     def leftJoin[A >: T](
       on: Quoted[A] => Quoted[Boolean]
-    ): DynamicQuery[Option[A]] =
+    )(implicit tt: TypeTag[Option[A]]): DynamicQuery[Option[A]] =
       flatJoin(LeftJoin, on)
 
     def rightJoin[A >: T](
       on: Quoted[A] => Quoted[Boolean]
-    ): DynamicQuery[Option[A]] =
+    )(implicit tt: TypeTag[Option[A]]): DynamicQuery[Option[A]] =
       flatJoin(RightJoin, on)
 
     def nonEmpty: Quoted[Boolean] =
@@ -329,7 +331,7 @@ trait DynamicQueryDsl {
     def isEmpty: Quoted[Boolean] =
       splice(UnaryOperation(SetOperator.isEmpty, q.ast))
 
-    def contains[B >: T](value: B)(implicit enc: Encoder[B]): Quoted[Boolean] =
+    def contains[B >: T](value: B)(implicit enc: Encoder[B], tt: TypeTag[B]): Quoted[Boolean] =
       contains(spliceLift(value))
 
     def contains[B >: T](value: Quoted[B]): Quoted[Boolean] =
@@ -353,8 +355,8 @@ trait DynamicQueryDsl {
       withFreshIdent { iA =>
         withFreshIdent { iB =>
           dyn(Join(tpe, q1.ast, q2.ast, iA, iB, f(splice(iA), splice(iB)).ast))
-        }(Quat.Value) // TODO Quat Parse from B
-      }(Quat.Value) // TODO Quat Parse from A
+        }(q2.ast.quat) // TODO Verify Quat Later
+      }(q1.ast.quat) // TODO Verify Quat Later
     }
   }
 
@@ -376,33 +378,33 @@ trait DynamicQueryDsl {
 
     override def filterOpt[O](opt: Option[O])(
       f: (Quoted[T], Quoted[O]) => Quoted[Boolean]
-    )(implicit enc: Encoder[O]): DynamicEntityQuery[T] =
+    )(implicit enc: Encoder[O], tt: TypeTag[O]): DynamicEntityQuery[T] =
       transformOpt(opt, f, filter, this)
 
-    override def map[R](f: Quoted[T] => Quoted[R]): DynamicEntityQuery[R] =
+    override def map[R](f: Quoted[T] => Quoted[R])(implicit tt: TypeTag[R]): DynamicEntityQuery[R] =
       transform(f, Map, dyn)
 
     def insertValue(value: T): DynamicInsert[T] = macro DynamicQueryDslMacro.insertValue
 
     type DynamicAssignment[U] = ((Quoted[T] => Quoted[U]), U)
 
-    private[this] def assignemnts[S](
+    private[this] def assignemnts[S: TypeTag](
       l: List[DynamicSet[S, _]]
     ): List[Assignment] =
       l.collect {
         case s: DynamicSetValue[_, _] =>
-          val v = Ident("v", Quat.Value) // TODO Quat get from S
+          val v = Ident("v", InferQuatRuntime.of[S])
           Assignment(v, s.property(splice(v)).ast, s.value.ast)
       }
 
-    def insert(l: DynamicSet[T, _]*): DynamicInsert[T] =
+    def insert(l: DynamicSet[T, _]*)(implicit tt: TypeTag[T]): DynamicInsert[T] =
       DynamicInsert(
         splice(Insert(DynamicEntityQuery.this.q.ast, assignemnts(l.toList)))
       )
 
     def updateValue(value: T): DynamicUpdate[T] = macro DynamicQueryDslMacro.updateValue
 
-    def update(sets: DynamicSet[T, _]*): DynamicUpdate[T] =
+    def update(sets: DynamicSet[T, _]*)(implicit tt: TypeTag[T]): DynamicUpdate[T] =
       DynamicUpdate(
         splice[Update[T]](
           Update(DynamicEntityQuery.this.q.ast, assignemnts(sets.toList))
@@ -438,19 +440,19 @@ trait DynamicQueryDsl {
     private[this] def dyn[R](ast: Ast) =
       DynamicInsert[R](splice(ast))
 
-    def returning[R](f: Quoted[E] => Quoted[R]): DynamicActionReturning[E, R] =
+    def returning[R](f: Quoted[E] => Quoted[R])(implicit tt: TypeTag[R]): DynamicActionReturning[E, R] =
       withFreshIdent { v =>
         DynamicActionReturning[E, R](splice(Returning(q.ast, v, f(splice(v)).ast)))
-      } { Quat.Value } // TODO Quat should be parsed from R type
+      } { InferQuatRuntime.of[R] }
 
     def returningGenerated[R](
       f: Quoted[E] => Quoted[R]
-    ): DynamicActionReturning[E, R] =
+    )(implicit tt: TypeTag[R]): DynamicActionReturning[E, R] =
       withFreshIdent { v =>
         DynamicActionReturning[E, R](
           splice(ReturningGenerated(q.ast, v, f(splice(v)).ast))
         )
-      } { Quat.Value } // TODO Quat should be parsed from R type
+      } { InferQuatRuntime.of[R] }
 
     def onConflictIgnore: DynamicInsert[E] =
       dyn(
@@ -463,8 +465,8 @@ trait DynamicQueryDsl {
 
     def onConflictIgnore(
       targets: (Quoted[E] => Quoted[Any])*
-    ): DynamicInsert[E] = {
-      val v = splice[E](Ident("v", Quat.Value)) // TODO Quat parse from E
+    )(implicit tt: TypeTag[E]): DynamicInsert[E] = {
+      val v = splice[E](Ident("v", InferQuatRuntime.of[E]))
       val properties =
         targets.toList.map { f =>
           f(v).ast match {

@@ -2,10 +2,25 @@ package io.getquill.quotation
 
 import scala.reflect.macros.whitebox.Context
 import io.getquill.ast._
+import scala.reflect.api.Universe
 
-trait InferQuat {
+trait InferQuat extends InferQuatBase {
   val c: Context
-  import c.universe.{ Ident => _, Constant => _, Function => _, If => _, Block => _, _ }
+  type Uni = c.universe.type
+  // NOTE: u needs to be lazy otherwise sets value from c before c can be initialized by higher level classes
+  lazy val u: Uni = c.universe
+}
+
+object InferQuatRuntime extends InferQuatBase {
+  type Uni = scala.reflect.api.Universe
+  lazy val u = scala.reflect.runtime.universe
+  def of[T: u.TypeTag] = inferQuat(implicitly[u.TypeTag[T]].tpe)
+}
+
+trait InferQuatBase {
+  type Uni <: Universe
+  val u: Uni
+  import u.{ Ident => _, Constant => _, Function => _, If => _, Block => _, _ }
 
   def inferQuat(tpe: Type): Quat = {
 

@@ -289,7 +289,7 @@ trait Parsing extends ValueComputation with InferQuat {
       value
   }
 
-  val impureInfixParser = combinedInfixParser(false, Quat.Value) // TODO Quat in what cases does this come up?
+  val impureInfixParser = combinedInfixParser(false, Quat.Value) // TODO Verify Quat in what cases does this come up?
 
   def combinedInfixParser(infixIsPure: Boolean, quat: Quat): Parser[Ast] = Parser[Ast] {
     case q"$pack.InfixInterpolator(scala.StringContext.apply(..${ parts: List[String] })).infix(..$params)" =>
@@ -356,7 +356,7 @@ trait Parsing extends ValueComputation with InferQuat {
     case id @ c.universe.Ident(TermName(name)) => identClean(Ident(name, inferQuat(id.symbol.typeSignature)))
     case t @ q"$cls.this.$i"                   => identClean(Ident(i.decodedName.toString, inferQuat(t.symbol.typeSignature)))
     case t @ c.universe.Bind(TermName(name), c.universe.Ident(termNames.WILDCARD)) =>
-      identClean(Ident(name, inferQuat(t.symbol.typeSignature))) // TODO Quat what is the type of this thing? In what cases does it happen? Do we need to do something more clever with the tree and get a TypeRef?
+      identClean(Ident(name, inferQuat(t.symbol.typeSignature))) // TODO Verify Quat what is the type of this thing? In what cases does it happen? Do we need to do something more clever with the tree and get a TypeRef?
   }
   private def identClean(x: Ident): Ident = x.copy(name = x.name.replace("$", ""))
   private def ident(x: TermName, quat: Quat): Ident = identClean(Ident(x.decodedName.toString, quat))

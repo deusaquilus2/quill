@@ -64,7 +64,7 @@ object VerifySqlQuery {
         }).flatten
       (freeVariables ++ freeIdents.map(_.idName)) match {
         case Nil  => None
-        case free => Some(Error(free.map(f => Ident(f.name, Quat.Value)), ast)) // TODO Quat Should this be a Error of VIdent
+        case free => Some(Error(free.map(f => Ident(f.name, Quat.Value)), ast)) // Quat is not actually needed here here just for the sake of the Error Ident
       }
     }
 

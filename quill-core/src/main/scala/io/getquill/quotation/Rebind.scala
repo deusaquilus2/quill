@@ -21,7 +21,7 @@ object Rebind {
     def toIdent(s: Symbol) =
       // Casing there is needed because scala doesn't undestand c.universe.Type =:= infer.c.universe.Type
       // alternatively, we could wrap this entire clause (starting with 'apply') in a class and extend inferQuat
-      Ident(s.name.decodedName.toString, infer.inferQuat(s.typeSignature.asInstanceOf[infer.c.universe.Type])) // TODO Quat verify
+      Ident(s.name.decodedName.toString, infer.inferQuat(s.typeSignature.asInstanceOf[infer.c.universe.Type])) // TODO Verify Quat
 
     def paramIdents(method: MethodSymbol) =
       method.paramLists.flatten.map(toIdent)

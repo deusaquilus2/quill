@@ -119,7 +119,6 @@ object SqlQuery {
 
   private def flatten(sources: List[FromContext], finalFlatMapBody: Ast, alias: String): FlattenSqlQuery = {
 
-    // TODO Quat take from finalFlatMapBody, that should have the correct value
     def select(alias: String, quat: Quat) = SelectValue(Ident(alias, quat), None) :: Nil
 
     def base(q: Ast, alias: String) = {

@@ -299,7 +299,7 @@ trait OrientDBIdiom extends Idiom {
   }
 
   implicit def entityTokenizer(implicit strategy: NamingStrategy): Tokenizer[Entity] = Tokenizer[Entity] {
-    case Entity.Opinionated(name, _, renameable, _) =>
+    case Entity.Opinionated(name, _, _, renameable) =>
       renameable.fixedOr(name.token)(strategy.table(name).token)
   }
 

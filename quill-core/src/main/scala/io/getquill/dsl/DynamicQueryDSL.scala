@@ -308,7 +308,7 @@ trait DynamicQueryDsl {
     ): DynamicQuery[R] =
       withFreshIdent { v =>
         dyn(FlatJoin(tpe, q.ast, v, on(splice(v)).ast))
-      }(Quat.Value) // Quat TODO Parse from R
+      }(Quat.Value) // TODO Quat Parse from R
 
     def join[A >: T](on: Quoted[A] => Quoted[Boolean]): DynamicQuery[A] =
       flatJoin(InnerJoin, on)
@@ -353,8 +353,8 @@ trait DynamicQueryDsl {
       withFreshIdent { iA =>
         withFreshIdent { iB =>
           dyn(Join(tpe, q1.ast, q2.ast, iA, iB, f(splice(iA), splice(iB)).ast))
-        }(Quat.Value) // Quat TODO Parse from B
-      }(Quat.Value) // Quat TODO Parse from A
+        }(Quat.Value) // TODO Quat Parse from B
+      }(Quat.Value) // TODO Quat Parse from A
     }
   }
 

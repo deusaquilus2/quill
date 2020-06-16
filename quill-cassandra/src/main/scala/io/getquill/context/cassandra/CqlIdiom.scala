@@ -190,7 +190,7 @@ trait CqlIdiom extends Idiom {
   }
 
   implicit def entityTokenizer(implicit strategy: NamingStrategy): Tokenizer[Entity] = Tokenizer[Entity] {
-    case Entity.Opinionated(name, properties, renameable, _) =>
+    case Entity.Opinionated(name, properties, _, renameable) =>
       renameable.fixedOr(name.token)(strategy.table(name).token)
   }
 

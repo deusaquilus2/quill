@@ -149,7 +149,7 @@ object ApplyMap {
       //    a.*join(d).on((b, e) => on[iA := c, iB := f]).map(t => (c[b := t._1], f[e := t._2]))
       case Join(tpe, DetachableMap(a, b, c), DetachableMap(d, e, f), iA, iB, on) =>
         val onr = BetaReduction(on, iA -> c, iB -> f)
-        val t = Ident("t", Quat.Tuple(c.quat, f.quat))
+        val t = Ident("t", Quat.Tuple(b.quat, e.quat))
         val t1 = BetaReduction(c, b -> Property(t, "_1"))
         val t2 = BetaReduction(f, e -> Property(t, "_2"))
         Some(Map(Join(tpe, a, d, b, e, onr), t, Tuple(List(t1, t2))))
@@ -165,7 +165,7 @@ object ApplyMap {
       //    a.*join(b).on((iA, c) => on[iB := d]).map(t => (t._1, d[c := t._2]))
       case Join(tpe, a, DetachableMap(b, c, d), iA, iB, on) =>
         val onr = BetaReduction(on, iB -> d)
-        val t = Ident("t", Quat.Tuple(a.quat, d.quat))
+        val t = Ident("t", Quat.Tuple(a.quat, c.quat))
         val t1 = Property(t, "_1")
         val t2 = BetaReduction(d, c -> Property(t, "_2"))
         Some(Map(Join(tpe, a, b, iA, c, onr), t, Tuple(List(t1, t2))))
@@ -182,7 +182,7 @@ object ApplyMap {
       // Quat Equivalence: a.quat == b.quat == iA.quat
       case Join(tpe, DetachableMap(a, b, c), d, iA, iB, on) =>
         val onr = BetaReduction(on, iA -> c)
-        val t = Ident("t", Quat.Tuple(c.quat, d.quat))
+        val t = Ident("t", Quat.Tuple(b.quat, d.quat))
         val t1 = BetaReduction(c, b -> Property(t, "_1"))
         val t2 = Property(t, "_2")
         Some(Map(Join(tpe, a, d, b, iB, onr), t, Tuple(List(t1, t2))))

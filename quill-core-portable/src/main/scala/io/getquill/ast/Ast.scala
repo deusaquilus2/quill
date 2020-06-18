@@ -121,11 +121,26 @@ sealed trait Quat {
 object Quat {
   case class CaseClass(fields: List[(String, Quat)]) extends Quat {
     override def toString: String = s"case class (${fields.map { case (k, v) => s"${k}:${v}" }.mkString(", ")})"
+    override def equals(obj: Any): Boolean = {
+      obj match {
+        case t: Quat.Tuple =>
+          this.fields == t.toCaseClass.fields
+        case CaseClass(otherFields) => fields == otherFields
+        case _                      => false
+      }
+    }
   }
   case class Tuple(fields: List[Quat]) extends Quat {
     override def toString: String = s"Tuple(${fields.mkString(",")})"
     def toCaseClass: Quat.CaseClass =
-      CaseClass(this.fields.zipWithIndex.map { case (field, i) => (s"_${i}", field) })
+      CaseClass(this.fields.zipWithIndex.map { case (field, i) => (s"_${i + 1}", field) })
+    override def equals(obj: Any): Boolean = {
+      obj match {
+        case cc: Quat.CaseClass => this.toCaseClass.fields == cc.fields
+        case Tuple(otherFields) => fields == otherFields
+        case _                  => false
+      }
+    }
   }
   object Tuple {
     def apply(fields: Quat*) = new Quat.Tuple(fields.toList)

@@ -120,20 +120,20 @@ case class BetaReduction(replacements: Replacements)
 
 object BetaReduction {
 
-  private def checkQuats(replacements: Seq[(Ast, Ast)]) =
+  private def checkQuats(body: Ast, replacements: Seq[(Ast, Ast)]) =
     replacements.foreach {
       case (orig, rep) =>
         if (orig.quat != rep.quat)
-          throw new IllegalArgumentException(s"Cannot beta reduce $orig -> $rep. They have different types: ${orig.quat} and ${rep.quat}")
+          throw new IllegalArgumentException(s"Cannot beta reduce [$orig -> $rep] within [$body]. They have different types: ${orig.quat.shortString} and ${rep.quat.shortString}")
     }
 
   def apply(ast: Ast, t: (Ast, Ast)*): Ast = {
-    checkQuats(t)
+    checkQuats(ast, t)
     apply(ast, Replacements(t.toMap))
   }
 
   def apply(ast: Ast, replacements: Replacements): Ast = {
-    checkQuats(replacements.map.toSeq)
+    checkQuats(ast, replacements.map.toSeq)
     BetaReduction(replacements).apply(ast) match {
       case `ast` => ast
       case other => apply(other, Replacements.empty)

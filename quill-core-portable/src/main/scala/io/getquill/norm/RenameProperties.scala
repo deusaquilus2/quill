@@ -66,7 +66,8 @@ object RenameProperties extends StatelessTransformer {
                 val propsR = props.map { prop =>
                   val replace =
                     trace"Finding Replacements for $props inside ${prop.ast} using schema $schema:" andReturn
-                      replacements(prop.ast, schema) // A BetaReduction on a Property will always give back a Property
+                      // TODO Quat is it legiminate to always cast to Ident here?
+                      replacements(prop.ast.asInstanceOf[Ident], schema) // A BetaReduction on a Property will always give back a Property
                   BetaReduction(prop, replace: _*).asInstanceOf[Property]
                 }
                 traceDifferent(props, propsR)
@@ -213,16 +214,17 @@ object RenameProperties extends StatelessTransformer {
   case class EntitySchema(e: Entity) extends Schema {
     def noAliases = e.properties.isEmpty
 
-    private def subSchema(path: List[String]) =
+    private def subSchema(subPath: List[String]) = {
       EntitySchema(Entity(s"sub-${e.name}", e.properties.flatMap {
         case PropertyAlias(aliasPath, alias) =>
-          if (aliasPath == path)
+          if (aliasPath == subPath)
             List(PropertyAlias(aliasPath, alias))
-          else if (aliasPath.startsWith(path))
-            List(PropertyAlias(aliasPath.diff(path), alias))
+          else if (aliasPath.startsWith(subPath))
+            List(PropertyAlias(aliasPath.diff(subPath), alias))
           else
             List()
-      }, e.quat)) // TOTO Quat: rename the properties of the entity's quat here per renaming of the schema
+      }, e.quat.lookup(subPath))) // TODO Quat rename the properties of the entity's quat here per renaming of the schema
+    }
 
     def subSchemaOrEmpty(path: List[String]): Schema =
       trace"Creating sub-schema for entity $e at path $path will be" andReturn {
@@ -412,26 +414,45 @@ object RenameProperties extends StatelessTransformer {
         (f(q, x, prr), schema)
     }
 
-  private def replacements(base: Ast, schema: Schema): List[(Ast, Ast)] =
+  private def replacements(base: Ident, schema: Schema, subPath: List[String] = Nil): List[(Ast, Ast)] = {
+
+    def buildReplacements(base: Ast, newBase: Ast, path: List[String], alias: String) = {
+      val oldPath = path
+      val newPath = path.dropRight(1) :+ alias
+
+      def buildRecurse(base: Ast, path: List[String]): Ast =
+        path match {
+          case Nil          => base
+          // Replace with Fixed, Visible since the property needs to be hidden and not replaceable
+          // TODO Quat (not sure that the outer tuple prop _1 etc.. should be hidden)
+          // Note that technically in the properties that need to be replaced, Fixed, Visible are not the correct values of the opinions,
+          // however, since beta reduction does not care about opinions (i.e. they are all reset to neutral) it should not matter.
+          case head :: tail => buildRecurse(Property.Opinionated(base, head, Fixed, Visible), tail)
+        }
+
+      val from = buildRecurse(base, oldPath)
+      val to = buildRecurse(newBase, newPath)
+      from -> to
+    }
+
     schema match {
       // The entity renameable property should already have been marked as Fixed
       case EntitySchema(Entity(entity, properties, _)) =>
-        //trace"%4 Entity Schema: " andReturn
         properties.flatMap {
           // A property alias means that there was either a querySchema(tableName, _.propertyName -> PropertyAlias)
           // or a schemaMeta (which ultimately gets turned into a querySchema) which is the same thing but implicit.
           // In this case, we want to rename the properties based on the property aliases as well as mark
           // them Fixed since they should not be renamed based on
           // the naming strategy wherever they are tokenized (e.g. in SqlIdiom)
-          case PropertyAlias(path, alias) =>
-            def apply(base: Ast, path: List[String]): Ast =
-              path match {
-                case Nil          => base
-                case head :: tail => apply(Property(base, head), tail)
-              }
-            List(
-              apply(base, path) -> Property.Opinionated(base, alias, Fixed, Visible) // Hidden properties cannot be renamed
-            )
+          case PropertyAlias(propertyPath, alias) =>
+            // If in a tuple schema it's going to be in a subpath e.g. say you have querySchema(Person, _.emb.foo -> bar)
+            // and you do people.join(addresses).on((p,a) => ...).map { case (p,a) => p.emb.foo } you'll get TupleSchema(<0 doesn't exist>, 1->_1.emb.foo -> bar)
+            // that in tern needs to replace p.emb.foo. However it will actually be _1.emb.foo which must now be _1.emb.bar. That means
+            // the "sub-path" _1 needs to be appended to the replace path.
+            val path = subPath ++ propertyPath
+            val newBase = base.copy(quat = base.quat.repath(path, alias))
+            val replacements = buildReplacements(base, newBase, path, alias)
+            List(replacements)
         }
       case tup: TupleSchema =>
         //trace"%4 Tuple Schema: " andReturn
@@ -440,8 +461,9 @@ object RenameProperties extends StatelessTransformer {
             replacements(
               // Should not matter whether property is fixed or variable here
               // since beta reduction ignores that
-              Property(base, s"_${idx + 1}"),
-              value
+              base,
+              value,
+              List(s"_${idx + 1}")
             )
         }
       case cc: CaseClassSchema =>
@@ -451,8 +473,9 @@ object RenameProperties extends StatelessTransformer {
             replacements(
               // Should not matter whether property is fixed or variable here
               // since beta reduction ignores that
-              Property(base, property),
-              value
+              base,
+              value,
+              List(property)
             )
         }
       case CompoundSchema(a, b) =>
@@ -460,4 +483,5 @@ object RenameProperties extends StatelessTransformer {
       // Do nothing if it is an empty schema
       case EmptySchema => List()
     }
+  }
 }

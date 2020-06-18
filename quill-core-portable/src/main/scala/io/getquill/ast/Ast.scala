@@ -59,6 +59,64 @@ sealed trait Quat {
     case Quat.Value      => "V"
     case Quat.Error(msg) => s"QError(${msg.take(20)})"
   }
+
+  def lookup(path: String): Quat = (this, path) match {
+    case (tup @ Quat.Tuple(fields), TupleIndex(i)) =>
+      fields.applyOrElse(i, (i: Int) => Quat.Error(s"Index ${i} does not exist in the SQL-level ${tup}")) // TODO Quat does this not match in certain cases? Which ones?
+    case (cc @ Quat.CaseClass(fields), fieldName) =>
+      fields.find(_._1 == fieldName).headOption.map(_._2).getOrElse(Quat.Error(s"The field ${fieldName} does not exist in the SQL-level ${cc}")) // TODO Quat does this not match in certain cases? Which ones?
+    case (Quat.Value, fieldName) =>
+      Quat.Error(s"The field ${fieldName} does not exist in an SQL-level leaf-node") // TODO Quat is there a case where we're putting a property on a entity which is actually a value?
+  }
+  def lookup(list: List[String]): Quat =
+    list match {
+      case head :: tail => this.lookup(head).lookup(tail)
+      case Nil          => this
+    }
+
+  /** Rename a property of a Quat.Tuple or Quat.CaseClass. Optionally can specify a new Quat to change the property to. */
+  def renameProperty(property: String, newProperty: String, newQuat: Option[Quat] = None): Quat = {
+    // sanity check does the property exist in the first place
+    this.lookup(property) match {
+      case e: Quat.Error => e
+      case _ => {
+        // TODO Quat, test quat changes with a tuple property rename
+        (this, property, newProperty) match {
+          case (tup: Quat.Tuple, property, newProperty) =>
+            val newFields =
+              tup.toCaseClass.fields.map {
+                case (field, quat) => if (field == property) (newProperty, newQuat.getOrElse(quat)) else (field, quat)
+              }
+            Quat.CaseClass(newFields)
+          case (cc: Quat.CaseClass, property, newProperty) =>
+            val newFields =
+              cc.fields.map {
+                case (field, quat) => if (field == property) (newProperty, newQuat.getOrElse(quat)) else (field, quat)
+              }
+            Quat.CaseClass(newFields)
+          case (Quat.Value, _, _) => Quat.Error(s"Cannot replace property ${property} with ${newProperty} on a Value SQL-level type")
+          case _                  => Quat.Error(s"Invalid state reached for ${this.shortString}, ${property}, ${newProperty}")
+        }
+      }
+    }
+  }
+
+  // TODO Quat tail recursive optimization
+  def repath(path: List[String], newEndProperty: String): Quat = {
+    path match {
+      case Nil => // do nothing
+        this
+
+      case head :: Nil =>
+        this.renameProperty(head, newEndProperty)
+
+      case head :: tail =>
+        val child = this.lookup(head)
+        val newChild = child.repath(tail, newEndProperty)
+        this.renameProperty(head, head, Some(newChild))
+    }
+  }
+
 }
 object Quat {
   case class CaseClass(fields: List[(String, Quat)]) extends Quat {
@@ -66,6 +124,8 @@ object Quat {
   }
   case class Tuple(fields: List[Quat]) extends Quat {
     override def toString: String = s"Tuple(${fields.mkString(",")})"
+    def toCaseClass: Quat.CaseClass =
+      CaseClass(this.fields.zipWithIndex.map { case (field, i) => (s"_${i}", field) })
   }
   object Tuple {
     def apply(fields: Quat*) = new Quat.Tuple(fields.toList)
@@ -319,15 +379,7 @@ case class Property(ast: Ast, name: String) extends Ast {
   // scala creates companion objects, the apply/unapply wouldn't be able to work correctly.
   def renameable: Renameable = Renameable.neutral
 
-  def quat =
-    (ast.quat, name) match {
-      case (tup @ Quat.Tuple(fields), TupleIndex(i)) =>
-        fields.applyOrElse(i, (i: Int) => Quat.Error(s"Index ${i} does not exist in the SQL-level ${tup}")) // TODO Quat does this not match in certain cases? Which ones?
-      case (cc @ Quat.CaseClass(fields), fieldName) =>
-        fields.find(_._1 == fieldName).headOption.map(_._2).getOrElse(Quat.Error(s"The field ${fieldName} does not exist in the SQL-level ${cc}")) // TODO Quat does this not match in certain cases? Which ones?
-      case _ =>
-        Quat.Value
-    }
+  def quat = ast.quat.lookup(name)
 
   // Properties that are 'Hidden' are used for embedded objects whose path should not be expressed
   // during SQL Tokenization.

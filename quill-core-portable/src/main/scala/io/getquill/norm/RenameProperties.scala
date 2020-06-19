@@ -41,12 +41,12 @@ object CompleteRenames extends StatelessTransformer {
 object ApplyRenamesToProps extends StatelessTransformer {
   override def apply(e: Ast): Ast = e match {
 
-    case p @ Property(ast, name) =>
+    case p @ Property.Opinionated(ast, name, renameable, visibility) =>
       val newAst = apply(ast)
       // Check the quat if it is renaming this property if so rename it. Otherwise property is the same
       newAst.quat.renames.find(_._1 == name) match {
         case Some((_, newName)) =>
-          Property(newAst, newName)
+          Property.Opinionated(newAst, newName, renameable, visibility)
         case None => p
       }
 

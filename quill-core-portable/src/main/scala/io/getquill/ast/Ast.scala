@@ -125,7 +125,12 @@ object Quat {
     override def toString: String = s"Quat.Product(${fields.map { case (k, v) => s"${k}:${v}" }.mkString(", ")})"
     override def withRenames(renames: List[(String, String)]) =
       Product.WithRenames(fields, renames)
-    /** Rename the properties and reset renames to empty */
+    /**
+     * Rename the properties and reset renames to empty.
+     * An interesting idea would be not to clear
+     * the renames at the end but rather keep them around until the SqlQuery phase wherein we could potentially
+     * create SQL aliases not based on the renamed properties by based on the original property name.
+     */
     override def applyRenames = {
       val newFields = fields.map {
         case (f, q) =>

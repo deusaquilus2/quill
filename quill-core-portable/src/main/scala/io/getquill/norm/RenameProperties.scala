@@ -13,11 +13,11 @@ object NewRenameProperties {
 
   def apply(ast: Ast) = {
     (identity[Ast] _)
-      .andThen(PropagateRenames.apply(_:Ast))
+      .andThen(PropagateRenames.apply(_: Ast))
       .andThen(demarcate("PropagateRenames"))
-      .andThen(ApplyRenamesToProps.apply(_:Ast))
+      .andThen(ApplyRenamesToProps.apply(_: Ast))
       .andThen(demarcate("ApplyRenamesToProps"))
-      .andThen(CompleteRenames.apply(_:Ast))
+      .andThen(CompleteRenames.apply(_: Ast))
       .andThen(demarcate("CompleteRenames"))(ast) // Quats can be invalid in between this phase and the previous one
   }
 }
@@ -25,6 +25,7 @@ object NewRenameProperties {
 object CompleteRenames extends StatelessTransformer {
   override def apply(e: Ast): Ast = e match {
     case e: Ident => e.copy(quat = e.quat.applyRenames)
+    case other    => super.apply(other)
   }
 }
 
@@ -92,19 +93,19 @@ object PropagateRenames extends StatelessTransformer {
         Assignment(aliasR, propertyR, valueR)
     }
 
-  private def apply(a: Action): Action =
+  override def apply(a: Action): Action =
     a match {
       case Insert(q: Query, assignments) =>
         val qr = apply(q)
         val assignmentsR = reassign(assignments, qr.quat)
         Insert(qr, assignmentsR)
 
-      case Update(q: Query, assignments) => a
+      case Update(q: Query, assignments) =>
         val qr = apply(q)
         val assignmentsR = reassign(assignments, qr.quat)
         Update(qr, assignmentsR)
 
-      case Returning(action: Action, alias, body) =>a
+      case Returning(action: Action, alias, body) =>
         val actionR = apply(action)
         val aliasR = alias.withRenames(actionR.quat)
         val bodyR = BetaReduction(body, alias -> aliasR)
@@ -116,33 +117,30 @@ object PropagateRenames extends StatelessTransformer {
         val bodyR = BetaReduction(body, alias -> aliasR)
         ReturningGenerated(actionR, aliasR, bodyR)
 
-        // TODO Finish this, not sure what do do in OnConflict.Properties i.e. what to beta-reduce
-//      case OnConflict(oca: Action, target, act) =>
-//        val actionR = apply(oca)
-//        val targetR =
-//          target match {
-//            case OnConflict.Properties(props) =>
-//              val propsR = props.map { prop =>
-//                BetaReduction(prop, )
-//              }
-//              OnConflict.Properties(props)
-//
-//            case v @ OnConflict.NoTarget => v
-//          }
-//        val actR = act match {
-//          case OnConflict.Update(assignments) =>
-//            val assignmentsR = assignments
-//            OnConflict.Update(assignmentsR)
-//          case _ => act
-//        }
-//        OnConflict(actionR, targetR, actR)
-//
-//      case other => super.apply(other)
-//    }
-
-
+      // TODO Finish this, not sure what do do in OnConflict.Properties i.e. what to beta-reduce
+      //      case OnConflict(oca: Action, target, act) =>
+      //        val actionR = apply(oca)
+      //        val targetR =
+      //          target match {
+      //            case OnConflict.Properties(props) =>
+      //              val propsR = props.map { prop =>
+      //                BetaReduction(prop, )
+      //              }
+      //              OnConflict.Properties(props)
+      //
+      //            case v @ OnConflict.NoTarget => v
+      //          }
+      //        val actR = act match {
+      //          case OnConflict.Update(assignments) =>
+      //            val assignmentsR = assignments
+      //            OnConflict.Update(assignmentsR)
+      //          case _ => act
+      //        }
+      //        OnConflict(actionR, targetR, actR)
+      //
+      case other => super.apply(other)
+    }
 }
-
 
 object RenameProperties extends StatelessTransformer {
   val interp = new Interpolator(Normalizations, 3)

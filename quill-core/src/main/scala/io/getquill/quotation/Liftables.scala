@@ -192,7 +192,6 @@ trait Liftables {
 
   implicit val quatLiftable: Liftable[Quat] = Liftable[Quat] {
     case Quat.Product.WithRenames(fields, renames) => q"$pack.Quat.Product.WithRenames($fields, $renames)"
-    case Quat.Product(fields)                      => q"$pack.Quat.Product($fields)"
     case Quat.Value                                => q"$pack.Quat.Value"
     case Quat.Error(msg)                           => q"$pack.Quat.Error($msg)"
   }

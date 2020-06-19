@@ -1,7 +1,6 @@
 package io.getquill.ast
 
-import io.getquill.{ NamingStrategy, ast }
-import io.getquill.norm.RenameProperties.TupleIndex
+import io.getquill.NamingStrategy
 
 //************************************************************
 
@@ -61,6 +60,7 @@ sealed trait Quat {
       fields.find(_._1 == fieldName).headOption.map(_._2).getOrElse(Quat.Error(s"The field ${fieldName} does not exist in the SQL-level ${cc}")) // TODO Quat does this not match in certain cases? Which ones?
     case (Quat.Value, fieldName) =>
       Quat.Error(s"The field ${fieldName} does not exist in an SQL-level leaf-node") // TODO Quat is there a case where we're putting a property on a entity which is actually a value?
+    case (Quat.Error(msg), _) => Quat.Error(s"${msg}. Also tried to lookup ${path} from node.")
   }
   def lookup(list: List[String]): Quat =
     list match {
@@ -151,9 +151,9 @@ object Quat {
      * (see `PropagateRenames` for more detail)
      */
     object WithRenames {
-      def apply(fields: List[(String, Quat)], renames: List[(String, String)]) =
+      def apply(fields: List[(String, Quat)], theRenames: List[(String, String)]) =
         new Product(fields) {
-          override def renames: List[(String, String)] = renames
+          override def renames: List[(String, String)] = theRenames
         }
       def unapply(p: Quat.Product) =
         Some((p.fields, p.renames))
@@ -161,7 +161,7 @@ object Quat {
   }
   object Tuple {
     def apply(fields: Quat*): Quat.Product = apply(fields.toList)
-    def apply(fields: Seq[Quat]): Quat.Product = new Quat.Product(fields.zipWithIndex.map { case (f, i) => (s"_${i}", f) }.toList)
+    def apply(fields: List[Quat]): Quat.Product = new Quat.Product(fields.zipWithIndex.map { case (f, i) => (s"_${i + 1}", f) })
   }
   object Value extends Quat {
 

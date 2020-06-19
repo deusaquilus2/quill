@@ -129,14 +129,18 @@ object BetaReduction {
 
   def apply(ast: Ast, t: (Ast, Ast)*): Ast = {
     checkQuats(ast, t)
-    apply(ast, Replacements(t.toMap))
+    val output = apply(ast, Replacements(t.toMap))
+    output
   }
 
   def apply(ast: Ast, replacements: Replacements): Ast = {
     checkQuats(ast, replacements.map.toSeq)
     BetaReduction(replacements).apply(ast) match {
-      case `ast` => ast
-      case other => apply(other, Replacements.empty)
+      // Since it is possible for the AST to match but the match not be exactly the same (e.g.
+      // if a AST property not in the product cases comes up (e.g. Ident's quat.rename etc...) make
+      // sure to return the actual AST that was matched as opposed to the one passed in.
+      case matchingAst @ `ast` => matchingAst
+      case other               => apply(other, Replacements.empty)
     }
   }
 }

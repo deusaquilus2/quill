@@ -50,7 +50,12 @@ sealed trait Quat {
           case other      => ":" + other.shortString
         })
       }.mkString(",")
-    })"
+    })${
+      (this.renames match {
+        case Nil   => ""
+        case other => s"[${other.map { case (k, v) => k + "->" + v }.mkString(",")}]"
+      })
+    }"
     case Quat.Value      => "V"
     case Quat.Error(msg) => s"QError(${msg.take(20)})"
   }

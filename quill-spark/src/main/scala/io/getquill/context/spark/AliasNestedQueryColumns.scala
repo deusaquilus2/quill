@@ -19,15 +19,7 @@ object AliasNestedQueryColumns {
       case q: FlattenSqlQuery =>
         val newSelects =
           q.quat match {
-            case Quat.Tuple(fields) =>
-              ((0 until fields.length), q.select) match {
-                case ZipMatch(indexesAndSelects) =>
-                  val ret = indexesAndSelects.map { case (idx, select) => select.copy(alias = Some(s"_${idx + 1}")) }
-                  ret
-                case _ =>
-                  q.select
-              }
-            case Quat.CaseClass(fields) =>
+            case Quat.Product(fields) =>
               (fields.map(_._1), q.select) match {
                 case ZipMatch(fieldsAndSelects) =>
                   fieldsAndSelects.map { case (field, select) => select.copy(alias = Some(field)) }

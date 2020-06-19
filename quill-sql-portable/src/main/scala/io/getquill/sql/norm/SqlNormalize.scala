@@ -31,7 +31,8 @@ class SqlNormalize(concatBehavior: ConcatBehavior, equalityBehavior: EqualityBeh
       .andThen(demarcate("Normalize"))
       // Need to do RenameProperties before ExpandJoin which normalizes-out all the tuple indexes
       // on which RenameProperties relies
-      .andThen(RenameProperties.apply _)
+      //.andThen(RenameProperties.apply _)
+      .andThen(NewRenameProperties.apply _)
       .andThen(demarcate("RenameProperties"))
       .andThen(ExpandDistinct.apply _)
       .andThen(demarcate("ExpandDistinct"))

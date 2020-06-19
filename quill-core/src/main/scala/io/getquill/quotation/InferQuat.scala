@@ -53,7 +53,7 @@ trait InferQuatBase {
           Quat.Tuple(fields.map { case (_, fieldType) => parseType(fieldType) })
         // For other types of case classes
         case CaseClassBaseType(name, fields) =>
-          Quat.CaseClass(fields.map { case (fieldName, fieldType) => (fieldName, parseType(fieldType)) })
+          Quat.Product(fields.map { case (fieldName, fieldType) => (fieldName, parseType(fieldType)) })
         // Otherwise it's a terminal value
         case _ =>
           Quat.Value

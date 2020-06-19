@@ -191,10 +191,10 @@ trait Liftables {
   }
 
   implicit val quatLiftable: Liftable[Quat] = Liftable[Quat] {
-    case Quat.CaseClass(fields) => q"$pack.Quat.CaseClass($fields)"
-    case Quat.Tuple(fields)     => q"$pack.Quat.Tuple($fields)"
-    case Quat.Value             => q"$pack.Quat.Value"
-    case Quat.Error(msg)        => q"$pack.Quat.Error($msg)"
+    case Quat.Product.WithRenames(fields, renames) => q"$pack.Quat.Product.WithRenames($fields, $renames)"
+    case Quat.Product(fields)                      => q"$pack.Quat.Product($fields)"
+    case Quat.Value                                => q"$pack.Quat.Value"
+    case Quat.Error(msg)                           => q"$pack.Quat.Error($msg)"
   }
 
   implicit val identLiftable: Liftable[Ident] = Liftable[Ident] {

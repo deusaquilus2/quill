@@ -5,6 +5,144 @@ import io.getquill.ast.Visibility.Visible
 import io.getquill.ast._
 import io.getquill.util.Interpolator
 import io.getquill.util.Messages.TraceType.Normalizations
+import io.getquill.util.Messages.title
+
+object NewRenameProperties {
+  private def demarcate(heading: String) =
+    ((ast: Ast) => title(heading)(ast))
+
+  def apply(ast: Ast) = {
+    (identity[Ast] _)
+      .andThen(PropagateRenames.apply(_:Ast))
+      .andThen(demarcate("PropagateRenames"))
+      .andThen(ApplyRenamesToProps.apply(_:Ast))
+      .andThen(demarcate("ApplyRenamesToProps"))
+      .andThen(CompleteRenames.apply(_:Ast))
+      .andThen(demarcate("CompleteRenames"))(ast) // Quats can be invalid in between this phase and the previous one
+  }
+}
+
+object CompleteRenames extends StatelessTransformer {
+  override def apply(e: Ast): Ast = e match {
+    case e: Ident => e.copy(quat = e.quat.applyRenames)
+  }
+}
+
+/** Take renames propogated to the quats and apply them to properties */
+object ApplyRenamesToProps extends StatelessTransformer {
+  override def apply(e: Ast): Ast = e match {
+
+    case p @ Property(ast, name) =>
+      val newAst = apply(ast)
+      // Check the quat if it is renaming this property if so rename it. Otherwise property is the same
+      newAst.quat.renames.find(_._1 == name) match {
+        case Some((_, newName)) =>
+          Property(newAst, newName)
+        case None => p
+      }
+
+    case other => super.apply(other)
+  }
+}
+
+object PropagateRenames extends StatelessTransformer {
+  implicit class IdentExt(id: Ident) {
+    def withRenames(from: Quat) =
+      id.copy(quat = id.quat.withRenames(from.renames))
+  }
+
+  def applyBody(a: Ast, b: Ident, c: Ast)(f: (Ast, Ident, Ast) => Query) = {
+    val ar = apply(a)
+    val br = b.withRenames(ar.quat)
+    val cr = BetaReduction(c, b -> br)
+    f(ar, br, apply(cr))
+  }
+
+  override def apply(e: Query): Query =
+    // TODO Quat Do I need to do something for infixes?
+    e match {
+      case e: Entity          => e.syncToQuat
+      case Filter(a, b, c)    => applyBody(a, b, c)(Filter)
+      case Map(a, b, c)       => applyBody(a, b, c)(Map)
+      case FlatMap(a, b, c)   => applyBody(a, b, c)(FlatMap)
+      case ConcatMap(a, b, c) => applyBody(a, b, c)(ConcatMap)
+      case GroupBy(a, b, c)   => applyBody(a, b, c)(GroupBy)
+      case SortBy(a, b, c, d) => applyBody(a, b, c)(SortBy(_, _, _, d))
+      case Join(t, a, b, iA, iB, on) =>
+        val ar = apply(a)
+        val br = apply(b)
+        val iAr = iA.withRenames(ar.quat)
+        val iBr = iB.withRenames(br.quat)
+        val onr = BetaReduction(on, iA -> iAr, iB -> iBr)
+        Join(t, ar, br, iAr, iBr, apply(onr))
+      case FlatJoin(t, a, iA, on) =>
+        val ar = apply(a)
+        val iAr = iA.withRenames(ar.quat)
+        val onr = BetaReduction(on, iA -> iAr)
+        FlatJoin(t, a, iAr, apply(onr))
+      case other => super.apply(other)
+    }
+
+  def reassign(assignments: List[Assignment], quat: Quat) =
+    assignments.map {
+      case Assignment(alias, property, value) =>
+        val aliasR = alias.withRenames(quat)
+        val propertyR = BetaReduction(property, alias -> aliasR)
+        val valueR = BetaReduction(value, alias -> aliasR)
+        Assignment(aliasR, propertyR, valueR)
+    }
+
+  private def apply(a: Action): Action =
+    a match {
+      case Insert(q: Query, assignments) =>
+        val qr = apply(q)
+        val assignmentsR = reassign(assignments, qr.quat)
+        Insert(qr, assignmentsR)
+
+      case Update(q: Query, assignments) => a
+        val qr = apply(q)
+        val assignmentsR = reassign(assignments, qr.quat)
+        Update(qr, assignmentsR)
+
+      case Returning(action: Action, alias, body) =>a
+        val actionR = apply(action)
+        val aliasR = alias.withRenames(actionR.quat)
+        val bodyR = BetaReduction(body, alias -> aliasR)
+        Returning(actionR, aliasR, bodyR)
+
+      case ReturningGenerated(action: Action, alias, body) =>
+        val actionR = apply(action)
+        val aliasR = alias.withRenames(actionR.quat)
+        val bodyR = BetaReduction(body, alias -> aliasR)
+        ReturningGenerated(actionR, aliasR, bodyR)
+
+        // TODO Finish this, not sure what do do in OnConflict.Properties i.e. what to beta-reduce
+//      case OnConflict(oca: Action, target, act) =>
+//        val actionR = apply(oca)
+//        val targetR =
+//          target match {
+//            case OnConflict.Properties(props) =>
+//              val propsR = props.map { prop =>
+//                BetaReduction(prop, )
+//              }
+//              OnConflict.Properties(props)
+//
+//            case v @ OnConflict.NoTarget => v
+//          }
+//        val actR = act match {
+//          case OnConflict.Update(assignments) =>
+//            val assignmentsR = assignments
+//            OnConflict.Update(assignmentsR)
+//          case _ => act
+//        }
+//        OnConflict(actionR, targetR, actR)
+//
+//      case other => super.apply(other)
+//    }
+
+
+}
+
 
 object RenameProperties extends StatelessTransformer {
   val interp = new Interpolator(Normalizations, 3)
@@ -450,7 +588,7 @@ object RenameProperties extends StatelessTransformer {
             // that in tern needs to replace p.emb.foo. However it will actually be _1.emb.foo which must now be _1.emb.bar. That means
             // the "sub-path" _1 needs to be appended to the replace path.
             val path = subPath ++ propertyPath
-            val newBase = base.copy(quat = base.quat.repath(path, alias))
+            val newBase = base.copy(quat = base.quat)
             val replacements = buildReplacements(base, newBase, path, alias)
             List(replacements)
         }

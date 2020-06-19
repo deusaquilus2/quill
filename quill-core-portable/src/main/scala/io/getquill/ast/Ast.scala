@@ -1,6 +1,6 @@
 package io.getquill.ast
 
-import io.getquill.NamingStrategy
+import io.getquill.{ NamingStrategy, ast }
 import io.getquill.norm.RenameProperties.TupleIndex
 
 //************************************************************
@@ -39,18 +39,14 @@ sealed trait Ast {
 // This represents a simplified Sql-Type. Since it applies to all dialects, it is called
 // Quill-Application-Type hence Quat.
 sealed trait Quat {
+  def applyRenames: Quat = this
+  def withRenames(renames: List[(String, String)]): Quat
+  def renames: List[(String, String)] = List()
+
   def shortString: String = this match {
-    case Quat.CaseClass(fields) => s"CC(${
+    case Quat.Product(fields) => s"CC(${
       fields.map {
         case (k, v) => k + (v match {
-          case Quat.Value => ""
-          case other      => ":" + other.shortString
-        })
-      }.mkString(",")
-    })"
-    case Quat.Tuple(fields) => s"Tup(${
-      fields.zipWithIndex.map {
-        case (ast, i) => s"_${i + 1}" + (ast match {
           case Quat.Value => ""
           case other      => ":" + other.shortString
         })
@@ -61,9 +57,7 @@ sealed trait Quat {
   }
 
   def lookup(path: String): Quat = (this, path) match {
-    case (tup @ Quat.Tuple(fields), TupleIndex(i)) =>
-      fields.applyOrElse(i, (i: Int) => Quat.Error(s"Index ${i} does not exist in the SQL-level ${tup}")) // TODO Quat does this not match in certain cases? Which ones?
-    case (cc @ Quat.CaseClass(fields), fieldName) =>
+    case (cc @ Quat.Product(fields), fieldName) =>
       fields.find(_._1 == fieldName).headOption.map(_._2).getOrElse(Quat.Error(s"The field ${fieldName} does not exist in the SQL-level ${cc}")) // TODO Quat does this not match in certain cases? Which ones?
     case (Quat.Value, fieldName) =>
       Quat.Error(s"The field ${fieldName} does not exist in an SQL-level leaf-node") // TODO Quat is there a case where we're putting a property on a entity which is actually a value?
@@ -75,25 +69,25 @@ sealed trait Quat {
     }
 
   /** Rename a property of a Quat.Tuple or Quat.CaseClass. Optionally can specify a new Quat to change the property to. */
-  def renameProperty(property: String, newProperty: String, newQuat: Option[Quat] = None): Quat = {
+  def stashRename(property: String, newProperty: String, newQuat: Option[Quat] = None): Quat = {
     // sanity check does the property exist in the first place
     this.lookup(property) match {
       case e: Quat.Error => e
       case _ => {
         // TODO Quat, test quat changes with a tuple property rename
         (this, property, newProperty) match {
-          case (tup: Quat.Tuple, property, newProperty) =>
-            val newFields =
-              tup.toCaseClass.fields.map {
-                case (field, quat) => if (field == property) (newProperty, newQuat.getOrElse(quat)) else (field, quat)
-              }
-            Quat.CaseClass(newFields)
-          case (cc: Quat.CaseClass, property, newProperty) =>
-            val newFields =
-              cc.fields.map {
-                case (field, quat) => if (field == property) (newProperty, newQuat.getOrElse(quat)) else (field, quat)
-              }
-            Quat.CaseClass(newFields)
+          case (cc: Quat.Product, property, newProperty) =>
+            cc.fields.find(_._1 == property) match {
+              case Some(_) =>
+                val newFields =
+                  cc.fields.map {
+                    case (field, quat) => if (field == property) (field, newQuat.getOrElse(quat)) else (field, quat)
+                  }
+                Quat.Product.WithRenames(newFields, cc.renames :+ ((property, newProperty)))
+
+              case None =>
+                cc
+            }
           case (Quat.Value, _, _) => Quat.Error(s"Cannot replace property ${property} with ${newProperty} on a Value SQL-level type")
           case _                  => Quat.Error(s"Invalid state reached for ${this.shortString}, ${property}, ${newProperty}")
         }
@@ -101,54 +95,83 @@ sealed trait Quat {
     }
   }
 
-  // TODO Quat tail recursive optimization
-  def repath(path: List[String], newEndProperty: String): Quat = {
+  def stashRename(path: List[String], newEndProperty: String): Quat = {
     path match {
       case Nil => // do nothing
         this
 
       case head :: Nil =>
-        this.renameProperty(head, newEndProperty)
+        this.stashRename(head, newEndProperty)
 
       case head :: tail =>
         val child = this.lookup(head)
-        val newChild = child.repath(tail, newEndProperty)
-        this.renameProperty(head, head, Some(newChild))
+        val newChild = child.stashRename(tail, newEndProperty)
+        this.stashRename(head, head, Some(newChild))
     }
   }
 
 }
 object Quat {
-  case class CaseClass(fields: List[(String, Quat)]) extends Quat {
-    override def toString: String = s"case class (${fields.map { case (k, v) => s"${k}:${v}" }.mkString(", ")})"
-    override def equals(obj: Any): Boolean = {
-      obj match {
-        case t: Quat.Tuple =>
-          this.fields == t.toCaseClass.fields
-        case CaseClass(otherFields) => fields == otherFields
-        case _                      => false
+  object TupleIndex {
+    def is(s: String): Boolean = unapply(s).isDefined
+    def unapply(s: String): Option[Int] =
+      if (s.matches("_[0-9]*"))
+        Some(s.drop(1).toInt - 1)
+      else
+        None
+  }
+
+  case class Product(fields: List[(String, Quat)]) extends Quat {
+    override def toString: String = s"Quat.Product(${fields.map { case (k, v) => s"${k}:${v}" }.mkString(", ")})"
+    override def withRenames(renames: List[(String, String)]) =
+      Product.WithRenames(fields, renames)
+    /** Rename the properties and reset renames to empty */
+    override def applyRenames = {
+      val newFields = fields.map {
+        case (f, q) =>
+          // Rename properties of this quat and rename it's children recursively
+          (renames.find(_._1 == f).map(_._2).getOrElse(f), q.applyRenames)
       }
+      Product(newFields)
     }
   }
-  case class Tuple(fields: List[Quat]) extends Quat {
-    override def toString: String = s"Tuple(${fields.mkString(",")})"
-    def toCaseClass: Quat.CaseClass =
-      CaseClass(this.fields.zipWithIndex.map { case (field, i) => (s"_${i + 1}", field) })
-    override def equals(obj: Any): Boolean = {
-      obj match {
-        case cc: Quat.CaseClass => this.toCaseClass.fields == cc.fields
-        case Tuple(otherFields) => fields == otherFields
-        case _                  => false
-      }
+  object Product {
+    def apply(fields: List[(String, Quat)]) = new Quat.Product(fields)
+    def unapply(p: Quat.Product): Some[(List[(String, Quat)])] = Some(p.fields)
+
+    /**
+     * Add staged renames to the Quat. Note that renames should
+     * explicit NOT be counted as part of the Type indicated by the Quat
+     * since it is typical to beta reduce a Quat without renames to a Quat with them
+     * (see `PropagateRenames` for more detail)
+     */
+    object WithRenames {
+      def apply(fields: List[(String, Quat)], renames: List[(String, String)]) =
+        new Product(fields) {
+          override def renames: List[(String, String)] = renames
+        }
+      def unapply(p: Quat.Product) =
+        Some((p.fields, p.renames))
     }
   }
   object Tuple {
-    def apply(fields: Quat*) = new Quat.Tuple(fields.toList)
+    def apply(fields: Quat*): Quat.Product = apply(fields.toList)
+    def apply(fields: Seq[Quat]): Quat.Product = new Quat.Product(fields.zipWithIndex.map { case (f, i) => (s"_${i}", f) }.toList)
   }
   object Value extends Quat {
+
+    /** Should not be able to rename properties on a value node, turns into a error of the array is not null */
+    override def withRenames(renames: List[(String, String)]) =
+      renames match {
+        case Nil => this
+        case _   => Quat.Error(s"Renames ${renames} cannot be applied to a value SQL-level type")
+      }
+
     override def toString: String = "QV"
   }
-  case class Error(msg: String) extends Quat
+  case class Error(msg: String) extends Quat {
+    override def withRenames(renames: List[(String, String)]): Quat = this
+  }
 }
 
 sealed trait Query extends Ast
@@ -176,6 +199,7 @@ case class Entity(name: String, properties: List[PropertyAlias], quat: Quat) ext
   override def neutral: Entity =
     new Entity(name, properties, quat)
 
+  // TODO Quat add quat to equals function here?
   override def equals(that: Any) =
     that match {
       case e: Entity =>
@@ -183,7 +207,17 @@ case class Entity(name: String, properties: List[PropertyAlias], quat: Quat) ext
       case _ => false
     }
 
+  // TODO Quat add quat to hash code function here?
   override def hashCode = (name, properties, renameable).hashCode()
+
+  // TODO Quat Test independently
+  def syncToQuat: Entity = {
+    val newQuat =
+      properties.foldLeft(quat) {
+        case (quat, PropertyAlias(path, alias)) => quat.stashRename(path, alias)
+      }
+    Entity.Opinionated(name, properties, newQuat, renameable)
+  }
 }
 
 object Entity {
@@ -499,7 +533,7 @@ object NullValue extends Value { def quat = Quat.Value }
 
 case class Tuple(values: List[Ast]) extends Value { def quat = Quat.Tuple(values.map(_.quat)) }
 
-case class CaseClass(values: List[(String, Ast)]) extends Value { def quat = Quat.CaseClass(values.map { case (k, v) => (k, v.quat) }) }
+case class CaseClass(values: List[(String, Ast)]) extends Value { def quat = Quat.Product(values.map { case (k, v) => (k, v.quat) }) }
 
 //************************************************************
 
@@ -511,9 +545,9 @@ case class Val(name: Ident, body: Ast) extends Ast { def quat = body.quat } // T
 
 sealed trait Action extends Ast
 
-case class Update(query: Ast, assignments: List[Assignment]) extends Action { def quat = Quat.Value } // TODO Quat quat in actions represents numeric values?
-case class Insert(query: Ast, assignments: List[Assignment]) extends Action { def quat = Quat.Value }
-case class Delete(query: Ast) extends Action { def quat = Quat.Value }
+case class Update(query: Ast, assignments: List[Assignment]) extends Action { def quat = query.quat } // TODO Quat quat in actions represents numeric values?
+case class Insert(query: Ast, assignments: List[Assignment]) extends Action { def quat = query.quat }
+case class Delete(query: Ast) extends Action { def quat = query.quat }
 
 sealed trait ReturningAction extends Action {
   def action: Ast

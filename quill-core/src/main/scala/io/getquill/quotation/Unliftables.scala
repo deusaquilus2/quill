@@ -197,8 +197,8 @@ trait Unliftables {
   }
 
   implicit val quatUnliftable: Unliftable[Quat] = Unliftable[Quat] {
-    case q"$pack.Quat.CaseClass.apply(${ fields: List[(String, Quat)] })" => Quat.CaseClass(fields)
-    case q"$pack.Quat.Tuple.apply(${ fields: List[Quat] })" => Quat.Tuple(fields)
+    case q"$pack.Quat.Product.WithRenames.apply(${ fields: List[(String, Quat)] }, ${ renames: List[(String, String)] })" => Quat.Product.WithRenames(fields, renames)
+    case q"$pack.Quat.Product.apply(${ fields: List[(String, Quat)] })" => Quat.Product(fields)
     case q"$pack.Quat.Value" => Quat.Value
     case q"$pack.Quat.Error(${ msg: String })" => Quat.Error(msg)
   }

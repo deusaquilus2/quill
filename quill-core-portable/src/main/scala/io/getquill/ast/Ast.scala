@@ -140,7 +140,9 @@ object Quat {
       val newFields = fields.map {
         case (f, q) =>
           // Rename properties of this quat and rename it's children recursively
-          (renames.find(_._1 == f).map(_._2).getOrElse(f), q.applyRenames)
+          val newKey = renames.find(_._1 == f).map(_._2).getOrElse(f)
+          val newValue = q.applyRenames
+          (newKey, newValue)
       }
       Product(newFields)
     }

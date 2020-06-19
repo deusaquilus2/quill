@@ -23,9 +23,17 @@ object NewRenameProperties {
 }
 
 object CompleteRenames extends StatelessTransformer {
+  override def applyIdent(e: Ident): Ident = e match {
+    case e: Ident =>
+      e.copy(quat = e.quat.applyRenames)
+  }
+
   override def apply(e: Ast): Ast = e match {
-    case e: Ident => e.copy(quat = e.quat.applyRenames)
-    case other    => super.apply(other)
+    case e: Ident =>
+      e.copy(quat = e.quat.applyRenames)
+
+    case other =>
+      super.apply(other)
   }
 }
 
@@ -48,13 +56,13 @@ object ApplyRenamesToProps extends StatelessTransformer {
 
 object PropagateRenames extends StatelessTransformer {
   implicit class IdentExt(id: Ident) {
-    def withRenames(from: Quat) =
-      id.copy(quat = id.quat.withRenames(from.renames))
+    def withQuat(from: Quat) =
+      id.copy(quat = from)
   }
 
   def applyBody(a: Ast, b: Ident, c: Ast)(f: (Ast, Ident, Ast) => Query) = {
     val ar = apply(a)
-    val br = b.withRenames(ar.quat)
+    val br = b.withQuat(ar.quat)
     val cr = BetaReduction(c, b -> br)
     f(ar, br, apply(cr))
   }
@@ -72,13 +80,13 @@ object PropagateRenames extends StatelessTransformer {
       case Join(t, a, b, iA, iB, on) =>
         val ar = apply(a)
         val br = apply(b)
-        val iAr = iA.withRenames(ar.quat)
-        val iBr = iB.withRenames(br.quat)
+        val iAr = iA.withQuat(ar.quat)
+        val iBr = iB.withQuat(br.quat)
         val onr = BetaReduction(on, iA -> iAr, iB -> iBr)
         Join(t, ar, br, iAr, iBr, apply(onr))
       case FlatJoin(t, a, iA, on) =>
         val ar = apply(a)
-        val iAr = iA.withRenames(ar.quat)
+        val iAr = iA.withQuat(ar.quat)
         val onr = BetaReduction(on, iA -> iAr)
         FlatJoin(t, a, iAr, apply(onr))
       case other => super.apply(other)
@@ -87,7 +95,7 @@ object PropagateRenames extends StatelessTransformer {
   def reassign(assignments: List[Assignment], quat: Quat) =
     assignments.map {
       case Assignment(alias, property, value) =>
-        val aliasR = alias.withRenames(quat)
+        val aliasR = alias.withQuat(quat)
         val propertyR = BetaReduction(property, alias -> aliasR)
         val valueR = BetaReduction(value, alias -> aliasR)
         Assignment(aliasR, propertyR, valueR)
@@ -107,13 +115,13 @@ object PropagateRenames extends StatelessTransformer {
 
       case Returning(action: Action, alias, body) =>
         val actionR = apply(action)
-        val aliasR = alias.withRenames(actionR.quat)
+        val aliasR = alias.withQuat(actionR.quat)
         val bodyR = BetaReduction(body, alias -> aliasR)
         Returning(actionR, aliasR, bodyR)
 
       case ReturningGenerated(action: Action, alias, body) =>
         val actionR = apply(action)
-        val aliasR = alias.withRenames(actionR.quat)
+        val aliasR = alias.withQuat(actionR.quat)
         val bodyR = BetaReduction(body, alias -> aliasR)
         ReturningGenerated(actionR, aliasR, bodyR)
 

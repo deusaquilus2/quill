@@ -23,6 +23,7 @@ object NewRenameProperties {
 }
 
 object CompleteRenames extends StatelessTransformer {
+  // TODO Quat apply this logic to entities as well
   override def applyIdent(e: Ident): Ident = e match {
     case e: Ident =>
       e.copy(quat = e.quat.applyRenames)
@@ -66,6 +67,9 @@ object PropagateRenames extends StatelessTransformer {
     val cr = BetaReduction(c, b -> br)
     f(ar, br, apply(cr))
   }
+
+  // TODO Quat for operation? (or for Map(Operation, ...)?)
+  // TODO Quat for infix? (or for Map(Infix, ...)?)
 
   override def apply(e: Query): Query =
     // TODO Quat Do I need to do something for infixes?
@@ -126,28 +130,62 @@ object PropagateRenames extends StatelessTransformer {
         ReturningGenerated(actionR, aliasR, bodyR)
 
       // TODO Finish this, not sure what do do in OnConflict.Properties i.e. what to beta-reduce
-      //      case OnConflict(oca: Action, target, act) =>
-      //        val actionR = apply(oca)
-      //        val targetR =
-      //          target match {
-      //            case OnConflict.Properties(props) =>
-      //              val propsR = props.map { prop =>
-      //                BetaReduction(prop, )
-      //              }
-      //              OnConflict.Properties(props)
-      //
-      //            case v @ OnConflict.NoTarget => v
-      //          }
-      //        val actR = act match {
-      //          case OnConflict.Update(assignments) =>
-      //            val assignmentsR = assignments
-      //            OnConflict.Update(assignmentsR)
-      //          case _ => act
-      //        }
-      //        OnConflict(actionR, targetR, actR)
-      //
+
+      case oc @ OnConflict(oca: Action, target, act) =>
+        val actionR = apply(oca)
+        val targetR =
+          target match {
+            case OnConflict.Properties(props) =>
+              val propsR = props.map {
+                case prop @ PropertyMatroshka(ident, _) =>
+                  BetaReduction(prop, ident -> ident.withQuat(oca.quat)).asInstanceOf[Property]
+                case _ =>
+                  throw new IllegalArgumentException(s"Malformed onConflict element ${oc}")
+              }
+              OnConflict.Properties(propsR)
+
+            case v @ OnConflict.NoTarget => v
+          }
+        val actR = act match {
+          case OnConflict.Update(assignments) =>
+            val assignmentsR =
+              assignments.map { assignment =>
+                val aliasR = assignment.alias.copy(quat = oca.quat)
+                val propertyR = BetaReduction(assignment.property, assignment.alias -> aliasR)
+                val valueR = BetaReduction(assignment.value, assignment.alias -> aliasR)
+                Assignment(aliasR, propertyR, valueR)
+              }
+            OnConflict.Update(assignmentsR)
+          case _ => act
+        }
+        OnConflict(actionR, targetR, actR)
+
       case other => super.apply(other)
     }
+}
+
+// Represents a nested property path to an identity i.e. Property(Property(... Ident(), ...))
+object PropertyMatroshka {
+
+  def traverse(initial: Property): Option[(Ident, List[String])] =
+    initial match {
+      // If it's a nested-property walk inside and append the name to the result (if something is returned)
+      case Property(inner: Property, name) =>
+        traverse(inner).map { case (id, list) => (id, list :+ name) }
+      // If it's a property with ident in the core, return that
+      case Property(id: Ident, name) =>
+        Some((id, List(name)))
+      // Otherwise an ident property is not inside so don't return anything
+      case _ =>
+        None
+    }
+
+  def unapply(ast: Ast): Option[(Ident, List[String])] =
+    ast match {
+      case p: Property => traverse(p)
+      case _           => None
+    }
+
 }
 
 object RenameProperties extends StatelessTransformer {
@@ -281,29 +319,7 @@ object RenameProperties extends StatelessTransformer {
       }
   }
 
-  // Represents a nested property path to an identity i.e. Property(Property(... Ident(), ...))
-  object PropertyMatroshka {
 
-    def traverse(initial: Property): Option[(Ident, List[String])] =
-      initial match {
-        // If it's a nested-property walk inside and append the name to the result (if something is returned)
-        case Property(inner: Property, name) =>
-          traverse(inner).map { case (id, list) => (id, list :+ name) }
-        // If it's a property with ident in the core, return that
-        case Property(id: Ident, name) =>
-          Some((id, List(name)))
-        // Otherwise an ident property is not inside so don't return anything
-        case _ =>
-          None
-      }
-
-    def unapply(ast: Ast): Option[(Ident, List[String])] =
-      ast match {
-        case p: Property => traverse(p)
-        case _           => None
-      }
-
-  }
 
   def protractSchema(body: Ast, ident: Ident, schema: Schema): Option[Schema] = {
 

@@ -1,6 +1,8 @@
 package io.getquill.norm
 
 import io.getquill.ast._
+import io.getquill.quat.Quat
+
 import scala.collection.immutable.{ Map => IMap }
 
 case class BetaReduction(replacements: Replacements)
@@ -10,7 +12,16 @@ case class BetaReduction(replacements: Replacements)
     ast match {
 
       case ast if replacements.contains(ast) =>
-        BetaReduction(replacements - ast - replacements(ast))(replacements(ast))
+        val rep = BetaReduction(replacements - ast - replacements(ast))(replacements(ast))
+        // TODO Detect if we're replacing something will null, synthesize a 'null' node
+        //       that has the type of we were replacing it with
+        (ast, rep) match {
+          case (ast, OptionNone(Quat.Null)) =>
+            OptionNone(ast.quat)
+          case (_, rep) =>
+            rep
+        }
+      //        rep
 
       case Property(Tuple(values), name) =>
         apply(values(name.drop(1).toInt - 1))
@@ -123,11 +134,16 @@ object BetaReduction {
   private def checkQuats(body: Ast, replacements: Seq[(Ast, Ast)]) =
     replacements.foreach {
       case (orig, rep) =>
-        if (orig.quat != rep.quat)
+        //if (orig.quat != rep.quat)
+        if (!orig.quat.canReduceTo(rep.quat))
           throw new IllegalArgumentException(s"Cannot beta reduce [$orig -> $rep] within [$body]. They have different types: ${orig.quat.shortString} and ${rep.quat.shortString}")
     }
 
   def apply(ast: Ast, t: (Ast, Ast)*): Ast = {
+    // TODO Quat Remove this
+    //    if (t.map(_._2).find(ast => ast.isInstanceOf[OptionNone]).isDefined) {
+    //      println("Stop here")
+    //    }
     checkQuats(ast, t)
     val output = apply(ast, Replacements(t.toMap))
     output

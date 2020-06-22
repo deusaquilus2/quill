@@ -230,6 +230,7 @@ trait SqlIdiom extends Idiom {
     case OptionIsEmpty(ast)   => stmt"${ast.token} IS NULL"
     case OptionNonEmpty(ast)  => stmt"${ast.token} IS NOT NULL"
     case OptionIsDefined(ast) => stmt"${ast.token} IS NOT NULL"
+    case OptionNone(_)        => stmt"null"
     case other                => fail(s"Malformed or unsupported construct: $other.")
   }
 

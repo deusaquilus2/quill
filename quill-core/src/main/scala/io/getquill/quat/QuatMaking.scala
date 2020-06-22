@@ -50,6 +50,8 @@ trait QuatMakingBase {
 
     def parseType(tpe: Type): Quat =
       tpe match {
+        case _ if (isNone(tpe)) =>
+          Quat.Null
         case _ if (isOptionType(tpe)) =>
           val innerParam = innerOptionParam(tpe, None)
           parseType(innerParam)
@@ -81,6 +83,12 @@ trait QuatMakingBase {
     case other => other
   }
 
+  def isNone(tpe: Type) = {
+    val era = tpe.erasure
+    era =:= typeOf[None.type]
+  }
+
+  // Note. Used in other places beside here where None needs to be included in option type.
   def isOptionType(tpe: Type) = {
     val era = tpe.erasure
     era =:= typeOf[Option[Any]] || era =:= typeOf[Some[Any]] || era =:= typeOf[None.type]

@@ -49,7 +49,7 @@ trait StatelessTransformer {
       case OptionApply(a)              => OptionApply(apply(a))
       case OptionOrNull(a)             => OptionOrNull(apply(a))
       case OptionGetOrNull(a)          => OptionGetOrNull(apply(a))
-      case OptionNone                  => OptionNone
+      case OptionNone(quat)            => OptionNone(quat)
     }
 
   def apply(o: IterableOperation): IterableOperation =

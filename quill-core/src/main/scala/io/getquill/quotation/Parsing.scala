@@ -702,11 +702,15 @@ trait Parsing extends ValueComputation with QuatMaking {
   }
 
   val valueParser: Parser[Ast] = Parser[Ast] {
-    case q"null"                         => NullValue
-    case q"scala.Some.apply[$t]($v)"     => OptionSome(astParser(v))
-    case q"scala.Option.apply[$t]($v)"   => OptionApply(astParser(v))
-    case q"scala.None"                   => OptionNone
-    case q"scala.Option.empty[$t]"       => OptionNone
+    case q"null"                       => NullValue
+    case q"scala.Some.apply[$t]($v)"   => OptionSome(astParser(v))
+    case q"scala.Option.apply[$t]($v)" => OptionApply(astParser(v))
+    case nn @ q"scala.None" =>
+      val tpe1 = nn.tpe // back here
+      val tpe2 = nn.symbol.typeSignature
+      OptionNone(Quat.Null)
+    case q"scala.Option.empty[$t]" =>
+      OptionNone(inferQuat(t.tpe)) // TODO Quat need to test this to make sure correct type inferred
     case Literal(c.universe.Constant(v)) => Constant(v)
     case q"((..$v))" if (v.size > 1)     => Tuple(v.map(astParser(_)))
     case q"new $ccTerm(..$v)" if (isCaseClass(c.WeakTypeTag(ccTerm.tpe.erasure))) => {

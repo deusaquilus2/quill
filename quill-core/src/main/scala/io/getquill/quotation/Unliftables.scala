@@ -50,7 +50,7 @@ trait Unliftables {
     case q"$pack.OptionApply.apply(${ a: Ast })" => OptionApply(a)
     case q"$pack.OptionOrNull.apply(${ a: Ast })" => OptionOrNull(a)
     case q"$pack.OptionGetOrNull.apply(${ a: Ast })" => OptionGetOrNull(a)
-    case q"$pack.OptionNone" => OptionNone
+    case q"$pack.OptionNone(${ q: Quat })" => OptionNone(q)
   }
 
   implicit val traversableOperationUnliftable: Unliftable[IterableOperation] = Unliftable[IterableOperation] {
@@ -200,6 +200,7 @@ trait Unliftables {
     case q"$pack.Quat.Product.WithRenames.apply(${ fields: List[(String, Quat)] }, ${ renames: List[(String, String)] })" => Quat.Product.WithRenames(fields, renames)
     case q"$pack.Quat.Product.apply(${ fields: List[(String, Quat)] })" => Quat.Product(fields)
     case q"$pack.Quat.Value" => Quat.Value
+    case q"$pack.Quat.Null" => Quat.Null
     case q"$pack.Quat.Error(${ msg: String })" => Quat.Error(msg)
   }
 

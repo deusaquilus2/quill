@@ -57,7 +57,7 @@ trait Liftables {
     case OptionApply(a)              => q"$pack.OptionApply($a)"
     case OptionOrNull(a)             => q"$pack.OptionOrNull($a)"
     case OptionGetOrNull(a)          => q"$pack.OptionGetOrNull($a)"
-    case OptionNone                  => q"$pack.OptionNone"
+    case OptionNone(quat)            => q"$pack.OptionNone($quat)"
   }
 
   implicit val traversableOperationLiftable: Liftable[IterableOperation] = Liftable[IterableOperation] {
@@ -193,6 +193,7 @@ trait Liftables {
   implicit val quatLiftable: Liftable[Quat] = Liftable[Quat] {
     case Quat.Product.WithRenames(fields, renames) => q"io.getquill.quat.Quat.Product.WithRenames($fields, $renames)"
     case Quat.Value                                => q"io.getquill.quat.Quat.Value"
+    case Quat.Null                                 => q"io.getquill.quat.Quat.Null"
     case Quat.Error(msg)                           => q"io.getquill.quat.Quat.Error($msg)"
   }
 

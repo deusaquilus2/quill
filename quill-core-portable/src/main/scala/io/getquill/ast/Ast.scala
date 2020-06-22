@@ -361,7 +361,7 @@ case class OptionTableExists(ast: Ast, alias: Ident, body: Ast)
   extends OptionOperation { def quat = body.quat }
 case class OptionTableForall(ast: Ast, alias: Ident, body: Ast)
   extends OptionOperation { def quat = body.quat }
-object OptionNone extends OptionOperation { def quat = Quat.Value } // TODO Quat Could this be a table in certain cases??? Maybe need to pass in the quat from the parser to create this
+case class OptionNone(quat: Quat) extends OptionOperation // TODO Quat Could this be a table in certain cases??? Maybe need to pass in the quat from the parser to create this
 case class OptionSome(ast: Ast) extends OptionOperation { def quat = ast.quat }
 case class OptionApply(ast: Ast) extends OptionOperation { def quat = ast.quat }
 case class OptionOrNull(ast: Ast) extends OptionOperation { def quat = ast.quat }
@@ -391,7 +391,7 @@ sealed trait Value extends Ast
 
 case class Constant(v: Any) extends Value { def quat = Quat.Value } // TODO Quat can this be a non scalar?
 
-object NullValue extends Value { def quat = Quat.Value }
+object NullValue extends Value { def quat = Quat.Null }
 
 case class Tuple(values: List[Ast]) extends Value { def quat = Quat.Tuple(values.map(_.quat)) }
 

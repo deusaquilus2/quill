@@ -118,7 +118,7 @@ trait StatefulTransformer[T] {
       case OptionGetOrNull(a) =>
         val (at, att) = apply(a)
         (OptionGetOrNull(at), att)
-      case OptionNone => (o, this)
+      case OptionNone(_) => (o, this)
     }
 
   def apply(e: IterableOperation): (IterableOperation, StatefulTransformer[T]) =

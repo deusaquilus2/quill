@@ -7,6 +7,31 @@ sealed trait Quat {
   def withRenames(renames: List[(String, String)]): Quat
   def renames: List[(String, String)] = List()
 
+  // Roughly speaking, is this a super-type of the inner type
+  def canReduceTo(other: Quat): Boolean = {
+    (this, other) match {
+      case (Quat.Value, Quat.Value)           => true
+      case (a: Quat.Product, b: Quat.Product) => a == b
+      case (Quat.Null, Quat.Product(_)) =>
+        false // Null is most specific subtype so can't replace with a supertype of it
+      case (Quat.Product(_), Quat.Null) =>
+        true
+      case (Quat.Value, Quat.Null) => true
+      case (_, _)                  => false
+    }
+  }
+
+  //  def reduceTo(other: Quat): Quat = {
+  //    (this, other) match {
+  //      case (Quat.Value, Quat.Value) => Quat.Value
+  //      case (a: Quat.Product, b: Quat.Product) => a
+  //      case (Quat.Null, Quat.Product(_)) => false // Null is most specific subtype so can't replace with a supertype of it
+  //      case (Quat.Product(_), Quat.Null) => true
+  //      case (Quat.Value, Quat.Null) => true
+  //      case (_, _) => false
+  //    }
+  //  }
+
   def shortString: String = this match {
     case Quat.Product(fields) => s"CC(${
       fields.map {
@@ -22,6 +47,7 @@ sealed trait Quat {
       })
     }"
     case Quat.Value      => "V"
+    case Quat.Null       => "N"
     case Quat.Error(msg) => s"QError(${msg.take(20)})"
   }
 
@@ -30,6 +56,8 @@ sealed trait Quat {
       fields.find(_._1 == fieldName).headOption.map(_._2).getOrElse(Quat.Error(s"The field ${fieldName} does not exist in the SQL-level ${cc}")) // TODO Quat does this not match in certain cases? Which ones?
     case (Quat.Value, fieldName) =>
       Quat.Error(s"The field ${fieldName} does not exist in an SQL-level leaf-node") // TODO Quat is there a case where we're putting a property on a entity which is actually a value?
+    case (Quat.Null, fieldName) =>
+      Quat.Error(s"The field ${fieldName} cannot be looked up from a SQL-level null node") // TODO Quat is there a case where we're putting a property on a entity which is actually a value?
     case (Quat.Error(msg), _) => Quat.Error(s"${msg}. Also tried to lookup ${path} from node.")
   }
   def lookup(list: List[String]): Quat =
@@ -134,6 +162,10 @@ object Quat {
   object Tuple {
     def apply(fields: Quat*): Quat.Product = apply(fields.toList)
     def apply(fields: List[Quat]): Quat.Product = new Quat.Product(fields.zipWithIndex.map { case (f, i) => (s"_${i + 1}", f) })
+  }
+  case object Null extends Quat {
+    override def withRenames(renames: List[(String, String)]) = this
+    override def toString: String = "N"
   }
   object Value extends Quat {
 

@@ -19,7 +19,7 @@ import io.getquill.ast.Visibility.{ Hidden, Visible }
 import io.getquill.util.Interleave
 import io.getquill.{ Query => DslQuery, Update => DslUpdate, Insert => DslInsert, Delete => DslDelete }
 
-trait Parsing extends ValueComputation with InferQuat {
+trait Parsing extends ValueComputation with QuatMaking {
   this: Quotation =>
 
   import c.universe.{ Ident => _, Constant => _, Function => _, If => _, Block => _, _ }

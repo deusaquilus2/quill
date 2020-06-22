@@ -326,8 +326,8 @@ trait SqlIdiom extends Idiom {
             case (ast, nestedName) =>
               (ast, nestedName :+ name)
           }
-        case e @ ExternalIdent.Opinionated(a, Fixed) => (e, List(a))
-        case a                                       => (a, Nil)
+        case e @ ExternalIdent.Opinionated(a, _, Fixed) => (e, List(a))
+        case a => (a, Nil)
       }
 
     def tokenizePrefixedProperty(name: String, prefix: List[String], strategy: NamingStrategy, renameable: Renameable, prefixRenameable: Renameable = Renameable.neutral) =
@@ -343,7 +343,7 @@ trait SqlIdiom extends Idiom {
         // as opposed to `realTable.embeddedTableAlias.realPropertyAlias`.
 
         unnest(ast) match {
-          case (ExternalIdent.Opinionated(_: String, prefixRenameable), prefix) =>
+          case (ExternalIdent.Opinionated(_: String, _, prefixRenameable), prefix) =>
             stmt"${
               actionAlias.map(alias => stmt"${scopedTokenizer(alias)}.").getOrElse(stmt"")
             }${tokenizePrefixedProperty(name, prefix, strategy, renameable, prefixRenameable)}"

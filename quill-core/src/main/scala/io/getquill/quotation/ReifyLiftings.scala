@@ -12,7 +12,7 @@ import io.getquill.util.MacroContextExt._
 case class ScalarValueLifting[T, U](value: T, encoder: EncodingDsl#Encoder[U])
 case class CaseClassValueLifting[T](value: T)
 
-trait ReifyLiftings extends InferQuat {
+trait ReifyLiftings extends QuatMaking {
   val c: MacroContext
   import c.universe.{ Ident => _, _ }
 

@@ -4,20 +4,20 @@ import scala.reflect.macros.whitebox.Context
 import io.getquill.ast._
 import scala.reflect.api.Universe
 
-trait InferQuat extends InferQuatBase {
+trait QuatMaking extends QuatMakingBase {
   val c: Context
   type Uni = c.universe.type
   // NOTE: u needs to be lazy otherwise sets value from c before c can be initialized by higher level classes
   lazy val u: Uni = c.universe
 }
 
-object InferQuatRuntime extends InferQuatBase {
+object InferQuatRuntime extends QuatMakingBase {
   type Uni = scala.reflect.api.Universe
   lazy val u = scala.reflect.runtime.universe
   def of[T: u.TypeTag] = inferQuat(implicitly[u.TypeTag[T]].tpe)
 }
 
-trait InferQuatBase {
+trait QuatMakingBase {
   type Uni <: Universe
   val u: Uni
   import u.{ Ident => _, Constant => _, Function => _, If => _, Block => _, _ }

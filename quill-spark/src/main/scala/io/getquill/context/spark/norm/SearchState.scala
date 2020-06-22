@@ -1,6 +1,6 @@
 package io.getquill.context.spark.norm
 
-import io.getquill.ast.{ Entity, Ident, Property, Quat }
+import io.getquill.ast.{ Entity, Ident, Property }
 
 sealed trait SearchState {
   def aliases: Seq[EntityId] = Seq()

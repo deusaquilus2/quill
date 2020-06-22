@@ -1,6 +1,7 @@
 package io.getquill.norm
 
-import io.getquill.ast.{ Ast, Quat, Query, StatelessTransformer }
+import io.getquill.ast.{ Ast, Query, StatelessTransformer }
+import io.getquill.quat.Quat
 
 case class CheckQuats(header: String) extends StatelessTransformer {
 

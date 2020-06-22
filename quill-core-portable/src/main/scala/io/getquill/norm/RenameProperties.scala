@@ -3,6 +3,7 @@ package io.getquill.norm
 import io.getquill.ast.Renameable.Fixed
 import io.getquill.ast.Visibility.Visible
 import io.getquill.ast._
+import io.getquill.quat.Quat
 import io.getquill.util.Interpolator
 import io.getquill.util.Messages.TraceType.Normalizations
 import io.getquill.util.Messages.title

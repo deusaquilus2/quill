@@ -1,6 +1,6 @@
 package io.getquill
 
-import io.getquill.ast.{ Ast, Ident, Quat }
+import io.getquill.ast.{ Ast, Ident }
 
 /**
  * For unit tests that do not care about the `Quat` of an ident, use this class to construct

@@ -3,7 +3,7 @@ package io.getquill.context.spark
 import io.getquill.context.sql.SqlQuery
 import io.getquill.context.sql.FlattenSqlQuery
 import io.getquill.context.sql._
-import io.getquill.ast.Quat
+import io.getquill.quat.Quat
 
 object AliasNestedQueryColumns {
 

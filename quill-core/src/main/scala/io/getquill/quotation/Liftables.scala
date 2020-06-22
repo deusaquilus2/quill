@@ -1,9 +1,9 @@
 package io.getquill.quotation
 
 import scala.reflect.macros.whitebox.Context
-
 import io.getquill.ast._
 import io.getquill.dsl.CoreDsl
+import io.getquill.quat.Quat
 
 trait Liftables {
   val c: Context

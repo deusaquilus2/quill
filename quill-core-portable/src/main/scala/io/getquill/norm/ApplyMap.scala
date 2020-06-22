@@ -1,6 +1,7 @@
 package io.getquill.norm
 
 import io.getquill.ast._
+import io.getquill.quat.Quat
 
 /**
  * Notes for the conceptual examples below. Gin and Tonic were used as prototypical

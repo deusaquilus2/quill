@@ -5,16 +5,17 @@ import io.getquill.ast.Renameable.Fixed
 import scala.language.implicitConversions
 import scala.language.experimental.macros
 import io.getquill.ast._
+import io.getquill.quat.Quat
 import io.getquill.quotation.InferQuatRuntime
 
-import scala.reflect.macros.whitebox.{ Context => MacroContext }
+import scala.reflect.macros.whitebox.{Context => MacroContext}
 import io.getquill.util.Messages._
 
 import scala.annotation.tailrec
 import scala.util.DynamicVariable
 import scala.reflect.ClassTag
 import scala.reflect.runtime.universe.TypeTag
-import io.getquill.{ ActionReturning, Delete, EntityQuery, Insert, Ord, Query, Update, Action => DslAction }
+import io.getquill.{ActionReturning, Delete, EntityQuery, Insert, Ord, Query, Update, Action => DslAction}
 
 class DynamicQueryDslMacro(val c: MacroContext) {
   import c.universe._

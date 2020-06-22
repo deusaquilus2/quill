@@ -3,8 +3,9 @@ package io.getquill.context.sql
 import io.getquill.ast._
 import io.getquill.context.sql.norm.FlattenGroupByAggregation
 import io.getquill.norm.BetaReduction
+import io.getquill.quat.Quat
 import io.getquill.util.Messages.fail
-import io.getquill.{ Literal, PseudoAst }
+import io.getquill.{Literal, PseudoAst}
 
 case class OrderByCriteria(ast: Ast, ordering: PropertyOrdering)
 

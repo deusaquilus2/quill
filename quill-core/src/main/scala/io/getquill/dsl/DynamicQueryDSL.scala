@@ -72,7 +72,7 @@ trait DynamicQueryDsl {
   def dynamicQuery[T](implicit t: ClassTag[T], tt: TypeTag[T]): DynamicEntityQuery[T] =
     DynamicEntityQuery(
       splice[EntityQuery[T]](
-        Entity(t.runtimeClass.getName.split('.').last.split('$').last, Nil, MakeQuat.of[T])
+        Entity(t.runtimeClass.getName.split('.').last.split('$').last, Nil, quatFor.apply[T])
       )
     )
 
@@ -137,12 +137,12 @@ trait DynamicQueryDsl {
           }
 
         PropertyAlias(
-          path(alias.property(splice[T](Ident("v", MakeQuat.of[T]))).ast),
+          path(alias.property(splice[T](Ident("v", quatFor.apply[T]))).ast),
           alias.name
         )
       }
     DynamicEntityQuery(
-      splice[EntityQuery[T]](Entity.Opinionated(entity, aliases.toList, MakeQuat.of[T], Fixed))
+      splice[EntityQuery[T]](Entity.Opinionated(entity, aliases.toList, quatFor.apply[T], Fixed))
     )
   }
 
@@ -164,7 +164,7 @@ trait DynamicQueryDsl {
     }
 
   protected def spliceLift[O](o: O)(implicit enc: Encoder[O], tt: TypeTag[O]) =
-    splice[O](ScalarValueLift("o", o, enc, MakeQuat.of[O]))
+    splice[O](ScalarValueLift("o", o, enc, quatFor.apply[O]))
 
   object DynamicQuery {
     def apply[T](p: Quoted[Query[T]]) =
@@ -184,7 +184,7 @@ trait DynamicQueryDsl {
     ) =
       withFreshIdent { v =>
         r(t(q.ast, v, f(splice(v)).ast))
-      }(MakeQuat.of[V])
+      }(quatFor.apply[V])
 
     protected[this] def transformOpt[O, R, D <: DynamicQuery[T]](
       opt:  Option[O],
@@ -310,7 +310,7 @@ trait DynamicQueryDsl {
     ): DynamicQuery[R] =
       withFreshIdent { v =>
         dyn(FlatJoin(tpe, q.ast, v, on(splice(v)).ast))
-      }(MakeQuat.of[R])
+      }(quatFor.apply[R])
 
     def join[A >: T](on: Quoted[A] => Quoted[Boolean])(implicit tt: TypeTag[A]): DynamicQuery[A] =
       flatJoin(InnerJoin, on)
@@ -393,7 +393,7 @@ trait DynamicQueryDsl {
     ): List[Assignment] =
       l.collect {
         case s: DynamicSetValue[_, _] =>
-          val v = Ident("v", MakeQuat.of[S])
+          val v = Ident("v", quatFor.apply[S])
           Assignment(v, s.property(splice(v)).ast, s.value.ast)
       }
 
@@ -443,7 +443,7 @@ trait DynamicQueryDsl {
     def returning[R](f: Quoted[E] => Quoted[R])(implicit tt: TypeTag[R]): DynamicActionReturning[E, R] =
       withFreshIdent { v =>
         DynamicActionReturning[E, R](splice(Returning(q.ast, v, f(splice(v)).ast)))
-      } { MakeQuat.of[R] }
+      } { quatFor.apply[R] }
 
     def returningGenerated[R](
       f: Quoted[E] => Quoted[R]
@@ -452,7 +452,7 @@ trait DynamicQueryDsl {
         DynamicActionReturning[E, R](
           splice(ReturningGenerated(q.ast, v, f(splice(v)).ast))
         )
-      } { MakeQuat.of[R] }
+      } { quatFor.apply[R] }
 
     def onConflictIgnore: DynamicInsert[E] =
       dyn(
@@ -466,7 +466,7 @@ trait DynamicQueryDsl {
     def onConflictIgnore(
       targets: (Quoted[E] => Quoted[Any])*
     )(implicit tt: TypeTag[E]): DynamicInsert[E] = {
-      val v = splice[E](Ident("v", MakeQuat.of[E]))
+      val v = splice[E](Ident("v", quatFor.apply[E]))
       val properties =
         targets.toList.map { f =>
           f(v).ast match {

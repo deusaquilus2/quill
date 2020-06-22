@@ -1,5 +1,6 @@
 package io.getquill.quat
 
+import scala.annotation.tailrec
 import scala.reflect.api.Universe
 import scala.reflect.macros.whitebox.Context
 
@@ -10,12 +11,12 @@ trait QuatMaking extends QuatMakingBase {
   lazy val u: Uni = c.universe
 }
 
-object MakeQuat extends MakeQuat
+object quatFor extends quatFor
 
-trait MakeQuat extends QuatMakingBase {
+trait quatFor extends QuatMakingBase {
   type Uni = scala.reflect.api.Universe
   lazy val u = scala.reflect.runtime.universe
-  def of[T: u.TypeTag] = inferQuat(implicitly[u.TypeTag[T]].tpe)
+  def apply[T: u.TypeTag] = inferQuat(implicitly[u.TypeTag[T]].tpe)
 }
 
 trait QuatMakingBase {
@@ -49,6 +50,9 @@ trait QuatMakingBase {
 
     def parseType(tpe: Type): Quat =
       tpe match {
+        case _ if (isOptionType(tpe)) =>
+          val innerParam = innerOptionParam(tpe, None)
+          parseType(innerParam)
         // For tuples
         case CaseClassBaseType(name, fields) if (name.startsWith("scala.Tuple")) =>
           Quat.Tuple(fields.map { case (_, fieldType) => parseType(fieldType) })
@@ -61,5 +65,24 @@ trait QuatMakingBase {
       }
 
     parseType(tpe)
+  }
+
+  @tailrec
+  private[getquill] final def innerOptionParam(tpe: Type, maxDepth: Option[Int]): Type = tpe match {
+    // If it's a ref-type and an Option, pull out the argument
+    case TypeRef(_, cls, List(arg)) if (cls.isClass && cls.asClass.fullName == "scala.Option") && maxDepth.forall(_ > 0) =>
+      innerOptionParam(arg, maxDepth.map(_ - 1))
+    // If it's not a ref-type but an Option, convert to a ref-type and reprocess
+    // also since Nothing is a subtype of everything need to know to stop searching once Nothing
+    // has been reached (since we have not gone inside anything, do not decrement the depth here).
+    case _ if (isOptionType(tpe) && !(tpe =:= typeOf[Nothing])) && maxDepth.forall(_ > 0) =>
+      innerOptionParam(tpe.baseType(typeOf[Option[Any]].typeSymbol), maxDepth)
+    // Otherwise we have gotten to the actual type inside the nesting. Check what it is.
+    case other => other
+  }
+
+  def isOptionType(tpe: Type) = {
+    val era = tpe.erasure
+    era =:= typeOf[Option[Any]] || era =:= typeOf[Some[Any]] || era =:= typeOf[None.type]
   }
 }

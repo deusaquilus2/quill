@@ -10,7 +10,6 @@ import io.getquill.dsl.{ CoreDsl, ValueComputation }
 import io.getquill.norm.capture.AvoidAliasConflict
 import io.getquill.idiom.Idiom
 
-import scala.annotation.tailrec
 import scala.collection.immutable.StringOps
 import scala.reflect.macros.TypecheckException
 import io.getquill.ast.Implicits._
@@ -427,7 +426,10 @@ trait Parsing extends ValueComputation with QuatMaking {
 
     case q"$o.map[$t]({($alias) => $body})" if is[Option[Any]](o) =>
       if (isOptionRowType(o) || isOptionEmbedded(o))
-        OptionTableMap(astParser(o), identParser(alias), astParser(body))
+        OptionTableMap(
+          astParser(o),
+          identParser(alias), astParser(body)
+        )
       else
         warnConditionalsExist(OptionMap(astParser(o), identParser(alias), astParser(body)))
 
@@ -671,38 +673,11 @@ trait Parsing extends ValueComputation with QuatMaking {
   private def isTypeTuple(tpe: Type) =
     tpe.typeSymbol.fullName startsWith "scala.Tuple"
 
-  /**
-   * Need special handling to check if a type is null since need to check if it's Option, Some or None. Don't want
-   * to use `<:<` since that would also match things like `Nothing` and `Null`.
-   */
-  def isOptionType(tpe: Type) = {
-    val era = tpe.erasure
-    era =:= typeOf[Option[Any]] || era =:= typeOf[Some[Any]] || era =:= typeOf[None.type]
-  }
-
   object ClassTypeRefMatch {
     def unapply(tpe: Type) = tpe match {
       case TypeRef(_, cls, args) if (cls.isClass) => Some((cls.asClass, args))
       case _                                      => None
     }
-  }
-
-  /**
-   * Recursively traverse an `Option[T]` or `Option[Option[T]]`, or `Option[Option[Option[T]]]` etc...
-   * until we find the `T`. Stop at a specified depth.
-   */
-  @tailrec
-  private def innerOptionParam(tpe: Type, maxDepth: Option[Int]): Type = tpe match {
-    // If it's a ref-type and an Option, pull out the argument
-    case TypeRef(_, cls, List(arg)) if (cls.isClass && cls.asClass.fullName == "scala.Option") && maxDepth.forall(_ > 0) =>
-      innerOptionParam(arg, maxDepth.map(_ - 1))
-    // If it's not a ref-type but an Option, convert to a ref-type and reprocess
-    // also since Nothing is a subtype of everything need to know to stop searching once Nothing
-    // has been reached (since we have not gone inside anything, do not decrement the depth here).
-    case _ if (isOptionType(tpe) && !(tpe =:= typeOf[Nothing])) && maxDepth.forall(_ > 0) =>
-      innerOptionParam(tpe.baseType(typeOf[Option[Any]].typeSymbol), maxDepth)
-    // Otherwise we have gotten to the actual type inside the nesting. Check what it is.
-    case other => other
   }
 
   private def isOptionEmbedded(tree: Tree) = {

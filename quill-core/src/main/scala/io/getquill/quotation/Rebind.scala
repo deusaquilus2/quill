@@ -6,6 +6,7 @@ import io.getquill.ast.Function
 import io.getquill.ast.FunctionApply
 import io.getquill.ast.Ident
 import io.getquill.ast.QuotedReference
+import io.getquill.quat.QuatMaking
 
 import scala.reflect.macros.whitebox
 

@@ -13,6 +13,7 @@ import io.getquill.util.Interpolator
 import io.getquill.util.Messages.TraceType.NestedQueryExpansion
 import io.getquill.context.sql.norm.nested.ExpandSelect
 import io.getquill.norm.BetaReduction
+import io.getquill.quat.Quat
 
 import scala.collection.mutable
 

@@ -4,6 +4,7 @@ import io.getquill.ast._
 import io.getquill.ast.Implicits._
 import io.getquill.context.sql._
 import io.getquill.quotation.{ FreeVariables }
+import io.getquill.quat.Quat
 
 case class Error(free: List[Ident], ast: Ast)
 case class InvalidSqlQuery(errors: List[Error]) {

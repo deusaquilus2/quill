@@ -6,7 +6,7 @@ import io.getquill.Embedded
 import io.getquill.context._
 import io.getquill.norm.BetaReduction
 import io.getquill.util.MacroContextExt.RichContext
-import io.getquill.dsl.{CoreDsl, ValueComputation}
+import io.getquill.dsl.{ CoreDsl, ValueComputation }
 import io.getquill.norm.capture.AvoidAliasConflict
 import io.getquill.idiom.Idiom
 
@@ -15,10 +15,10 @@ import scala.collection.immutable.StringOps
 import scala.reflect.macros.TypecheckException
 import io.getquill.ast.Implicits._
 import io.getquill.ast.Renameable.Fixed
-import io.getquill.ast.Visibility.{Hidden, Visible}
-import io.getquill.quat.Quat
+import io.getquill.ast.Visibility.{ Hidden, Visible }
+import io.getquill.quat._
 import io.getquill.util.Interleave
-import io.getquill.{Delete => DslDelete, Insert => DslInsert, Query => DslQuery, Update => DslUpdate}
+import io.getquill.{ Delete => DslDelete, Insert => DslInsert, Query => DslQuery, Update => DslUpdate }
 
 trait Parsing extends ValueComputation with QuatMaking {
   this: Quotation =>

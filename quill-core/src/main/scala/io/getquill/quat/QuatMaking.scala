@@ -1,10 +1,7 @@
-package io.getquill.quotation
-
-import scala.reflect.macros.whitebox.Context
-import io.getquill.ast._
-import io.getquill.quat.Quat
+package io.getquill.quat
 
 import scala.reflect.api.Universe
+import scala.reflect.macros.whitebox.Context
 
 trait QuatMaking extends QuatMakingBase {
   val c: Context
@@ -13,7 +10,9 @@ trait QuatMaking extends QuatMakingBase {
   lazy val u: Uni = c.universe
 }
 
-object InferQuatRuntime extends QuatMakingBase {
+object MakeQuat extends MakeQuat
+
+trait MakeQuat extends QuatMakingBase {
   type Uni = scala.reflect.api.Universe
   lazy val u = scala.reflect.runtime.universe
   def of[T: u.TypeTag] = inferQuat(implicitly[u.TypeTag[T]].tpe)
@@ -22,7 +21,7 @@ object InferQuatRuntime extends QuatMakingBase {
 trait QuatMakingBase {
   type Uni <: Universe
   val u: Uni
-  import u.{ Ident => _, Constant => _, Function => _, If => _, Block => _, _ }
+  import u.{ Block => _, Constant => _, Function => _, Ident => _, If => _, _ }
 
   def inferQuat(tpe: Type): Quat = {
 

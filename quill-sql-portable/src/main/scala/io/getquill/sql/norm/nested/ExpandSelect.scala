@@ -10,6 +10,7 @@ import scala.collection.mutable.LinkedHashSet
 import io.getquill.context.sql.norm.nested.Elements._
 import io.getquill.ast._
 import io.getquill.norm.BetaReduction
+import io.getquill.quat.Quat
 
 /**
  * Takes the `SelectValue` elements inside of a sub-query (if a super/sub-query constrct exists) and flattens

@@ -1,11 +1,13 @@
 package io.getquill.quotation
 
 import io.getquill.ast._
+
 import scala.collection.immutable.Map
 import scala.reflect.macros.whitebox.{ Context => MacroContext }
 import scala.reflect.NameTransformer
 import io.getquill.dsl.EncodingDsl
 import io.getquill.norm.BetaReduction
+import io.getquill.quat.QuatMaking
 import io.getquill.util.OptionalTypecheck
 import io.getquill.util.MacroContextExt._
 

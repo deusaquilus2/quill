@@ -5,17 +5,16 @@ import io.getquill.ast.Renameable.Fixed
 import scala.language.implicitConversions
 import scala.language.experimental.macros
 import io.getquill.ast._
-import io.getquill.quat.Quat
-import io.getquill.quotation.InferQuatRuntime
+import io.getquill.quat._
 
-import scala.reflect.macros.whitebox.{Context => MacroContext}
+import scala.reflect.macros.whitebox.{ Context => MacroContext }
 import io.getquill.util.Messages._
 
 import scala.annotation.tailrec
 import scala.util.DynamicVariable
 import scala.reflect.ClassTag
 import scala.reflect.runtime.universe.TypeTag
-import io.getquill.{ActionReturning, Delete, EntityQuery, Insert, Ord, Query, Update, Action => DslAction}
+import io.getquill.{ ActionReturning, Delete, EntityQuery, Insert, Ord, Query, Update, Action => DslAction }
 
 class DynamicQueryDslMacro(val c: MacroContext) {
   import c.universe._
@@ -73,7 +72,7 @@ trait DynamicQueryDsl {
   def dynamicQuery[T](implicit t: ClassTag[T], tt: TypeTag[T]): DynamicEntityQuery[T] =
     DynamicEntityQuery(
       splice[EntityQuery[T]](
-        Entity(t.runtimeClass.getName.split('.').last.split('$').last, Nil, InferQuatRuntime.of[T])
+        Entity(t.runtimeClass.getName.split('.').last.split('$').last, Nil, MakeQuat.of[T])
       )
     )
 
@@ -138,12 +137,12 @@ trait DynamicQueryDsl {
           }
 
         PropertyAlias(
-          path(alias.property(splice[T](Ident("v", InferQuatRuntime.of[T]))).ast),
+          path(alias.property(splice[T](Ident("v", MakeQuat.of[T]))).ast),
           alias.name
         )
       }
     DynamicEntityQuery(
-      splice[EntityQuery[T]](Entity.Opinionated(entity, aliases.toList, InferQuatRuntime.of[T], Fixed))
+      splice[EntityQuery[T]](Entity.Opinionated(entity, aliases.toList, MakeQuat.of[T], Fixed))
     )
   }
 
@@ -165,7 +164,7 @@ trait DynamicQueryDsl {
     }
 
   protected def spliceLift[O](o: O)(implicit enc: Encoder[O], tt: TypeTag[O]) =
-    splice[O](ScalarValueLift("o", o, enc, InferQuatRuntime.of[O]))
+    splice[O](ScalarValueLift("o", o, enc, MakeQuat.of[O]))
 
   object DynamicQuery {
     def apply[T](p: Quoted[Query[T]]) =
@@ -185,7 +184,7 @@ trait DynamicQueryDsl {
     ) =
       withFreshIdent { v =>
         r(t(q.ast, v, f(splice(v)).ast))
-      }(InferQuatRuntime.of[V])
+      }(MakeQuat.of[V])
 
     protected[this] def transformOpt[O, R, D <: DynamicQuery[T]](
       opt:  Option[O],
@@ -311,7 +310,7 @@ trait DynamicQueryDsl {
     ): DynamicQuery[R] =
       withFreshIdent { v =>
         dyn(FlatJoin(tpe, q.ast, v, on(splice(v)).ast))
-      }(InferQuatRuntime.of[R])
+      }(MakeQuat.of[R])
 
     def join[A >: T](on: Quoted[A] => Quoted[Boolean])(implicit tt: TypeTag[A]): DynamicQuery[A] =
       flatJoin(InnerJoin, on)
@@ -394,7 +393,7 @@ trait DynamicQueryDsl {
     ): List[Assignment] =
       l.collect {
         case s: DynamicSetValue[_, _] =>
-          val v = Ident("v", InferQuatRuntime.of[S])
+          val v = Ident("v", MakeQuat.of[S])
           Assignment(v, s.property(splice(v)).ast, s.value.ast)
       }
 
@@ -444,7 +443,7 @@ trait DynamicQueryDsl {
     def returning[R](f: Quoted[E] => Quoted[R])(implicit tt: TypeTag[R]): DynamicActionReturning[E, R] =
       withFreshIdent { v =>
         DynamicActionReturning[E, R](splice(Returning(q.ast, v, f(splice(v)).ast)))
-      } { InferQuatRuntime.of[R] }
+      } { MakeQuat.of[R] }
 
     def returningGenerated[R](
       f: Quoted[E] => Quoted[R]
@@ -453,7 +452,7 @@ trait DynamicQueryDsl {
         DynamicActionReturning[E, R](
           splice(ReturningGenerated(q.ast, v, f(splice(v)).ast))
         )
-      } { InferQuatRuntime.of[R] }
+      } { MakeQuat.of[R] }
 
     def onConflictIgnore: DynamicInsert[E] =
       dyn(
@@ -467,7 +466,7 @@ trait DynamicQueryDsl {
     def onConflictIgnore(
       targets: (Quoted[E] => Quoted[Any])*
     )(implicit tt: TypeTag[E]): DynamicInsert[E] = {
-      val v = splice[E](Ident("v", InferQuatRuntime.of[E]))
+      val v = splice[E](Ident("v", MakeQuat.of[E]))
       val properties =
         targets.toList.map { f =>
           f(v).ast match {

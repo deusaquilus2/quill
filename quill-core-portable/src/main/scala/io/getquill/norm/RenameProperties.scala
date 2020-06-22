@@ -71,6 +71,13 @@ object PropagateRenames extends StatelessTransformer {
   // TODO Quat for operation? (or for Map(Operation, ...)?)
   // TODO Quat for infix? (or for Map(Infix, ...)?)
 
+  //  override def apply(e: Operation): Operation =
+  //    e match {
+  //      case UnaryOperation(o, c: Query) =>
+  //        UnaryOperation(o, applySchemaOnly(apply(c)))
+  //      case _ => super.apply(e)
+  //    }
+
   override def apply(e: Query): Query =
     // TODO Quat Do I need to do something for infixes?
     e match {
@@ -129,8 +136,6 @@ object PropagateRenames extends StatelessTransformer {
         val bodyR = BetaReduction(body, alias -> aliasR)
         ReturningGenerated(actionR, aliasR, bodyR)
 
-      // TODO Finish this, not sure what do do in OnConflict.Properties i.e. what to beta-reduce
-
       case oc @ OnConflict(oca: Action, target, act) =>
         val actionR = apply(oca)
         val targetR =
@@ -139,8 +144,8 @@ object PropagateRenames extends StatelessTransformer {
               val propsR = props.map {
                 case prop @ PropertyMatroshka(ident, _) =>
                   BetaReduction(prop, ident -> ident.withQuat(oca.quat)).asInstanceOf[Property]
-                case _ =>
-                  throw new IllegalArgumentException(s"Malformed onConflict element ${oc}")
+                case other =>
+                  throw new IllegalArgumentException(s"Malformed onConflict element ${oc}. Could not parse property ${other}")
               }
               OnConflict.Properties(propsR)
 
@@ -318,8 +323,6 @@ object RenameProperties extends StatelessTransformer {
             None
       }
   }
-
-
 
   def protractSchema(body: Ast, ident: Ident, schema: Schema): Option[Schema] = {
 

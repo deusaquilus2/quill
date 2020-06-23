@@ -69,6 +69,16 @@ trait QuatMakingBase {
     parseType(tpe)
   }
 
+  def paramOf[T](tpe: Type)(implicit tt: TypeTag[T]): Option[Type] = tpe match {
+    case _ if (!(tpe <:< tt.tpe)) =>
+      None
+    case TypeRef(_, cls, List(arg)) =>
+      Some(arg)
+    case _ =>
+      val base = tpe.baseType(implicitly[TypeTag[T]].tpe.typeSymbol)
+      paramOf(base)
+  }
+
   @tailrec
   private[getquill] final def innerOptionParam(tpe: Type, maxDepth: Option[Int]): Type = tpe match {
     // If it's a ref-type and an Option, pull out the argument

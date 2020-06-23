@@ -3,6 +3,7 @@ package io.getquill
 import io.getquill.ast.Renameable.Fixed
 import io.getquill.ast.{ Entity, PropertyAlias }
 import io.getquill.context.mirror.Row
+import io.getquill.quat._
 
 class UnlimitedOptionalEmbeddedSpec extends Spec {
   val ctx = testContext
@@ -47,7 +48,7 @@ class UnlimitedOptionalEmbeddedSpec extends Spec {
       PropertyAlias(List("e2", "e1", "e2", "value"), "value212"),
       PropertyAlias(List("e2", "e2", "e1", "value"), "value221"),
       PropertyAlias(List("e2", "e2", "e2", "value"), "value222")
-    ), Fixed)
+    ), quatOf[OptEmd], Fixed)
   }
 
   "meta" - {

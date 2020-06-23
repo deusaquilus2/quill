@@ -115,15 +115,21 @@ trait Parsing extends ValueComputation with QuatMaking {
 
   val liftParser: Parser[Lift] = Parser[Lift] {
 
-    case q"$pack.liftScalar[$t]($value)($encoder)"          => ScalarValueLift(value.toString, value, encoder, inferQuat(q"$t".tpe))
-    case q"$pack.liftCaseClass[$t]($value)"                 => CaseClassValueLift(value.toString, value, inferQuat(q"$t".tpe))
+    case q"$pack.liftScalar[$t]($value)($encoder)" =>
+      ScalarValueLift(value.toString, value, encoder, inferQuat(q"$t".tpe))
+    case q"$pack.liftCaseClass[$t]($value)" =>
+      CaseClassValueLift(value.toString, value, inferQuat(q"$t".tpe))
 
-    case q"$pack.liftQueryScalar[$u, $t]($value)($encoder)" => ScalarQueryLift(value.toString, value, encoder, inferQuat(q"$t".tpe))
-    case q"$pack.liftQueryCaseClass[$u, $t]($value)"        => CaseClassQueryLift(value.toString, value, inferQuat(q"$t".tpe))
+    case q"$pack.liftQueryScalar[$u, $t]($value)($encoder)" =>
+      ScalarQueryLift(value.toString, value, encoder, inferQuat(q"$t".tpe))
+    case q"$pack.liftQueryCaseClass[$u, $t]($value)" =>
+      CaseClassQueryLift(value.toString, value, inferQuat(q"$t".tpe))
 
     // Unused, it's here only to make eclipse's presentation compiler happy :(
-    case q"$pack.lift[$t]($value)"                          => ScalarValueLift(value.toString, value, q"null", inferQuat(q"$t".tpe))
-    case q"$pack.liftQuery[$t, $u]($value)"                 => ScalarQueryLift(value.toString, value, q"null", inferQuat(q"$t".tpe))
+    case q"$pack.lift[$t]($value)" =>
+      ScalarValueLift(value.toString, value, q"null", inferQuat(q"$t".tpe))
+    case q"$pack.liftQuery[$t, $u]($value)" =>
+      ScalarQueryLift(value.toString, value, q"null", inferQuat(q"$t".tpe))
   }
 
   val quotedAstParser: Parser[Ast] = Parser[Ast] {
@@ -135,8 +141,21 @@ trait Parsing extends ValueComputation with QuatMaking {
             case t: c.universe.Block => ast // expand quote(quote(body)) locally
             case t =>
               Rebind(c)(t, ast, astParser(_)) match {
-                case Some(ast) => ast
-                case None      => QuotedReference(t, ast)
+                case Some(ast) =>
+                  ast
+                case None =>
+                  val typeSig = t.tpe.typeSymbol.typeSignature
+                  val base = typeOf[CoreDsl#Quoted[Any]].typeSymbol
+                  val ref = t.tpe.baseType(base)
+                  ref match {
+                    case TypeRef(_, cls, args) =>
+                      println(args)
+                    case _ =>
+                      println("nope")
+                  }
+                  val par = paramOf[CoreDsl#Quoted[Any]](t.tpe)
+
+                  QuotedReference(t, ast)
               }
           }
         case other => Dynamic(t)
@@ -289,7 +308,7 @@ trait Parsing extends ValueComputation with QuatMaking {
       value
   }
 
-  val impureInfixParser = combinedInfixParser(false, Quat.Value) // TODO Verify Quat in what cases does this come up?
+  val impureInfixParser = combinedInfixParser(false, Quat.Product(List("foo" -> Quat.Value))) // TODO Verify Quat in what cases does this come up?
 
   def combinedInfixParser(infixIsPure: Boolean, quat: Quat): Parser[Ast] = Parser[Ast] {
     case q"$pack.InfixInterpolator(scala.StringContext.apply(..${ parts: List[String] })).infix(..$params)" =>
@@ -330,8 +349,9 @@ trait Parsing extends ValueComputation with QuatMaking {
             }
           """)
         }
-      } else
+      } else {
         Infix(parts, params.map(astParser(_)), infixIsPure, quat)
+      }
   }
 
   val functionParser: Parser[Function] = Parser[Function] {

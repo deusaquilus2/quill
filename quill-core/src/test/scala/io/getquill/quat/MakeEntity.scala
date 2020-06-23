@@ -5,5 +5,5 @@ import scala.reflect.runtime.{ universe => u }
 
 object MakeEntity {
   def of[T: u.TypeTag](name: String, properties: List[PropertyAlias]) =
-    Entity(name, properties, quatFor[T])
+    Entity(name, properties, MakeQuat[T])
 }

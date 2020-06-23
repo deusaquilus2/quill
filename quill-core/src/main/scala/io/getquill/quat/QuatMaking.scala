@@ -11,12 +11,12 @@ trait QuatMaking extends QuatMakingBase {
   lazy val u: Uni = c.universe
 }
 
-object quatFor extends quatFor
+object MakeQuat extends MakeQuat
 
-trait quatFor extends QuatMakingBase {
+trait MakeQuat extends QuatMakingBase {
   type Uni = scala.reflect.api.Universe
   lazy val u = scala.reflect.runtime.universe
-  def apply[T: u.TypeTag] = inferQuat(implicitly[u.TypeTag[T]].tpe)
+  def of[T: u.TypeTag] = inferQuat(implicitly[u.TypeTag[T]].tpe)
 }
 
 trait QuatMakingBase {

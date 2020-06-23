@@ -5,7 +5,7 @@ import io.getquill.ast._
 import io.getquill.EntityQuery
 import io.getquill.testContext.InfixInterpolator
 import io.getquill.Query
-import io.getquill.quat.{ MakeEntity, quatFor }
+import io.getquill.quat._
 import io.getquill.testContext.TestEntity
 import io.getquill.testContext.qr1
 import io.getquill.testContext.query
@@ -34,14 +34,14 @@ class OpsSpec extends Spec {
       val q = quote {
         unquote(qr1).map(t => t)
       }
-      val quat = quatFor[TestEntity]
+      val quat = Quat.of[TestEntity]
       q.ast mustEqual Map(Entity("TestEntity", Nil, quat), Ident("t", quat), Ident("t", quat))
     }
     "implicitly" in {
       val q = quote {
         qr1.map(t => t)
       }
-      val quat = quatFor[TestEntity]
+      val quat = Quat.of[TestEntity]
       q.ast mustEqual Map(Entity("TestEntity", Nil, quat), Ident("t", quat), Ident("t", quat))
     }
   }

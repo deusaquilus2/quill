@@ -109,6 +109,7 @@ sealed trait Quat {
   }
 
 }
+
 object Quat {
   object TupleIndex {
     def is(s: String): Boolean = unapply(s).isDefined

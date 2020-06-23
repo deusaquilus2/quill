@@ -21,28 +21,32 @@ object MySparkExample {
   implicit val sqlContext = spark.sqlContext
 
   def main(args: Array[String]) = {
-    val people = Seq(Person(1, "Joe", 123)).toDS
-    val addresses = Seq(Address(1, 11, "123. St")).toDS // if you don't do .toDS: Query not properly normalized. Please open a bug report. Ast: '?'
-    val lots = Seq(Lot(1, 11, "123 Place")).toDS
+    val peopleDS = Seq(Person(1, "Joe", 123)).toDS
+    val addressesDS = Seq(Address(1, 11, "123. St")).toDS // if you don't do .toDS: Query not properly normalized. Please open a bug report. Ast: '?'
+    val lotsDS = Seq(Lot(1, 11, "123 Place")).toDS
 
     //val join = quote { liftQuery(people).join(liftQuery(addresses)).on((p, a) => p.id == a.fk) }
 
+    val people = liftQuery(peopleDS)
+    val addresses = liftQuery(addressesDS)
+    val lots = liftQuery(lotsDS)
+
     val join = quote {
       for {
-        p <- liftQuery(people)
-        a <- liftQuery(addresses).join(a => p.id == a.fk)
+        p <- people
+        a <- addresses.join(a => p.id == a.fk)
       } yield (p, a)
     }
 
     val q = quote {
       for {
-        l <- liftQuery(lots)
+        l <- lots
         //(p, a) <- join.join { case (p, a) => l.afk == a.id && l.pfk == p.id } // should be possible with joinOn
         (pp, aa) <- join.join(tup => tup match { case (p, a) => l.afk == a.id && l.pfk == p.id })
 
       } yield (aa.fk, aa, pp.id, l.name)
     }
-    run(q).show() //hellooooooooooooooooooooo
+    run(q).show() //helloooooooooooooooooooooo
   }
 }
 

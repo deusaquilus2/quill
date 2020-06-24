@@ -61,7 +61,7 @@ case class Entity(name: String, properties: List[PropertyAlias], quat: Quat.Prod
   override def neutral: Entity =
     new Entity(name, properties, quat)
 
-  // TODO Quat add quat to equals function here?
+  // TODO Quat add quat to equals function here? (note that if you do the tests will test for it)
   override def equals(that: Any) =
     that match {
       case e: Entity =>

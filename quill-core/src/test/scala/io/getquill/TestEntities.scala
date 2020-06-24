@@ -16,6 +16,14 @@ trait TestEntities {
   case class TestEntity4Emb(emb: EmbSingle)
   case class TestEntityRegular(s: String, i: Long)
 
+  val qr1Quat = quat.quatOf[TestEntity]
+  val qr1EmbQuat = quat.quatOf[TestEntityEmb]
+  val qr2Quat = quat.quatOf[TestEntity2]
+  val qr3Quat = quat.quatOf[TestEntity3]
+  val qr4Quat = quat.quatOf[TestEntity4]
+  val qr5Quat = quat.quatOf[TestEntity5]
+  val qr4EmbQuat = quat.quatOf[TestEntity4Emb]
+
   val qr1 = quote {
     query[TestEntity]
   }

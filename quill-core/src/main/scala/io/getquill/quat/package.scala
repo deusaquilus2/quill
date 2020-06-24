@@ -5,5 +5,5 @@ package io.getquill
  */
 package object quat {
 
-  def quatOf[T: scala.reflect.runtime.universe.TypeTag] = MakeQuat.of[T]
+  def quatOf[T: scala.reflect.runtime.universe.TypeTag]: Quat.ProductOr = MakeQuat.of[T].prodOr
 }

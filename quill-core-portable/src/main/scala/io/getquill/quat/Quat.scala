@@ -89,7 +89,20 @@ object Quat {
         None
   }
 
-  sealed trait ProductOr extends Quat
+  sealed trait ProductOr extends Quat {
+
+    override def applyRenames: Quat.ProductOr =
+      this match {
+        case p: Product   => p.applyRenames
+        case error: Error => error
+      }
+
+    def prod =
+      this match {
+        case p: Quat.Product => p
+        case Quat.Error(msg) => throw new IllegalArgumentException(s"Could not cast ProductOr SQL-Type to Product SQL Type due to error. ${msg}")
+      }
+  }
 
   case class Product(fields: List[(String, Quat)]) extends ProductOr {
     override def toString: String = s"Quat.Product(${fields.map { case (k, v) => s"${k}:${v}" }.mkString(", ")})"
@@ -101,7 +114,7 @@ object Quat {
      * the renames at the end but rather keep them around until the SqlQuery phase wherein we could potentially
      * create SQL aliases not based on the renamed properties by based on the original property name.
      */
-    override def applyRenames = {
+    override def applyRenames: Quat.Product = {
       val newFields = fields.map {
         case (f, q) =>
           // Rename properties of this quat and rename it's children recursively

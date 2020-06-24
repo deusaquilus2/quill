@@ -48,7 +48,7 @@ class BetaReductionSpec extends Spec {
         Ident("a'")
     }
     "with inline" - {
-      val entity = Entity("a", Nil)
+      val entity = Entity("a", Nil, QEP)
       val (a, b, c, d) = (Ident("a"), Ident("b"), Ident("c"), Ident("d"))
       val (c1, c2, c3) = (Constant(1), Constant(2), Constant(3))
 

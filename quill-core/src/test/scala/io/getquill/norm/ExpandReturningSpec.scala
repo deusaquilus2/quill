@@ -24,7 +24,7 @@ class ExpandReturningSpec extends Spec {
       val list =
         ExpandReturning.apply(q.ast.asInstanceOf[Returning])(MirrorIdiom, Literal)
       list must matchPattern {
-        case List((Property(ExternalIdent("p"), "name"), _), (Property(ExternalIdent("p"), "age"), _)) =>
+        case List((Property(ExternalIdent("p", QEP), "name"), _), (Property(ExternalIdent("p", QEP), "age"), _)) =>
       }
     }
 
@@ -35,7 +35,7 @@ class ExpandReturningSpec extends Spec {
       val list =
         ExpandReturning.apply(q.ast.asInstanceOf[Returning])(MirrorIdiom, Literal)
       list must matchPattern {
-        case List((Property(ExternalIdent("p"), "name"), _), (Property(ExternalIdent("p"), "age"), _)) =>
+        case List((Property(ExternalIdent("p", QEP), "name"), _), (Property(ExternalIdent("p", QEP), "age"), _)) =>
       }
     }
   }
@@ -51,7 +51,7 @@ class ExpandReturningSpec extends Spec {
       val list =
         ExpandReturning.apply(q.ast.asInstanceOf[Returning], Some("OTHER"))(MirrorIdiom, SnakeCase)
       list must matchPattern {
-        case List((Property(ExternalIdent("OTHER"), "name"), _), (Property(ExternalIdent("OTHER"), "age"), _)) =>
+        case List((Property(ExternalIdent("OTHER", QEP), "name"), _), (Property(ExternalIdent("OTHER", QEP), "age"), _)) =>
       }
     }
 
@@ -62,7 +62,7 @@ class ExpandReturningSpec extends Spec {
       val list =
         ExpandReturning.apply(q.ast.asInstanceOf[Returning], Some("OTHER"))(MirrorIdiom, SnakeCase)
       list must matchPattern {
-        case List((Property(ExternalIdent("OTHER"), "name"), _), (Property(ExternalIdent("OTHER"), "age"), _)) =>
+        case List((Property(ExternalIdent("OTHER", QEP), "name"), _), (Property(ExternalIdent("OTHER", QEP), "age"), _)) =>
       }
     }
   }
@@ -140,7 +140,7 @@ class ExpandReturningSpec extends Spec {
 
     def insert = Insert(
       Map(
-        Entity.Opinionated("Person", List(), renameable),
+        Entity.Opinionated("Person", List(), QEP, renameable),
         Ident("p"),
         Tuple(List(Property.Opinionated(Ident("p"), "name", renameable, Visible), Property.Opinionated(Ident("p"), "age", renameable, Visible)))
       ),

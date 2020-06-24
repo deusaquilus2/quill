@@ -7,7 +7,7 @@ import scala.reflect.macros.whitebox.{ Context => MacroContext }
 import scala.reflect.NameTransformer
 import io.getquill.dsl.EncodingDsl
 import io.getquill.norm.BetaReduction
-import io.getquill.quat.QuatMaking
+import io.getquill.quat.{ Quat, QuatMaking }
 import io.getquill.util.OptionalTypecheck
 import io.getquill.util.MacroContextExt._
 
@@ -97,8 +97,19 @@ trait ReifyLiftings extends QuatMaking {
           }
 
         case QuotedReference(ref: Tree, refAst) =>
+
+          // Improve the type signature info if possible. This is for
+          // Spark's infix"${lift(ds)}" use case and could be enhanced to understand
+          // other kinds of constructs.
+          val reparsedAst =
+            (ref.tpe, refAst) match {
+              case (QuotedType(QueryType(tpe)), i @ Infix(_, _, _, Quat.Generic)) =>
+                i.copy(quat = inferQuat(tpe))
+              case _ => refAst
+            }
+
           val newAst =
-            Transform(refAst) {
+            Transform(reparsedAst) {
               case lift: Lift =>
                 val nested =
                   q"$ref.$liftings.${encode(lift.name)}"

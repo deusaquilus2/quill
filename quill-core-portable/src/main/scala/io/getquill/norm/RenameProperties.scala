@@ -387,7 +387,7 @@ object RenameProperties extends StatelessTransformer {
             List(PropertyAlias(aliasPath.diff(subPath), alias))
           else
             List()
-      }, e.quat.lookup(subPath))) // TODO Quat rename the properties of the entity's quat here per renaming of the schema
+      }, e.quat)) // TODO Quat rename the properties of the entity's quat here per renaming of the schema
     }
 
     def subSchemaOrEmpty(path: List[String]): Schema =

@@ -3,6 +3,7 @@ package io.getquill.ast
 import io.getquill.Spec
 import io.getquill.ast.Implicits._
 import io.getquill.VIdent
+import io.getquill.quat.Quat
 
 class AstOpsSpec extends Spec {
 
@@ -98,13 +99,13 @@ class AstOpsSpec extends Spec {
   }
 
   "returning matcher" - {
-    val insert = Insert(Entity("Ent", List()), List(Assignment(VIdent("p"), Property(VIdent("p"), "prop"), Constant(123))))
+    val insert = Insert(Entity("Ent", List(), Quat.LeafProduct("prop")), List(Assignment(VIdent("p"), Property(VIdent("p"), "prop"), Constant(123))))
     val r = VIdent("r")
     val prop = Property(r, "value")
 
     "must match returning" in {
       Returning(insert, r, prop) must matchPattern {
-        case ReturningAction(`insert`, `r`, `prop`) =>
+        case ReturningAction(`insert`, `r`, `prop`) => // TODO Quat check the quat here
       }
     }
 

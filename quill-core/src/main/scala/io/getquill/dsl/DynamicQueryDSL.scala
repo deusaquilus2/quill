@@ -72,7 +72,7 @@ trait DynamicQueryDsl {
   def dynamicQuery[T](implicit t: ClassTag[T], tt: TypeTag[T]): DynamicEntityQuery[T] =
     DynamicEntityQuery(
       splice[EntityQuery[T]](
-        Entity(t.runtimeClass.getName.split('.').last.split('$').last, Nil, MakeQuat.of[T])
+        Entity(t.runtimeClass.getName.split('.').last.split('$').last, Nil, MakeQuat.of[T].prodOr)
       )
     )
 
@@ -142,7 +142,7 @@ trait DynamicQueryDsl {
         )
       }
     DynamicEntityQuery(
-      splice[EntityQuery[T]](Entity.Opinionated(entity, aliases.toList, MakeQuat.of[T], Fixed))
+      splice[EntityQuery[T]](Entity.Opinionated(entity, aliases.toList, MakeQuat.of[T].prodOr, Fixed))
     )
   }
 

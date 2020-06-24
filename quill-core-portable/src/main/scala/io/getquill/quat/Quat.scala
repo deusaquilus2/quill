@@ -7,6 +7,13 @@ sealed trait Quat {
   def withRenames(renames: List[(String, String)]): Quat
   def renames: List[(String, String)] = List()
 
+  def prodOr =
+    this match {
+      case p: Quat.Product => p
+      case e: Quat.Error   => e
+      case other           => Quat.Error(s"SQL-level type must be a product but found ${other}")
+    }
+
   // Roughly speaking, is this a super-type of the inner type
   def canReduceTo(other: Quat): Boolean = {
     (this, other) match {
@@ -70,49 +77,6 @@ sealed trait Quat {
       case head :: tail => this.lookup(head).lookup(tail)
       case Nil          => this
     }
-
-  /** Rename a property of a Quat.Tuple or Quat.CaseClass. Optionally can specify a new Quat to change the property to. */
-  def stashRename(property: String, newProperty: String, newQuat: Option[Quat] = None): Quat = {
-    // sanity check does the property exist in the first place
-    this.lookup(property) match {
-      case e: Quat.Error => e
-      case _ => {
-        // TODO Quat, test quat changes with a tuple property rename
-        (this, property, newProperty) match {
-          case (cc: Quat.Product, property, newProperty) =>
-            cc.fields.find(_._1 == property) match {
-              case Some(_) =>
-                val newFields =
-                  cc.fields.map {
-                    case (field, quat) => if (field == property) (field, newQuat.getOrElse(quat)) else (field, quat)
-                  }
-                Quat.Product.WithRenames(newFields, cc.renames :+ ((property, newProperty)))
-
-              case None =>
-                cc
-            }
-          case (Quat.Value, _, _) => Quat.Error(s"Cannot replace property ${property} with ${newProperty} on a Value SQL-level type")
-          case _                  => Quat.Error(s"Invalid state reached for ${this.shortString}, ${property}, ${newProperty}")
-        }
-      }
-    }
-  }
-
-  def stashRename(path: List[String], newEndProperty: String): Quat = {
-    path match {
-      case Nil => // do nothing
-        this
-
-      case head :: Nil =>
-        this.stashRename(head, newEndProperty)
-
-      case head :: tail =>
-        val child = this.lookup(head)
-        val newChild = child.stashRename(tail, newEndProperty)
-        this.stashRename(head, head, Some(newChild))
-    }
-  }
-
 }
 
 object Quat {
@@ -125,7 +89,9 @@ object Quat {
         None
   }
 
-  case class Product(fields: List[(String, Quat)]) extends Quat {
+  sealed trait ProductOr extends Quat
+
+  case class Product(fields: List[(String, Quat)]) extends ProductOr {
     override def toString: String = s"Quat.Product(${fields.map { case (k, v) => s"${k}:${v}" }.mkString(", ")})"
     override def withRenames(renames: List[(String, String)]) =
       Product.WithRenames(fields, renames)
@@ -145,9 +111,66 @@ object Quat {
       }
       Product(newFields)
     }
+
+    /** Rename a property of a Quat.Tuple or Quat.CaseClass. Optionally can specify a new Quat to change the property to. */
+    def stashRename(property: String, newProperty: String, newQuat: Option[Quat] = None): Quat.ProductOr = {
+      // sanity check does the property exist in the first place
+      this.lookup(property) match {
+        case e: Quat.Error => e
+        case _ => {
+          // TODO Quat, test quat changes with a tuple property rename
+          (this, property, newProperty) match {
+            case (cc: Quat.Product, property, newProperty) =>
+              cc.fields.find(_._1 == property) match {
+                case Some(_) =>
+                  val newFields =
+                    cc.fields.map {
+                      case (field, quat) => if (field == property) (field, newQuat.getOrElse(quat)) else (field, quat)
+                    }
+                  Quat.Product.WithRenames(newFields, cc.renames :+ ((property, newProperty)))
+
+                case None =>
+                  cc
+              }
+            case _ => Quat.Error(s"Invalid state reached for ${this.shortString}, ${property}, ${newProperty}")
+          }
+        }
+      }
+    }
+
+    def stashRename(path: List[String], newEndProperty: String): Quat.ProductOr = {
+      path match {
+        case Nil => // do nothing
+          this
+
+        case head :: Nil =>
+          this.stashRename(head, newEndProperty)
+
+        case head :: tail =>
+          val child = this.lookup(head)
+          val newChild: Either[Quat.Error, ProductOr] =
+            child match {
+              case childProduct: Quat.Product =>
+                Right(childProduct.stashRename(tail, newEndProperty))
+              case e: Quat.Error =>
+                Left(e)
+              case other =>
+                Left(Quat.Error(s"Cannot continue to lookup property '${tail.head}' from ${other.shortString} in ${this.shortString}"))
+            }
+
+          newChild match {
+            case Right(value) => this.stashRename(head, head, Some(value))
+            case Left(error)  => error
+          }
+      }
+    }
   }
+  def LeafProduct(list: String*) = new Quat.Product(list.toList.map(e => (e, Quat.Value)))
+
   object Product {
-    def apply(fields: List[(String, Quat)]) = new Quat.Product(fields)
+    def empty = new Product(List())
+    def apply(fields: (String, Quat)*): Quat.Product = apply(fields.toList)
+    def apply(fields: List[(String, Quat)]): Quat.Product = new Quat.Product(fields)
     def unapply(p: Quat.Product): Some[(List[(String, Quat)])] = Some(p.fields)
 
     /**
@@ -188,7 +211,7 @@ object Quat {
 
     override def toString: String = "QV"
   }
-  case class Error(msg: String) extends Quat {
+  case class Error(msg: String) extends ProductOr with Quat {
     override def withRenames(renames: List[(String, String)]): Quat = this
   }
 }

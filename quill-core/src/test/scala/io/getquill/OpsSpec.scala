@@ -20,12 +20,12 @@ class OpsSpec extends Spec {
       val q = quote {
         query[TestEntity]
       }
-      q.ast mustEqual MakeEntity.of[TestEntity]("TestEntity", Nil)
+      q.ast mustEqual Entity("TestEntity", Nil, quatOf[TestEntity])
     }
     "implicitly" in {
       val q: Quoted[Query[TestEntity]] =
         query[TestEntity]
-      q.ast mustEqual MakeEntity.of[TestEntity]("TestEntity", Nil)
+      q.ast mustEqual Entity("TestEntity", Nil, quatOf[TestEntity])
     }
   }
 
@@ -34,14 +34,14 @@ class OpsSpec extends Spec {
       val q = quote {
         unquote(qr1).map(t => t)
       }
-      val quat = Quat.of[TestEntity]
+      val quat = quatOf[TestEntity]
       q.ast mustEqual Map(Entity("TestEntity", Nil, quat), Ident("t", quat), Ident("t", quat))
     }
     "implicitly" in {
       val q = quote {
         qr1.map(t => t)
       }
-      val quat = Quat.of[TestEntity]
+      val quat = quatOf[TestEntity]
       q.ast mustEqual Map(Entity("TestEntity", Nil, quat), Ident("t", quat), Ident("t", quat))
     }
   }
@@ -51,13 +51,13 @@ class OpsSpec extends Spec {
       val q = quote {
         infix"true".as[Boolean]
       }
-      q.ast mustEqual Infix(List("true"), Nil, false)
+      q.ast mustEqual Infix(List("true"), Nil, false, quatOf[Boolean])
     }
     "without `as`" in {
       val q = quote {
         infix"true"
       }
-      q.ast mustEqual Infix(List("true"), Nil, false)
+      q.ast mustEqual Infix(List("true"), Nil, false, quatOf[Boolean])
     }
   }
 

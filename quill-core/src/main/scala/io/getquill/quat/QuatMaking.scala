@@ -18,7 +18,7 @@ object MakeQuat extends MakeQuat
 trait MakeQuat extends QuatMakingBase {
   type Uni = scala.reflect.api.Universe
   lazy val u = scala.reflect.runtime.universe
-  def of[T: u.TypeTag] = inferQuat(implicitly[u.TypeTag[T]].tpe)
+  def of[T: u.TypeTag]: Quat = inferQuat(implicitly[u.TypeTag[T]].tpe)
 }
 
 trait QuatMakingBase {

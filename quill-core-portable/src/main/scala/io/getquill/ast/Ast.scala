@@ -53,7 +53,7 @@ sealed trait Query extends Ast
  * That means that even if the `NamingSchema` is `UpperCase`, the resulting query will select `t_person` as opposed
  * to `T_PERSON` or `Person`.
  */
-case class Entity(name: String, properties: List[PropertyAlias], quat: Quat) extends Query {
+case class Entity(name: String, properties: List[PropertyAlias], quat: Quat.ProductOr) extends Query {
   // Technically this should be part of the Entity case class but due to the limitations of how
   // scala creates companion objects, the apply/unapply wouldn't be able to work correctly.
   def renameable: Renameable = Renameable.neutral
@@ -76,14 +76,18 @@ case class Entity(name: String, properties: List[PropertyAlias], quat: Quat) ext
   def syncToQuat: Entity = {
     val newQuat =
       properties.foldLeft(quat) {
-        case (quat, PropertyAlias(path, alias)) => quat.stashRename(path, alias)
+        case (quat, PropertyAlias(path, alias)) =>
+          quat match {
+            case e: Quat.Error   => e
+            case p: Quat.Product => p.stashRename(path, alias)
+          }
       }
     Entity.Opinionated(name, properties, newQuat, renameable)
   }
 }
 
 object Entity {
-  def apply(name: String, properties: List[PropertyAlias], quat: Quat) =
+  def apply(name: String, properties: List[PropertyAlias], quat: Quat.ProductOr) =
     new Entity(name, properties, quat)
   def unapply(e: Entity) = Some((e.name, e.properties, e.quat))
 
@@ -91,7 +95,7 @@ object Entity {
     def apply(
       name:          String,
       properties:    List[PropertyAlias],
-      quat:          Quat,
+      quat:          Quat.ProductOr,
       renameableNew: Renameable
     ) =
       new Entity(name, properties, quat) {
@@ -197,7 +201,7 @@ case class Ident(name: String, quat: Quat) extends Ast {
  * needs to be marked invisible.
  */
 object Ident {
-  def apply(name: String, quat: Quat) = new Ident(name, quat)
+  def apply(name: String, quat: Quat = Quat.Value) = new Ident(name, quat)
   def unapply(p: Ident) = Some((p.name, p.quat))
 
   object Opinionated {

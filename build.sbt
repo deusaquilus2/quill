@@ -803,6 +803,13 @@ lazy val commonSettings = ReleasePlugin.extraReleaseCommands ++ basicSettings ++
         doOnPush   (setReleaseVersion) ++
         doOnDefault(publishArtifacts)
         //doOnPush   ("sonatypeReleaseAll") ++
+      case Some((2, 13)) =>
+        doOnDefault(checkSnapshotDependencies) ++
+        doOnDefault(inquireVersions) ++
+        doOnDefault(runClean) ++
+        doOnPush   (setReleaseVersion) ++
+        doOnDefault(publishArtifacts)
+        //doOnPush   ("sonatypeReleaseAll") ++
       case _ => Seq[ReleaseStep]()
     }
   },

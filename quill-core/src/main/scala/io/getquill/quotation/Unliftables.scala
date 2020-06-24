@@ -201,6 +201,7 @@ trait Unliftables {
     case q"$pack.Quat.Product.apply(${ fields: List[(String, Quat)] })" => Quat.Product(fields)
     case q"$pack.Quat.Value" => Quat.Value
     case q"$pack.Quat.Null" => Quat.Null
+    case q"$pack.Quat.Generic" => Quat.Generic
     case q"$pack.Quat.Error.apply(${ msg: String })" => Quat.Error(msg)
   }
 

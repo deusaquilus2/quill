@@ -465,7 +465,7 @@ object OnConflict {
 
 case class Dynamic(tree: Any) extends Ast { def quat = Quat.Value } // TODO Quat how is this used?????
 
-case class QuotedReference(tree: Any, ast: Ast) extends Ast { def quat = Quat.Value } // TODO Quat how is this used?????
+case class QuotedReference(tree: Any, ast: Ast) extends Ast { def quat = ast.quat } // TODO Quat how is this used?????
 
 sealed trait External extends Ast
 

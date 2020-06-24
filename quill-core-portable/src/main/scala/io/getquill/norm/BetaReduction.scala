@@ -15,9 +15,14 @@ case class BetaReduction(replacements: Replacements)
         val rep = BetaReduction(replacements - ast - replacements(ast))(replacements(ast))
         // TODO Detect if we're replacing something will null, synthesize a 'null' node
         //       that has the type of we were replacing it with
+        // TODO what other kinds of entities do we need to detect here whose Quat we need to change?
         (ast, rep) match {
           case (ast, OptionNone(Quat.Null)) =>
             OptionNone(ast.quat)
+          case (ast, Ident(n, Quat.Generic)) =>
+            Ident(n, ast.quat)
+          case (ast, ScalarValueLift(n, v, e, Quat.Generic)) =>
+            ScalarValueLift(n, v, e, ast.quat)
           case (_, rep) =>
             rep
         }

@@ -46,7 +46,9 @@ object MySparkExample {
 
       } yield (aa.fk, aa, pp.id, l.name)
     }
-    run(q).show() //helloooooooooooooooooooooo
+    //run(q).show() //hellooooooooooooooooooooooooo
+
+    run(liftQuery(peopleDS).nested).show()
   }
 }
 

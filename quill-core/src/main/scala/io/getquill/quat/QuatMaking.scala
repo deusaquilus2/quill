@@ -1,5 +1,7 @@
 package io.getquill.quat
 
+import io.getquill.dsl.QuotationDsl
+
 import scala.annotation.tailrec
 import scala.reflect.api.Universe
 import scala.reflect.macros.whitebox.Context
@@ -69,15 +71,27 @@ trait QuatMakingBase {
     parseType(tpe)
   }
 
-  def paramOf[T](tpe: Type)(implicit tt: TypeTag[T]): Option[Type] = tpe match {
-    case _ if (!(tpe <:< tt.tpe)) =>
-      None
-    case TypeRef(_, cls, List(arg)) =>
-      Some(arg)
-    case _ =>
-      val base = tpe.baseType(implicitly[TypeTag[T]].tpe.typeSymbol)
-      paramOf(base)
-  }
+//  object QuotedType {
+//    def unapply(tpe: Type) =
+//      paramOf[QuotationDsl#Quoted[Any]](tpe)
+//  }
+
+//  object QueryType {
+//    def unapply(tpe: Type) =
+//      paramOf[io.getquill.Query[Any]](tpe)
+//  }
+
+//  def paramOf[T](tpe: Type, maxDepth: Int = 100)(implicit tt: TypeTag[T]): Option[Type] = tpe match {
+//    case _ if (maxDepth == 0) =>
+//      throw new IllegalArgumentException("Max Depth")
+//    case _ if (!(tpe <:< tt.tpe)) =>
+//      None
+//    case TypeRef(_, cls, List(arg)) =>
+//      Some(arg)
+//    case _ =>
+//      val base = tpe.baseType(implicitly[TypeTag[T]].tpe.typeSymbol)
+//      paramOf(base, maxDepth - 1)
+//  }
 
   @tailrec
   private[getquill] final def innerOptionParam(tpe: Type, maxDepth: Option[Int]): Type = tpe match {

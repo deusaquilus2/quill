@@ -12,12 +12,14 @@ sealed trait Quat {
     (this, other) match {
       case (Quat.Value, Quat.Value)           => true
       case (a: Quat.Product, b: Quat.Product) => a == b
-      case (Quat.Null, Quat.Product(_)) =>
-        false // Null is most specific subtype so can't replace with a supertype of it
-      case (Quat.Product(_), Quat.Null) =>
-        true
-      case (Quat.Value, Quat.Null) => true
-      case (_, _)                  => false
+      case (Quat.Null, Quat.Product(_))       => false // Null is most specific subtype so can't replace with a supertype of it, same wht Generic
+      case (Quat.Product(_), Quat.Null)       => true
+      case (Quat.Value, Quat.Null)            => true
+      case (Quat.Product(_), Quat.Generic)    => true
+      case (Quat.Value, Quat.Generic)         => true
+      case (Quat.Generic, Quat.Generic)       => true
+      case (Quat.Null, Quat.Null)             => true
+      case (_, _)                             => false
     }
   }
 
@@ -46,9 +48,10 @@ sealed trait Quat {
         case other => s"[${other.map { case (k, v) => k + "->" + v }.mkString(",")}]"
       })
     }"
+    case Quat.Error(msg) => s"Quat-Error(${msg.take(20)})"
+    case Quat.Generic    => "<G>"
     case Quat.Value      => "V"
     case Quat.Null       => "N"
-    case Quat.Error(msg) => s"QError(${msg.take(20)})"
   }
 
   def lookup(path: String): Quat = (this, path) match {
@@ -58,6 +61,8 @@ sealed trait Quat {
       Quat.Error(s"The field ${fieldName} does not exist in an SQL-level leaf-node") // TODO Quat is there a case where we're putting a property on a entity which is actually a value?
     case (Quat.Null, fieldName) =>
       Quat.Error(s"The field ${fieldName} cannot be looked up from a SQL-level null node") // TODO Quat is there a case where we're putting a property on a entity which is actually a value?
+    case (Quat.Generic, fieldName) =>
+      Quat.Error(s"The field ${fieldName} cannot be looked up from a SQL-level generic node") // TODO Quat is there a case where we're putting a property on a entity which is actually a value?
     case (Quat.Error(msg), _) => Quat.Error(s"${msg}. Also tried to lookup ${path} from node.")
   }
   def lookup(list: List[String]): Quat =
@@ -167,6 +172,10 @@ object Quat {
   case object Null extends Quat {
     override def withRenames(renames: List[(String, String)]) = this
     override def toString: String = "N"
+  }
+  case object Generic extends Quat {
+    override def withRenames(renames: List[(String, String)]) = this
+    override def toString: String = "<G>"
   }
   object Value extends Quat {
 

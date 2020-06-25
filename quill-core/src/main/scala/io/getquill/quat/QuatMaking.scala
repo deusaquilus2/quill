@@ -24,7 +24,8 @@ trait QuatMaking extends QuatMakingBase {
   }
 }
 
-// TODO Maybe this should be a separate macro in the dynamic query case?
+// TODO Write a macro to use in dynamic-query cases that will check quats against existing implicits
+//      in the context (i.e. to see what encoders there are for better quat generation)
 object MakeQuat extends MakeQuat {
   override def existsEncoderFor(tpe: quat.MakeQuat.u.Type): Boolean = true
 }

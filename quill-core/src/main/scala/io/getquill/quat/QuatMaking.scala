@@ -102,6 +102,10 @@ trait QuatMakingBase {
         case _ if existsEncoderFor(tpe) =>
           Quat.Value
 
+        // Already covered by encoders case but also want to have separate check in case they are not available
+        case _ if isType[AnyVal](tpe) =>
+          Quat.Value
+
         // If the type is optional, recurse
         case _ if (isOptionType(tpe)) =>
           val innerParam = innerOptionParam(tpe, None)
@@ -189,4 +193,7 @@ trait QuatMakingBase {
     val era = tpe.erasure
     era =:= typeOf[Option[Any]] || era =:= typeOf[Some[Any]] || era =:= typeOf[None.type]
   }
+
+  private[getquill] def isType[T](tpe: Type)(implicit tt: TypeTag[T]) =
+    tpe <:< tt.tpe
 }

@@ -7,11 +7,12 @@ sealed trait Quat {
   def withRenames(renames: List[(String, String)]): Quat
   def renames: List[(String, String)] = List()
 
-  def prodOr =
+  /** Either convert to a Product or make the Quat into an error if it is anything else. */
+  def probit =
     this match {
       case p: Quat.Product => p
       case e: Quat.Error   => e
-      case other           => Quat.Error(s"SQL-level type must be a product but found ${other}")
+      case other           => Quat.Error(s"Was expecting SQL-level type must be a Product but found `${other}`")
     }
 
   // Roughly speaking, is this a super-type of the inner type
@@ -41,6 +42,8 @@ sealed trait Quat {
   //    }
   //  }
 
+  override def toString: String = shortString
+
   def shortString: String = this match {
     case Quat.Product(fields) => s"CC(${
       fields.map {
@@ -65,11 +68,11 @@ sealed trait Quat {
     case (cc @ Quat.Product(fields), fieldName) =>
       fields.find(_._1 == fieldName).headOption.map(_._2).getOrElse(Quat.Error(s"The field ${fieldName} does not exist in the SQL-level ${cc}")) // TODO Quat does this not match in certain cases? Which ones?
     case (Quat.Value, fieldName) =>
-      Quat.Error(s"The field ${fieldName} does not exist in an SQL-level leaf-node") // TODO Quat is there a case where we're putting a property on a entity which is actually a value?
+      Quat.Error(s"The field '${fieldName}' does not exist in an SQL-level leaf-node") // TODO Quat is there a case where we're putting a property on a entity which is actually a value?
     case (Quat.Null, fieldName) =>
-      Quat.Error(s"The field ${fieldName} cannot be looked up from a SQL-level null node") // TODO Quat is there a case where we're putting a property on a entity which is actually a value?
+      Quat.Error(s"The field '${fieldName}' cannot be looked up from a SQL-level null node") // TODO Quat is there a case where we're putting a property on a entity which is actually a value?
     case (Quat.Generic, fieldName) =>
-      Quat.Error(s"The field ${fieldName} cannot be looked up from a SQL-level generic node") // TODO Quat is there a case where we're putting a property on a entity which is actually a value?
+      Quat.Error(s"The field '${fieldName}' cannot be looked up from a SQL-level generic node") // TODO Quat is there a case where we're putting a property on a entity which is actually a value?
     case (Quat.Error(msg), _) => Quat.Error(s"${msg}. Also tried to lookup ${path} from node.")
   }
   def lookup(list: List[String]): Quat =
@@ -97,23 +100,24 @@ object Quat {
         None
   }
 
-  sealed trait ProductOr extends Quat {
+  /** Represents a coproduct of a Product and Error */
+  sealed trait Probity extends Quat {
 
-    override def applyRenames: Quat.ProductOr =
+    override def applyRenames: Quat.Probity =
       this match {
         case p: Product   => p.applyRenames
         case error: Error => error
       }
 
-    def prod =
+    /** Produce a product or throw an error. I.e. 'prove' the fact that the probity is a Product. */
+    def prove =
       this match {
         case p: Quat.Product => p
         case Quat.Error(msg) => throw new IllegalArgumentException(s"Could not cast ProductOr SQL-Type to Product SQL Type due to error. ${msg}")
       }
   }
 
-  case class Product(fields: List[(String, Quat)]) extends ProductOr {
-    override def toString: String = s"Quat.Product(${fields.map { case (k, v) => s"${k}:${v}" }.mkString(", ")})"
+  case class Product(fields: List[(String, Quat)]) extends Probity {
     override def withRenames(renames: List[(String, String)]) =
       Product.WithRenames(fields, renames)
     /**
@@ -134,7 +138,7 @@ object Quat {
     }
 
     /** Rename a property of a Quat.Tuple or Quat.CaseClass. Optionally can specify a new Quat to change the property to. */
-    def stashRename(property: String, newProperty: String, newQuat: Option[Quat] = None): Quat.ProductOr = {
+    def stashRename(property: String, newProperty: String, newQuat: Option[Quat] = None): Quat.Probity = {
       // sanity check does the property exist in the first place
       this.lookup(property) match {
         case e: Quat.Error => e
@@ -159,7 +163,7 @@ object Quat {
       }
     }
 
-    def stashRename(path: List[String], newEndProperty: String): Quat.ProductOr = {
+    def stashRename(path: List[String], newEndProperty: String): Quat.Probity = {
       path match {
         case Nil => // do nothing
           this
@@ -169,7 +173,7 @@ object Quat {
 
         case head :: tail =>
           val child = this.lookup(head)
-          val newChild: Either[Quat.Error, ProductOr] =
+          val newChild: Either[Quat.Error, Probity] =
             child match {
               case childProduct: Quat.Product =>
                 Right(childProduct.stashRename(tail, newEndProperty))
@@ -215,11 +219,9 @@ object Quat {
   }
   case object Null extends Quat {
     override def withRenames(renames: List[(String, String)]) = this
-    override def toString: String = "N"
   }
   case object Generic extends Quat {
     override def withRenames(renames: List[(String, String)]) = this
-    override def toString: String = "<G>"
   }
   object Value extends Quat {
 
@@ -229,10 +231,8 @@ object Quat {
         case Nil => this
         case _   => Quat.Error(s"Renames ${renames} cannot be applied to a value SQL-level type")
       }
-
-    override def toString: String = "QV"
   }
-  case class Error(msg: String) extends ProductOr with Quat {
+  case class Error(msg: String) extends Probity with Quat {
     override def withRenames(renames: List[(String, String)]): Quat = this
   }
 }

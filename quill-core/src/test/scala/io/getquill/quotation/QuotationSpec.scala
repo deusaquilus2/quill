@@ -47,9 +47,9 @@ class QuotationSpec extends Spec {
             querySchema[TestEnt]("SomeAlias", _.ev.s -> "theS", _.ev.i -> "theI")
           }
           val renamedQuat =
-            quatOf[TestEnt].prod
-              .stashRename(List("ev", "s"), "theS").prod
-              .stashRename(List("ev", "i"), "theI").prod
+            quatOf[TestEnt].prove
+              .stashRename(List("ev", "s"), "theS").prove
+              .stashRename(List("ev", "i"), "theI").prove
           quote(unquote(q)).ast mustEqual Entity.Opinionated("SomeAlias", List(PropertyAlias(List("ev", "s"), "theS"), PropertyAlias(List("ev", "i"), "theI")), renamedQuat, Fixed)
         }
         "with embedded option property alias" in {
@@ -58,9 +58,9 @@ class QuotationSpec extends Spec {
             querySchema[TestEnt]("SomeAlias", _.ev.map(_.s) -> "theS", _.ev.map(_.i) -> "theI")
           }
           val renamedQuat =
-            quatOf[TestEnt].prod
-              .stashRename(List("ev", "s"), "theS").prod
-              .stashRename(List("ev", "i"), "theI").prod
+            quatOf[TestEnt].prove
+              .stashRename(List("ev", "s"), "theS").prove
+              .stashRename(List("ev", "i"), "theI").prove
           quote(unquote(q)).ast mustEqual Entity.Opinionated("SomeAlias", List(PropertyAlias(List("ev", "s"), "theS"), PropertyAlias(List("ev", "i"), "theI")), renamedQuat, Fixed)
         }
         "explicit `Predef.ArrowAssoc`" in {

@@ -4,7 +4,7 @@ import scala.reflect.macros.whitebox.Context
 import io.getquill.ast._
 import io.getquill.dsl.CoreDsl
 import io.getquill.quat.Quat
-import io.getquill.quat.Quat.ProductOr
+import io.getquill.quat.Quat.Probity
 
 trait Liftables {
   val c: Context
@@ -191,7 +191,7 @@ trait Liftables {
     case CaseClass(a) => q"$pack.CaseClass($a)"
   }
 
-  implicit val quatProductOrLiftable: Liftable[ProductOr] = Liftable[ProductOr] {
+  implicit val quatProbityLiftable: Liftable[Probity] = Liftable[Probity] {
     case Quat.Product.WithRenames(fields, renames) => q"io.getquill.quat.Quat.Product.WithRenames($fields, $renames)"
     case Quat.Error(msg)                           => q"io.getquill.quat.Quat.Error($msg)"
   }

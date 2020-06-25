@@ -3,7 +3,7 @@ package io.getquill.quotation
 import scala.reflect.macros.whitebox.Context
 import io.getquill.ast._
 import io.getquill.quat.Quat
-import io.getquill.quat.Quat.ProductOr
+import io.getquill.quat.Quat.Probity
 import io.getquill.util.MacroContextExt._
 
 trait Unliftables {
@@ -105,8 +105,8 @@ trait Unliftables {
   }
 
   implicit val queryUnliftable: Unliftable[Query] = Unliftable[Query] {
-    case q"$pack.Entity.apply(${ a: String }, ${ b: List[PropertyAlias] }, ${ quat: Quat.ProductOr })" => Entity(a, b, quat)
-    case q"$pack.Entity.Opinionated.apply(${ a: String }, ${ b: List[PropertyAlias] }, ${ quat: Quat.ProductOr }, ${ renameable: Renameable })" => Entity.Opinionated(a, b, quat, renameable)
+    case q"$pack.Entity.apply(${ a: String }, ${ b: List[PropertyAlias] }, ${ quat: Quat.Probity })" => Entity(a, b, quat)
+    case q"$pack.Entity.Opinionated.apply(${ a: String }, ${ b: List[PropertyAlias] }, ${ quat: Quat.Probity }, ${ renameable: Renameable })" => Entity.Opinionated(a, b, quat, renameable)
     case q"$pack.Filter.apply(${ a: Ast }, ${ b: Ident }, ${ c: Ast })" => Filter(a, b, c)
     case q"$pack.Map.apply(${ a: Ast }, ${ b: Ident }, ${ c: Ast })" => Map(a, b, c)
     case q"$pack.FlatMap.apply(${ a: Ast }, ${ b: Ident }, ${ c: Ast })" => FlatMap(a, b, c)
@@ -197,7 +197,7 @@ trait Unliftables {
     case q"$pack.CaseClass.apply(${ values: List[(String, Ast)] })" => CaseClass(values)
   }
 
-  implicit val quatProductOr: Unliftable[ProductOr] = Unliftable[ProductOr] {
+  implicit val quatProbity: Unliftable[Probity] = Unliftable[Probity] {
     case q"$pack.Quat.Product.WithRenames.apply(${ fields: List[(String, Quat)] }, ${ renames: List[(String, String)] })" => Quat.Product.WithRenames(fields, renames)
     case q"$pack.Quat.Product.apply(${ fields: List[(String, Quat)] })" => Quat.Product(fields)
     case q"$pack.Quat.Error.apply(${ msg: String })" => Quat.Error(msg)

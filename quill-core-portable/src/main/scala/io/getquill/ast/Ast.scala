@@ -65,7 +65,7 @@ object Terminal {
  * That means that even if the `NamingSchema` is `UpperCase`, the resulting query will select `t_person` as opposed
  * to `T_PERSON` or `Person`.
  */
-case class Entity(name: String, properties: List[PropertyAlias], quat: Quat.ProductOr) extends Query {
+case class Entity(name: String, properties: List[PropertyAlias], quat: Quat.Probity) extends Query {
   // Technically this should be part of the Entity case class but due to the limitations of how
   // scala creates companion objects, the apply/unapply wouldn't be able to work correctly.
   def renameable: Renameable = Renameable.neutral
@@ -99,7 +99,7 @@ case class Entity(name: String, properties: List[PropertyAlias], quat: Quat.Prod
 }
 
 object Entity {
-  def apply(name: String, properties: List[PropertyAlias], quat: Quat.ProductOr) =
+  def apply(name: String, properties: List[PropertyAlias], quat: Quat.Probity) =
     new Entity(name, properties, quat)
   def unapply(e: Entity) = Some((e.name, e.properties, e.quat))
 
@@ -107,7 +107,7 @@ object Entity {
     def apply(
       name:          String,
       properties:    List[PropertyAlias],
-      quat:          Quat.ProductOr,
+      quat:          Quat.Probity,
       renameableNew: Renameable
     ) =
       new Entity(name, properties, quat) {

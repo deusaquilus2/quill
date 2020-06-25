@@ -1,6 +1,8 @@
 package io.getquill.quat
 
 import io.getquill.dsl.QuotationDsl
+import io.getquill.quat
+import io.getquill.util.OptionalTypecheck
 
 import scala.annotation.tailrec
 import scala.reflect.api.Universe
@@ -11,9 +13,21 @@ trait QuatMaking extends QuatMakingBase {
   type Uni = c.universe.type
   // NOTE: u needs to be lazy otherwise sets value from c before c can be initialized by higher level classes
   lazy val u: Uni = c.universe
+
+  import u.{ Block => _, Constant => _, Function => _, Ident => _, If => _, _ }
+
+  def existsEncoderFor(tpe: Type) = {
+    OptionalTypecheck(c)(q"implicitly[${c.prefix}.Encoder[$tpe]]") match {
+      case Some(enc) => true
+      case None      => false
+    }
+  }
 }
 
-object MakeQuat extends MakeQuat
+// TODO Maybe this should be a separate macro in the dynamic query case?
+object MakeQuat extends MakeQuat {
+  override def existsEncoderFor(tpe: quat.MakeQuat.u.Type): Boolean = true
+}
 
 trait MakeQuat extends QuatMakingBase {
   type Uni = scala.reflect.api.Universe
@@ -26,9 +40,19 @@ trait QuatMakingBase {
   val u: Uni
   import u.{ Block => _, Constant => _, Function => _, Ident => _, If => _, _ }
 
+  def existsEncoderFor(tpe: Type): Boolean
+
   def inferQuat(tpe: Type): Quat = {
 
-    //case TypeRef(_, cls, _)) =>
+    // TODO Quat do we need other exclusions?
+    def nonGenericMethods(tpe: Type) = {
+      tpe.members
+        .filter(m => m.isPublic
+          && m.owner.name.toString != "Any"
+          && m.owner.name.toString != "Object").map { param =>
+          (param.name.toString, param.typeSignature.asSeenFrom(tpe, tpe.typeSymbol))
+        }.toList
+    }
 
     def caseClassConstructorArgs(tpe: Type) = {
       val constructor =
@@ -42,6 +66,14 @@ trait QuatMakingBase {
       }
     }
 
+    object ArbitraryBaseType {
+      def unapply(tpe: Type): Option[(String, List[(String, Type)])] =
+        if (tpe.widen.typeSymbol.isClass)
+          Some((tpe.widen.typeSymbol.name.toString, nonGenericMethods(tpe.widen)))
+        else
+          None
+    }
+
     object CaseClassBaseType {
       def unapply(tpe: Type): Option[(String, List[(String, Type)])] =
         if (tpe.widen.typeSymbol.isClass && tpe.widen.typeSymbol.asClass.isCaseClass)
@@ -50,22 +82,32 @@ trait QuatMakingBase {
           None
     }
 
+    object Signature {
+      def unapply(tpe: Type) =
+        Some(tpe.typeSymbol.typeSignature)
+    }
+
     def parseType(tpe: Type): Quat =
       tpe match {
+        case _ if existsEncoderFor(tpe) =>
+          Quat.Value
+        case Signature(TypeBounds(lower, upper)) =>
+          parseType(upper)
+        case TypeBounds(lower, upper) =>
+          parseType(upper)
+        case QueryType(tpe) =>
+          parseType(tpe)
         case _ if (isNone(tpe)) =>
           Quat.Null
         case _ if (isOptionType(tpe)) =>
           val innerParam = innerOptionParam(tpe, None)
           parseType(innerParam)
-        // For tuples
-        case CaseClassBaseType(name, fields) if (name.startsWith("scala.Tuple")) =>
-          Quat.Tuple(fields.map { case (_, fieldType) => parseType(fieldType) })
         // For other types of case classes
         case CaseClassBaseType(name, fields) =>
           Quat.Product(fields.map { case (fieldName, fieldType) => (fieldName, parseType(fieldType)) })
         // Otherwise it's a terminal value
-        case _ =>
-          Quat.Value
+        case ArbitraryBaseType(name, fields) =>
+          Quat.Product(fields.map { case (fieldName, fieldType) => (fieldName, parseType(fieldType)) })
       }
 
     parseType(tpe)
@@ -95,7 +137,6 @@ trait QuatMakingBase {
 
   @tailrec
   private[getquill] final def innerOptionParam(tpe: Type, maxDepth: Option[Int]): Type = tpe match {
-    // If it's a ref-type and an Option, pull out the argument
     case TypeRef(_, cls, List(arg)) if (cls.isClass && cls.asClass.fullName == "scala.Option") && maxDepth.forall(_ > 0) =>
       innerOptionParam(arg, maxDepth.map(_ - 1))
     // If it's not a ref-type but an Option, convert to a ref-type and reprocess

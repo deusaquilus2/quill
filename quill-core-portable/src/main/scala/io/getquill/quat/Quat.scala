@@ -80,6 +80,14 @@ sealed trait Quat {
 }
 
 object Quat {
+  object BottomType {
+    def unapply(quat: Quat) =
+      quat match {
+        case Quat.Null | Quat.Generic => true
+        case _                        => false
+      }
+  }
+
   object TupleIndex {
     def is(s: String): Boolean = unapply(s).isDefined
     def unapply(s: String): Option[Int] =

@@ -38,6 +38,18 @@ sealed trait Ast {
 
 sealed trait Query extends Ast
 
+sealed trait Terminal extends Ast {
+  def withQuat(newQuat: Quat): Terminal
+}
+
+object Terminal {
+  def unapply(ast: Ast): Option[(Terminal, Quat)] =
+    ast match {
+      case t: Terminal => Some((t, t.quat))
+      case _           => None
+    }
+}
+
 /**
  * Entities represent the actual tables/views being selected.
  * Typically, something like:
@@ -164,7 +176,7 @@ case class Infix(parts: List[String], params: List[Ast], pure: Boolean, quat: Qu
 
 case class Function(params: List[Ident], body: Ast) extends Ast { def quat = body.quat }
 
-case class Ident(name: String, quat: Quat) extends Ast {
+case class Ident(name: String, quat: Quat) extends Terminal with Ast {
   def visibility: Visibility = Visibility.Visible
 
   override def neutral: Ident =
@@ -179,6 +191,9 @@ case class Ident(name: String, quat: Quat) extends Ast {
     }
 
   override def hashCode = (name, visibility).hashCode()
+
+  override def withQuat(newQuat: Quat) =
+    Ident.Opinionated(this.name, this.quat, this.visibility)
 }
 
 /**
@@ -365,7 +380,9 @@ case class OptionTableExists(ast: Ast, alias: Ident, body: Ast)
   extends OptionOperation { def quat = body.quat }
 case class OptionTableForall(ast: Ast, alias: Ident, body: Ast)
   extends OptionOperation { def quat = body.quat }
-case class OptionNone(quat: Quat) extends OptionOperation // TODO Quat Could this be a table in certain cases??? Maybe need to pass in the quat from the parser to create this
+case class OptionNone(quat: Quat) extends OptionOperation with Terminal {
+  override def withQuat(newQuat: Quat) = this.copy(quat = newQuat)
+}
 case class OptionSome(ast: Ast) extends OptionOperation { def quat = ast.quat }
 case class OptionApply(ast: Ast) extends OptionOperation { def quat = ast.quat }
 case class OptionOrNull(ast: Ast) extends OptionOperation { def quat = ast.quat }
@@ -477,22 +494,30 @@ sealed trait External extends Ast
 /*                      Only Quill 2                                   */
 /***********************************************************************/
 
-sealed trait Lift extends External {
+sealed trait Lift extends External with Terminal {
   val name: String
   val value: Any
 }
 
-sealed trait ScalarLift extends Lift {
+sealed trait ScalarLift extends Lift with Terminal {
   val encoder: Any
 }
 case class ScalarValueLift(name: String, value: Any, encoder: Any, quat: Quat)
-  extends ScalarLift
+  extends ScalarLift {
+  override def withQuat(newQuat: Quat) = this.copy(quat = newQuat)
+}
 case class ScalarQueryLift(name: String, value: Any, encoder: Any, quat: Quat)
-  extends ScalarLift
+  extends ScalarLift {
+  override def withQuat(newQuat: Quat) = this.copy(quat = newQuat)
+}
 
 sealed trait CaseClassLift extends Lift
-case class CaseClassValueLift(name: String, value: Any, quat: Quat) extends CaseClassLift
-case class CaseClassQueryLift(name: String, value: Any, quat: Quat) extends CaseClassLift
+case class CaseClassValueLift(name: String, value: Any, quat: Quat) extends CaseClassLift {
+  override def withQuat(newQuat: Quat) = this.copy(quat = newQuat)
+}
+case class CaseClassQueryLift(name: String, value: Any, quat: Quat) extends CaseClassLift {
+  override def withQuat(newQuat: Quat) = this.copy(quat = newQuat)
+}
 
 /***********************************************************************/
 /*                      New for ProtoQuill                             */

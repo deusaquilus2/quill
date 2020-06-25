@@ -2,7 +2,7 @@ package io.getquill.quat
 
 import io.getquill.dsl.QuotationDsl
 import io.getquill.quat
-import io.getquill.util.OptionalTypecheck
+import io.getquill.util.{ Messages, OptionalTypecheck }
 
 import scala.annotation.tailrec
 import scala.reflect.api.Universe
@@ -87,27 +87,57 @@ trait QuatMakingBase {
         Some(tpe.typeSymbol.typeSignature)
     }
 
-    def parseType(tpe: Type): Quat =
+    object Deoption {
+      def unapply(tpe: Type) =
+        if (isOptionType(tpe))
+          Some(innerOptionParam(tpe, None))
+        else
+          Some(tpe)
+    }
+
+    def parseType(tpe: Type, boundedInterfaceType: Boolean = false): Quat =
       tpe match {
+        // If there exists an encoder for the type assume it is a value
         case _ if existsEncoderFor(tpe) =>
           Quat.Value
-        case Signature(TypeBounds(lower, upper)) =>
-          parseType(upper)
-        case TypeBounds(lower, upper) =>
-          parseType(upper)
-        case QueryType(tpe) =>
-          parseType(tpe)
-        case _ if (isNone(tpe)) =>
-          Quat.Null
+
+        // If the type is optional, recurse
         case _ if (isOptionType(tpe)) =>
           val innerParam = innerOptionParam(tpe, None)
           parseType(innerParam)
+
+        // If it is a query type, recurse into it
+        case QueryType(tpe) =>
+          parseType(tpe)
+
+        // For cases where the type is actually a parameter with type bounds
+        // and the upper bound is not final, assume that polymorphism is being used
+        // and that the user wants to extend a class e.g.
+        // trait Spirit { def grade: Int }
+        // case class Gin(grade: Int) extends Spirit
+        // def is80Prof[T <: Spirit] = quote { (spirit: Query[Spirit]) => spirit.filter(_.grade == 80) }
+        // run(is80Proof(query[Gin]))
+        // When processing is80Prof, we assume that Spirit is actually a base class to be extended
+        case Signature(TypeBounds(lower, Deoption(upper))) if (upper != null && tpe.typeSymbol.isParameter && !upper.typeSymbol.isFinal) =>
+          parseType(upper, true)
+
+        case TypeBounds(lower, Deoption(upper)) if (upper != null && tpe.typeSymbol.isParameter && !upper.typeSymbol.isFinal) =>
+          parseType(upper, true)
+
+        case _ if (isNone(tpe)) =>
+          Quat.Null
         // For other types of case classes
         case CaseClassBaseType(name, fields) =>
           Quat.Product(fields.map { case (fieldName, fieldType) => (fieldName, parseType(fieldType)) })
-        // Otherwise it's a terminal value
-        case ArbitraryBaseType(name, fields) =>
+
+        // If we are already inside a bounded type, treat an arbitrary type as a interface list
+        case ArbitraryBaseType(name, fields) if (boundedInterfaceType) =>
           Quat.Product(fields.map { case (fieldName, fieldType) => (fieldName, parseType(fieldType)) })
+
+        // Otherwise it's a terminal value
+        case _ =>
+          Messages.trace(s"Could not infer SQL-type of ${tpe}, assuming it is a value.")
+          Quat.Value
       }
 
     parseType(tpe)

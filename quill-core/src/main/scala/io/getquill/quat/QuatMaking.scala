@@ -96,20 +96,39 @@ trait QuatMakingBase {
           Some(tpe)
     }
 
-    def parseType(tpe: Type, boundedInterfaceType: Boolean = false): Quat =
+    object Param {
+      def unapply(tpe: Type) =
+        if (tpe.typeSymbol.isParameter)
+          Some(tpe)
+        else
+          None
+    }
+
+    object RealTypeBounds {
+      def unapply(tpe: Type) =
+        tpe match {
+          case TypeBounds(lower, upper) if (upper != null && !(upper =:= typeOf[Any])) =>
+            Some((lower, upper))
+          case _ =>
+            None
+        }
+    }
+
+    object DefiniteValue {
+      def unapply(tpe: Type): Option[Type] = {
+        if (existsEncoderFor(tpe))
+          Some(tpe)
+        else if (isType[AnyVal](tpe))
+          Some(tpe)
+        else
+          None
+      }
+    }
+
+    def parseTopLevelType(tpe: Type): Quat =
       tpe match {
-        // If there exists an encoder for the type assume it is a value
-        case _ if existsEncoderFor(tpe) =>
+        case DefiniteValue(tpe) =>
           Quat.Value
-
-        // Already covered by encoders case but also want to have separate check in case they are not available
-        case _ if isType[AnyVal](tpe) =>
-          Quat.Value
-
-        // If the type is optional, recurse
-        case _ if (isOptionType(tpe)) =>
-          val innerParam = innerOptionParam(tpe, None)
-          parseType(innerParam)
 
         // If it is a query type, recurse into it
         case QueryType(tpe) =>
@@ -123,11 +142,28 @@ trait QuatMakingBase {
         // def is80Prof[T <: Spirit] = quote { (spirit: Query[Spirit]) => spirit.filter(_.grade == 80) }
         // run(is80Proof(query[Gin]))
         // When processing is80Prof, we assume that Spirit is actually a base class to be extended
-        case Signature(TypeBounds(lower, Deoption(upper))) if (upper != null && tpe.typeSymbol.isParameter && !upper.typeSymbol.isFinal) =>
+        case Param(Signature(RealTypeBounds(lower, Deoption(upper)))) if (!upper.typeSymbol.isFinal) =>
           parseType(upper, true)
 
-        case TypeBounds(lower, Deoption(upper)) if (upper != null && tpe.typeSymbol.isParameter && !upper.typeSymbol.isFinal) =>
+        case Param(RealTypeBounds(lower, Deoption(upper))) if (!upper.typeSymbol.isFinal) =>
           parseType(upper, true)
+
+        case Param(tpe) =>
+          Quat.Generic
+
+        case other =>
+          parseType(other)
+      }
+
+    def parseType(tpe: Type, boundedInterfaceType: Boolean = false): Quat =
+      tpe match {
+        case DefiniteValue(tpe) =>
+          Quat.Value
+
+        // If the type is optional, recurse
+        case _ if (isOptionType(tpe)) =>
+          val innerParam = innerOptionParam(tpe, None)
+          parseType(innerParam)
 
         case _ if (isNone(tpe)) =>
           Quat.Null
@@ -145,7 +181,7 @@ trait QuatMakingBase {
           Quat.Value
       }
 
-    parseType(tpe)
+    parseTopLevelType(tpe)
   }
 
   object QuotedType {
@@ -158,11 +194,13 @@ trait QuatMakingBase {
       paramOf[io.getquill.Query[Any]](tpe)
   }
 
-  def paramOf[T](tpe: Type, maxDepth: Int = 100)(implicit tt: TypeTag[T]): Option[Type] = tpe match {
+  def paramOf[T](tpe: Type, maxDepth: Int = 10)(implicit tt: TypeTag[T]): Option[Type] = tpe match {
     case _ if (maxDepth == 0) =>
-      throw new IllegalArgumentException("Max Depth")
+      throw new IllegalArgumentException(s"Max Depth reached with type: ${tpe}")
     case _ if (!(tpe <:< tt.tpe)) =>
       None
+    case _ if (tpe =:= typeOf[Nothing] || tpe =:= typeOf[Any]) =>
+      Some(tpe)
     case TypeRef(_, cls, List(arg)) =>
       Some(arg)
     case _ =>

@@ -16,18 +16,17 @@ sealed trait Quat {
     }
 
   // Roughly speaking, is this a super-type of the inner type
-  def canReduceTo(other: Quat): Boolean = {
+  def subTypeOf(other: Quat): Boolean = {
     (this, other) match {
-      case (Quat.Value, Quat.Value)           => true
-      case (a: Quat.Product, b: Quat.Product) => a == b
-      case (Quat.Null, Quat.Product(_))       => false // Null is most specific subtype so can't replace with a supertype of it, same wht Generic
-      case (Quat.Product(_), Quat.Null)       => true
-      case (Quat.Value, Quat.Null)            => true
-      case (Quat.Product(_), Quat.Generic)    => true
-      case (Quat.Value, Quat.Generic)         => true
-      case (Quat.Generic, Quat.Generic)       => true
-      case (Quat.Null, Quat.Null)             => true
-      case (_, _)                             => false
+      case (Quat.Value, Quat.Value)                => true
+      case (me: Quat.Product, other: Quat.Product) => me.subTypeOfProduct(other)
+      case (Quat.Null, Quat.Product(_))            => true
+      case (Quat.Null, Quat.Value)                 => true
+      case (Quat.Generic, Quat.Product(_))         => true
+      case (Quat.Generic, Quat.Value)              => true
+      case (Quat.Generic, Quat.Generic)            => true
+      case (Quat.Null, Quat.Null)                  => true
+      case (_, _)                                  => false
     }
   }
 
@@ -118,6 +117,15 @@ object Quat {
   }
 
   case class Product(fields: List[(String, Quat)]) extends Probity {
+
+    def subTypeOfProduct(other: Quat.Product): Boolean = {
+      // TODO Quat this is a N^2 field check. Explor changing product fields into ListMap and make this more efficient
+      other.fields.forall {
+        case (field, value) =>
+          this.fields.exists { case (thisField, thisValue) => thisField == field && thisValue.subTypeOf(value) }
+      }
+    }
+
     override def withRenames(renames: List[(String, String)]) =
       Product.WithRenames(fields, renames)
     /**

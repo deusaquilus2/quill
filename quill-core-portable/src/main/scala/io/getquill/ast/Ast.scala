@@ -43,9 +43,9 @@ sealed trait Terminal extends Ast {
 }
 
 object Terminal {
-  def unapply(ast: Ast): Option[(Terminal, Quat)] =
+  def unapply(ast: Ast): Option[Terminal] =
     ast match {
-      case t: Terminal => Some((t, t.quat))
+      case t: Terminal => Some(t)
       case _           => None
     }
 }
@@ -65,7 +65,7 @@ object Terminal {
  * That means that even if the `NamingSchema` is `UpperCase`, the resulting query will select `t_person` as opposed
  * to `T_PERSON` or `Person`.
  */
-case class Entity(name: String, properties: List[PropertyAlias], quat: Quat.Probity) extends Query {
+case class Entity(name: String, properties: List[PropertyAlias], quat: Quat.Probity) extends Query { // TODO Quat - quat cannot be part of equals/hashcode
   // Technically this should be part of the Entity case class but due to the limitations of how
   // scala creates companion objects, the apply/unapply wouldn't be able to work correctly.
   def renameable: Renameable = Renameable.neutral
@@ -193,7 +193,7 @@ case class Ident(name: String, quat: Quat) extends Terminal with Ast {
   override def hashCode = (name, visibility).hashCode()
 
   override def withQuat(newQuat: Quat) =
-    Ident.Opinionated(this.name, this.quat, this.visibility)
+    Ident.Opinionated(this.name, newQuat, this.visibility) // TODO Quat quat cannot be part of equals/hashcode (maybe add it to secondary args list?)
 }
 
 /**
@@ -380,7 +380,7 @@ case class OptionTableExists(ast: Ast, alias: Ident, body: Ast)
   extends OptionOperation { def quat = body.quat }
 case class OptionTableForall(ast: Ast, alias: Ident, body: Ast)
   extends OptionOperation { def quat = body.quat }
-case class OptionNone(quat: Quat) extends OptionOperation with Terminal {
+case class OptionNone(quat: Quat) extends OptionOperation with Terminal { // TODO Quat - Quat cannot be part of equals/hashcode  (maybe add it to secondary args list? but here there's no first one)
   override def withQuat(newQuat: Quat) = this.copy(quat = newQuat)
 }
 case class OptionSome(ast: Ast) extends OptionOperation { def quat = ast.quat }
@@ -504,18 +504,18 @@ sealed trait ScalarLift extends Lift with Terminal {
 }
 case class ScalarValueLift(name: String, value: Any, encoder: Any, quat: Quat)
   extends ScalarLift {
-  override def withQuat(newQuat: Quat) = this.copy(quat = newQuat)
+  override def withQuat(newQuat: Quat) = this.copy(quat = newQuat) // TODO Quat quat cannot be part of equals/hashcode  (maybe add it to secondary args list?)
 }
 case class ScalarQueryLift(name: String, value: Any, encoder: Any, quat: Quat)
   extends ScalarLift {
-  override def withQuat(newQuat: Quat) = this.copy(quat = newQuat)
+  override def withQuat(newQuat: Quat) = this.copy(quat = newQuat) // TODO Quat quat cannot be part of equals/hashcode (maybe add it to secondary args list?)
 }
 
 sealed trait CaseClassLift extends Lift
-case class CaseClassValueLift(name: String, value: Any, quat: Quat) extends CaseClassLift {
+case class CaseClassValueLift(name: String, value: Any, quat: Quat) extends CaseClassLift { // TODO Quat quat cannot be part of equals/hashcode (maybe add it to secondary args list?)
   override def withQuat(newQuat: Quat) = this.copy(quat = newQuat)
 }
-case class CaseClassQueryLift(name: String, value: Any, quat: Quat) extends CaseClassLift {
+case class CaseClassQueryLift(name: String, value: Any, quat: Quat) extends CaseClassLift { // TODO Quat quat cannot be part of equals/hashcode (maybe add it to secondary args list?)
   override def withQuat(newQuat: Quat) = this.copy(quat = newQuat)
 }
 

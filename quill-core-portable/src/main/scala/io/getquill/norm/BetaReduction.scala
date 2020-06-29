@@ -18,8 +18,17 @@ case class BetaReduction(replacements: Replacements)
         // TODO what other kinds of entities do we need to detect here whose Quat we need to change?
         val output =
           rep match {
-            case Terminal(terminal, quat @ Quat.BottomType()) =>
-              terminal.withQuat(quat)
+            // In this case the terminal must be a subtype of this type
+            case Terminal(terminal) =>
+              if (terminal.quat.subTypeOf(ast.quat))
+                terminal.quat match {
+                  case Quat.Null | Quat.Generic =>
+                    terminal.withQuat(ast.quat)
+                  case _ =>
+                    terminal
+                }
+              else
+                throw new IllegalArgumentException(s"Cannot beta reduce [$ast -> $rep]. They have incompatible types: ${ast.quat.shortString} and ${rep.quat.shortString}")
             case other =>
               other
           }
@@ -46,11 +55,17 @@ case class BetaReduction(replacements: Replacements)
       case FunctionApply(Function(params, body), values) =>
         val conflicts = values.flatMap(CollectAst.byType[Ident]).map { i =>
           i -> Ident(s"tmp_${i.name}", i.quat)
-        }.toMap[Ast, Ast]
+        }.toMap[Ident, Ident]
         val newParams = params.map { p =>
           conflicts.getOrElse(p, p)
         }
         val bodyr = BetaReduction(Replacements(conflicts ++ params.zip(newParams))).apply(body)
+
+        //        var paramReductions =
+        //          newParams.zip(values).map {
+        //            case ()
+        //          }
+
         apply(BetaReduction(replacements ++ newParams.zip(values).toMap).apply(bodyr))
 
       case Function(params, body) =>
@@ -149,8 +164,8 @@ object BetaReduction {
     replacements.foreach {
       case (orig, rep) =>
         //if (orig.quat != rep.quat)
-        if (!orig.quat.canReduceTo(rep.quat))
-          throw new IllegalArgumentException(s"Cannot beta reduce [$orig -> $rep] within [$body]. They have different types: ${orig.quat.shortString} and ${rep.quat.shortString}")
+        if (!rep.quat.subTypeOf(orig.quat))
+          throw new IllegalArgumentException(s"Cannot beta reduce [$orig -> $rep] within [$body]. They have incompatible types: ${orig.quat.shortString} and ${rep.quat.shortString}")
     }
 
   def apply(ast: Ast, t: (Ast, Ast)*): Ast = {

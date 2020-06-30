@@ -5,7 +5,7 @@ import io.getquill.ast.Ast
 import io.getquill.norm.ConcatBehavior.AnsiConcat
 import io.getquill.norm.EqualityBehavior.AnsiEquality
 import io.getquill.norm.capture.DemarcateExternalAliases
-import io.getquill.util.Messages.title
+import io.getquill.util.Messages.{ TraceType, title }
 
 object SqlNormalize {
   def apply(ast: Ast, concatBehavior: ConcatBehavior = AnsiConcat, equalityBehavior: EqualityBehavior = AnsiEquality) =
@@ -15,7 +15,7 @@ object SqlNormalize {
 class SqlNormalize(concatBehavior: ConcatBehavior, equalityBehavior: EqualityBehavior) {
 
   private def demarcate(heading: String) =
-    ((ast: Ast) => title(heading)(ast))
+    ((ast: Ast) => title(heading, TraceType.SqlNormalizations)(ast))
       .andThen(CheckQuats(heading).apply _)
 
   private val normalize =

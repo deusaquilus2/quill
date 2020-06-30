@@ -50,6 +50,16 @@ object Terminal {
     }
 }
 
+object BottomTypedTerminal {
+  def unapply(ast: Ast): Option[Terminal] =
+    ast match {
+      case t: Terminal if (t.quat == Quat.Null || t.quat == Quat.Generic) =>
+        Some(t)
+      case _ =>
+        None
+    }
+}
+
 /**
  * Entities represent the actual tables/views being selected.
  * Typically, something like:

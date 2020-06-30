@@ -14,8 +14,10 @@ object NewRenameProperties {
 
   def apply(ast: Ast) = {
     (identity[Ast] _)
-      .andThen(PropagateRenames.apply(_: Ast))
-      .andThen(demarcate("PropagateRenames"))
+      .andThen(SeedRenames.apply(_: Ast))
+      .andThen(demarcate("SeedRenames"))
+      .andThen(RepropagateQuats.apply(_: Ast))
+      .andThen(demarcate("RepropagateQuats"))
       .andThen(ApplyRenamesToProps.apply(_: Ast))
       .andThen(demarcate("ApplyRenamesToProps"))
       .andThen(CompleteRenames.apply(_: Ast))
@@ -56,7 +58,17 @@ object ApplyRenamesToProps extends StatelessTransformer {
   }
 }
 
-object PropagateRenames extends StatelessTransformer {
+object SeedRenames extends StatelessTransformer {
+  override def apply(e: Query): Query =
+    e match {
+      case e: Entity => e.syncToQuat
+      case _         => super.apply(e)
+    }
+}
+
+object RepropagateQuats extends StatelessTransformer {
+  import TypeBehavior.{ ReplaceWithReduction => RWR }
+
   implicit class IdentExt(id: Ident) {
     def withQuat(from: Quat) =
       id.copy(quat = from)
@@ -65,26 +77,16 @@ object PropagateRenames extends StatelessTransformer {
   def applyBody(a: Ast, b: Ident, c: Ast)(f: (Ast, Ident, Ast) => Query) = {
     val ar = apply(a)
     val br = b.withQuat(ar.quat)
-    val cr = BetaReduction(c, b -> br)
+    val cr = BetaReduction(c, RWR, b -> br)
     f(ar, br, apply(cr))
   }
-
-  // TODO Quat for operation? (or for Map(Operation, ...)?)
-  // TODO Quat for infix? (or for Map(Infix, ...)?)
-
-  //  override def apply(e: Operation): Operation =
-  //    e match {
-  //      case UnaryOperation(o, c: Query) =>
-  //        UnaryOperation(o, applySchemaOnly(apply(c)))
-  //      case _ => super.apply(e)
-  //    }
 
   override def apply(e: Query): Query =
     // TODO Quat Do I need to do something for infixes?
     e match {
-      case e: Entity          => e.syncToQuat
-      case Filter(a, b, c)    => applyBody(a, b, c)(Filter)
-      case Map(a, b, c)       => applyBody(a, b, c)(Map)
+      case Filter(a, b, c) => applyBody(a, b, c)(Filter)
+      case Map(a, b, c) =>
+        applyBody(a, b, c)(Map)
       case FlatMap(a, b, c)   => applyBody(a, b, c)(FlatMap)
       case ConcatMap(a, b, c) => applyBody(a, b, c)(ConcatMap)
       case GroupBy(a, b, c)   => applyBody(a, b, c)(GroupBy)
@@ -94,12 +96,12 @@ object PropagateRenames extends StatelessTransformer {
         val br = apply(b)
         val iAr = iA.withQuat(ar.quat)
         val iBr = iB.withQuat(br.quat)
-        val onr = BetaReduction(on, iA -> iAr, iB -> iBr)
+        val onr = BetaReduction(on, RWR, iA -> iAr, iB -> iBr)
         Join(t, ar, br, iAr, iBr, apply(onr))
       case FlatJoin(t, a, iA, on) =>
         val ar = apply(a)
         val iAr = iA.withQuat(ar.quat)
-        val onr = BetaReduction(on, iA -> iAr)
+        val onr = BetaReduction(on, RWR, iA -> iAr)
         FlatJoin(t, a, iAr, apply(onr))
       case other => super.apply(other)
     }
@@ -108,8 +110,8 @@ object PropagateRenames extends StatelessTransformer {
     assignments.map {
       case Assignment(alias, property, value) =>
         val aliasR = alias.withQuat(quat)
-        val propertyR = BetaReduction(property, alias -> aliasR)
-        val valueR = BetaReduction(value, alias -> aliasR)
+        val propertyR = BetaReduction(property, RWR, alias -> aliasR)
+        val valueR = BetaReduction(value, RWR, alias -> aliasR)
         Assignment(aliasR, propertyR, valueR)
     }
 
@@ -128,13 +130,13 @@ object PropagateRenames extends StatelessTransformer {
       case Returning(action: Action, alias, body) =>
         val actionR = apply(action)
         val aliasR = alias.withQuat(actionR.quat)
-        val bodyR = BetaReduction(body, alias -> aliasR)
+        val bodyR = BetaReduction(body, RWR, alias -> aliasR)
         Returning(actionR, aliasR, bodyR)
 
       case ReturningGenerated(action: Action, alias, body) =>
         val actionR = apply(action)
         val aliasR = alias.withQuat(actionR.quat)
-        val bodyR = BetaReduction(body, alias -> aliasR)
+        val bodyR = BetaReduction(body, RWR, alias -> aliasR)
         ReturningGenerated(actionR, aliasR, bodyR)
 
       case oc @ OnConflict(oca: Action, target, act) =>
@@ -144,7 +146,7 @@ object PropagateRenames extends StatelessTransformer {
             case OnConflict.Properties(props) =>
               val propsR = props.map {
                 case prop @ PropertyMatroshka(ident, _) =>
-                  BetaReduction(prop, ident -> ident.withQuat(oca.quat)).asInstanceOf[Property]
+                  BetaReduction(prop, RWR, ident -> ident.withQuat(oca.quat)).asInstanceOf[Property]
                 case other =>
                   throw new IllegalArgumentException(s"Malformed onConflict element ${oc}. Could not parse property ${other}")
               }
@@ -157,8 +159,8 @@ object PropagateRenames extends StatelessTransformer {
             val assignmentsR =
               assignments.map { assignment =>
                 val aliasR = assignment.alias.copy(quat = oca.quat)
-                val propertyR = BetaReduction(assignment.property, assignment.alias -> aliasR)
-                val valueR = BetaReduction(assignment.value, assignment.alias -> aliasR)
+                val propertyR = BetaReduction(assignment.property, RWR, assignment.alias -> aliasR)
+                val valueR = BetaReduction(assignment.value, RWR, assignment.alias -> aliasR)
                 Assignment(aliasR, propertyR, valueR)
               }
             OnConflict.Update(assignmentsR)

@@ -25,12 +25,14 @@ object Messages {
 
   sealed trait TraceType { def value: String }
   object TraceType {
+    case object SqlNormalizations extends TraceType { val value = "sql" }
     case object Normalizations extends TraceType { val value = "norm" }
     case object Standard extends TraceType { val value = "standard" }
     case object NestedQueryExpansion extends TraceType { val value = "nest" }
     case object AvoidAliasConflict extends TraceType { val value = "alias" }
+    case object ReifyLiftings extends TraceType { val value = "reify" }
 
-    def values: List[TraceType] = List(Standard, Normalizations, NestedQueryExpansion, AvoidAliasConflict)
+    def values: List[TraceType] = List(Standard, SqlNormalizations, Normalizations, NestedQueryExpansion, AvoidAliasConflict, ReifyLiftings)
   }
 
   val qprint = new AstPrinter(traceOpinions, traceAstSimple)

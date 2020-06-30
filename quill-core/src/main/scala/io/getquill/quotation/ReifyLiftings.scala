@@ -6,10 +6,11 @@ import scala.collection.immutable.Map
 import scala.reflect.macros.whitebox.{ Context => MacroContext }
 import scala.reflect.NameTransformer
 import io.getquill.dsl.EncodingDsl
-import io.getquill.norm.BetaReduction
+import io.getquill.norm.{ BetaReduction, RepropagateQuats, TypeBehavior }
 import io.getquill.quat.{ Quat, QuatMaking }
-import io.getquill.util.OptionalTypecheck
+import io.getquill.util.{ Interpolator, OptionalTypecheck }
 import io.getquill.util.MacroContextExt._
+import io.getquill.util.Messages.TraceType
 
 case class ScalarValueLifting[T, U](value: T, encoder: EncodingDsl#Encoder[U])
 case class CaseClassValueLifting[T](value: T)
@@ -17,6 +18,9 @@ case class CaseClassValueLifting[T](value: T)
 trait ReifyLiftings extends QuatMaking {
   val c: MacroContext
   import c.universe.{ Ident => _, _ }
+
+  val interp = new Interpolator(TraceType.ReifyLiftings, 1)
+  import interp._
 
   private val liftings = TermName("liftings")
 
@@ -133,8 +137,11 @@ trait ReifyLiftings extends QuatMaking {
   protected def reifyLiftings(ast: Ast): (Ast, Tree) =
     ReifyLiftings(Map.empty)(ast) match {
       case (ast, _) =>
+        trace"ReifyLiftings Original AST: ${ast}" andLog ()
+        val reduced = trace"ReifyLiftings BetaReduction: " andReturn BetaReduction(ast, TypeBehavior.ReplaceWithReduction)
+        val retyped = trace"ReifyLiftings Retyped: " andReturn RepropagateQuats(reduced)
         // reify again with beta reduction, given that the first pass will remove `QuotedReference`s
-        ReifyLiftings(Map.empty)(BetaReduction(ast)) match {
+        ReifyLiftings(Map.empty)(retyped) match {
           case (ast, transformer) =>
             val trees =
               for ((name, Reified(value, encoder)) <- transformer.state) yield {

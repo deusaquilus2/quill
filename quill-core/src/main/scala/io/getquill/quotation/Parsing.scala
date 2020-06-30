@@ -328,7 +328,7 @@ trait Parsing extends ValueComputation with QuatMaking {
         Dynamic {
           c.typecheck(q"""
             new ${c.prefix}.Quoted[Any] {
-              override def ast = io.getquill.ast.Infix($newParts, $newParams, $infixIsPure)
+              override def ast = io.getquill.ast.Infix($newParts, $newParams, $infixIsPure, $quat)
             }
           """)
         }

@@ -2,6 +2,7 @@ package io.getquill.quotation
 
 import io.getquill._
 import io.getquill.dsl.DynamicQueryDsl
+import scala.reflect.runtime.universe.TypeTag
 
 class DynamicQuerySpec extends Spec {
 
@@ -61,6 +62,10 @@ class DynamicQuerySpec extends Spec {
     }
   }
 
+  // Need to put here so an summon TypeTag for these
+  case class S(v: String) extends Embedded
+  case class E(s: S)
+
   "query" - {
 
     def test[T: QueryMeta](d: Quoted[Query[T]], s: Quoted[Query[T]]) =
@@ -100,8 +105,6 @@ class DynamicQuerySpec extends Spec {
         )
       }
       "path property" in {
-        case class S(v: String) extends Embedded
-        case class E(s: S)
         test(
           dynamicQuerySchema[E]("e", alias(_.s.v, "sv")),
           querySchema[E]("e", _.s.v -> "sv")
@@ -227,7 +230,7 @@ class DynamicQuerySpec extends Spec {
     "sortBy" in {
       val o = Ord.desc[Int]
       test(
-        dynamicQuery[TestEntity].sortBy(v0 => quote(v0.i))(o),
+        dynamicQuery[TestEntity].sortBy(v0 => quote(v0.i))(o, implicitly[TypeTag[Int]]),
         query[TestEntity].sortBy(v0 => v0.i)(Ord.desc)
       )
     }

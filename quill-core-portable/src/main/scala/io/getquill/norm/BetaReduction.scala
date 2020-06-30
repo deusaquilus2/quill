@@ -54,7 +54,7 @@ case class BetaReduction(replacements: Replacements, typeBehavior: TypeBehavior)
               if (terminal.quat.subTypeOf(ast.quat))
                 terminal
               else
-                throw new IllegalArgumentException(s"Cannot beta reduce [$rep <- $ast] because ${rep.quat.shortString} is not a subtype of ${ast.quat.shortString}")
+                throw new IllegalArgumentException(s"Cannot beta reduce [$rep <- $ast] because ${rep}:${rep.quat.shortString} is not a subtype of ${ast}:${ast.quat.shortString}")
 
             case other =>
               other
@@ -192,7 +192,7 @@ object BetaReduction {
       case (orig, rep) =>
         //if (orig.quat != rep.quat)
         if (!rep.quat.subTypeOf(orig.quat))
-          throw new IllegalArgumentException(s"Cannot beta reduce [$rep <- $orig] within [$body] because ${rep.quat.shortString} is not a subtype of ${orig.quat.shortString}")
+          throw new IllegalArgumentException(s"Cannot beta reduce [$rep <- $orig] within [$body] because ${rep}:${rep.quat.shortString} is not a subtype of ${orig}:${orig.quat.shortString}")
     }
 
   def apply(ast: Ast, typeBehavior: TypeBehavior, t: (Ast, Ast)*): Ast = {

@@ -194,6 +194,14 @@ trait QuatMakingBase {
       paramOf[io.getquill.Query[Any]](tpe)
   }
 
+  object TypeSigParam {
+    def unapply(tpe: Type): Option[Type] =
+      tpe.typeSymbol.typeSignature.typeParams match {
+        case head :: tail => Some(head.typeSignature)
+        case Nil          => None
+      }
+  }
+
   def paramOf[T](tpe: Type, maxDepth: Int = 10)(implicit tt: TypeTag[T]): Option[Type] = tpe match {
     case _ if (maxDepth == 0) =>
       throw new IllegalArgumentException(s"Max Depth reached with type: ${tpe}")
@@ -203,6 +211,8 @@ trait QuatMakingBase {
       Some(tpe)
     case TypeRef(_, cls, List(arg)) =>
       Some(arg)
+    case TypeSigParam(param) =>
+      Some(param)
     case _ =>
       val base = tpe.baseType(implicitly[TypeTag[T]].tpe.typeSymbol)
       paramOf(base, maxDepth - 1)

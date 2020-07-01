@@ -39,7 +39,7 @@ class SqlNormalize(concatBehavior: ConcatBehavior, equalityBehavior: EqualityBeh
       .andThen(Normalize.apply _)
       .andThen(demarcate("Normalize")) // Needed only because ExpandDistinct introduces an alias.
       .andThen(NestImpureMappedInfix.apply _)
-      .andThen(demarcate("NestMappedInfix"))
+      .andThen(demarcate("NestImpureMappedInfix"))
       .andThen(Normalize.apply _)
       .andThen(demarcate("Normalize"))
       .andThen(ExpandJoin.apply _)

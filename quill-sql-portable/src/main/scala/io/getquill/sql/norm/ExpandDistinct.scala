@@ -16,7 +16,7 @@ object ExpandDistinct {
 
           case Distinct(Map(q, x, cc @ Tuple(values))) =>
             val newIdent = Ident("x", cc.quat)
-            Map(Distinct(Map(q, x, cc)), x,
+            Map(Distinct(Map(q, x, cc)), newIdent,
               Tuple(values.zipWithIndex.map {
                 case (_, i) => Property(newIdent, s"_${i + 1}")
               }))

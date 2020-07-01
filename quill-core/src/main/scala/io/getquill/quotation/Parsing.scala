@@ -4,7 +4,7 @@ import scala.reflect.ClassTag
 import io.getquill.ast._
 import io.getquill.Embedded
 import io.getquill.context._
-import io.getquill.norm.BetaReduction
+import io.getquill.norm.{ BetaReduction, TypeBehavior }
 import io.getquill.util.MacroContextExt.RichContext
 import io.getquill.dsl.{ CoreDsl, ValueComputation }
 import io.getquill.norm.capture.AvoidAliasConflict
@@ -16,7 +16,8 @@ import io.getquill.ast.Implicits._
 import io.getquill.ast.Renameable.Fixed
 import io.getquill.ast.Visibility.{ Hidden, Visible }
 import io.getquill.quat._
-import io.getquill.util.Interleave
+import io.getquill.util.Messages.TraceType
+import io.getquill.util.{ Interleave, Interpolator }
 import io.getquill.{ Delete => DslDelete, Insert => DslInsert, Query => DslQuery, Update => DslUpdate }
 
 trait Parsing extends ValueComputation with QuatMaking {
@@ -106,7 +107,15 @@ trait Parsing extends ValueComputation with QuatMaking {
           c.fail(s"Please report a bug. Expected tuple, val, or ident, got '$other'")
       }
     }
-    BetaReduction(body, reductions(fields): _*)
+
+    val interp = new Interpolator(TraceType.PatMatch, 1)
+    import interp._
+
+    val reductionTuples = reductions(fields)
+    trace"Pat Match Parsing: ${body}" andLog ()
+    trace"Reductions: ${reductionTuples}" andLog ()
+    // Do not care about types here because pat-match body does not necessarily have correct typing in the Parsing phase
+    BetaReduction(body, TypeBehavior.ReplaceWithReduction, reductionTuples: _*)
   }
 
   val ifParser: Parser[If] = Parser[If] {

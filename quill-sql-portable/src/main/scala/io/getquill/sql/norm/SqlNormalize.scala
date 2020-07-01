@@ -36,6 +36,8 @@ class SqlNormalize(concatBehavior: ConcatBehavior, equalityBehavior: EqualityBeh
       .andThen(demarcate("RenameProperties"))
       .andThen(ExpandDistinct.apply _)
       .andThen(demarcate("ExpandDistinct"))
+      .andThen(Normalize.apply _)
+      .andThen(demarcate("Normalize")) // Needed only because ExpandDistinct introduces an alias.
       .andThen(NestImpureMappedInfix.apply _)
       .andThen(demarcate("NestMappedInfix"))
       .andThen(Normalize.apply _)

@@ -152,7 +152,7 @@ case object DescNullsFirst extends PropertyOrdering
 case object AscNullsLast extends PropertyOrdering
 case object DescNullsLast extends PropertyOrdering
 
-case class GroupBy(query: Ast, alias: Ident, body: Ast) extends Query { def quat = body.quat }
+case class GroupBy(query: Ast, alias: Ident, body: Ast) extends Query { def quat = Quat.Tuple(body.quat, query.quat) }
 
 case class Aggregation(operator: AggregationOperator, ast: Ast) extends Query { def quat = ast.quat }
 

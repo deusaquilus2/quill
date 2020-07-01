@@ -51,9 +51,6 @@ object Normalize extends StatelessTransformer {
       case OrderTerms(query) =>
         demarcate("OrderTerms")(query)
         norm(query)
-      case NormalizeAggregationIdent(query) =>
-        demarcate("NormalizeAggregationIdent")(query)
-        norm(query)
       case other =>
         other
     }

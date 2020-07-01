@@ -8,18 +8,40 @@ import io.getquill.util.Interpolator
 import io.getquill.util.Messages.TraceType.Normalizations
 import io.getquill.util.Messages.title
 
+/**
+ * Rename properties now relies on the Quats themselves to propagate field renames. The previous
+ * itreations of this phase relied on schema propagation via stateful transforms holding
+ * field-renames which were then compared to Property AST elements. This was a painstakingly complex and
+ * highly error-prone especially when embedded objects were used requiring computation of sub-schemas
+ * in a process called 'schema protraction'.
+ * The new variation of this phase relies on the Quats directly since the Quats of every Identity, Lift, etc...
+ * now know what the field-names contained therein as well as the sub-Quats of any embedded property.
+ * This is fairly simple process:
+ *
+ * <ul>
+ * <li> Learning what Quats have which renames is simple since this can be propagated from the Quats of the Entity objects,
+ * to the rest of the AST.
+ * <li> This has the simple requirement that renames must be propagated fully before they are actually committed
+ * so that the knowledge of what needs to be renamed into what can be distributed easily throughout the AST.
+ * <li> Once these future-renames are staged to Quats throught the AST, a simple stateless reduction will then apply
+ * the renames to the Property AST elements around the Ident's (and potentially Lifts etc...) with the renamed Quats.
+ * </ul>
+ *
+ * The entire process above can be done with a series of stateless transformations with straighforward operations
+ * since the majority of the logic actually lives within the Quats themselves.
+ */
 object NewRenameProperties {
   private def demarcate(heading: String) =
     ((ast: Ast) => title(heading)(ast))
 
   def apply(ast: Ast) = {
     (identity[Ast] _)
-      .andThen(SeedRenames.apply(_: Ast))
+      .andThen(SeedRenames.apply(_: Ast))                  // Stage field renames into the Quats of entities
       .andThen(demarcate("SeedRenames"))
       .andThen(RepropagateQuats.apply(_: Ast))
-      .andThen(demarcate("RepropagateQuats"))
+      .andThen(demarcate("RepropagateQuats"))     // Propagate the renames from Entity-Quats to the rest of the Quats in the AST
       .andThen(ApplyRenamesToProps.apply(_: Ast))
-      .andThen(demarcate("ApplyRenamesToProps"))
+      .andThen(demarcate("ApplyRenamesToProps"))  // Go through the Quats and 'commit' the renames
       .andThen(CompleteRenames.apply(_: Ast))
       .andThen(demarcate("CompleteRenames"))(ast) // Quats can be invalid in between this phase and the previous one
   }

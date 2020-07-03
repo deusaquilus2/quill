@@ -121,8 +121,8 @@ object ApplyMap {
       case GroupBy(DetachableMap(a, b, c), d, e) =>
         val er = BetaReduction(e, d -> c)
         val x = Ident("x", Quat.Tuple(e.quat, c.quat))
-        val x1 = Property(Ident("x", e.quat), "_1")
-        val x2 = Property(Ident("x", c.quat), "_2")
+        val x1 = Property(x, "_1")
+        val x2 = Property(x, "_2")
         val body = Tuple(List(x1, Map(x2, b, c)))
         Some(Map(GroupBy(a, b, er), x, body))
 

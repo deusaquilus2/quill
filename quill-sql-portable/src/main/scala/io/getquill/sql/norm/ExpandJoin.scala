@@ -4,6 +4,31 @@ import io.getquill.ast._
 import io.getquill.norm.BetaReduction
 import io.getquill.norm.Normalize
 
+// TODO Quat comment here about the other branch where this is done
+//      via flatmaps and technically this does not typecheck but left it alone
+//      because inner aliases not expanded correctly from the following query
+//
+//    def nestedWithRenames(): Unit = {
+//      case class Ent(name: String)
+//      case class Foo(fame: String)
+//      case class Bar(bame: String)
+//
+//      implicit val entSchema = schemaMeta[Ent]("TheEnt", _.name -> "theName")
+//
+//      val q = quote {
+//        query[Foo]
+//          .join(query[Ent]).on((f, e) => f.fame == e.name) // (Foo, Ent)
+//          .distinct
+//          .join(query[Bar]).on((fe, b) => (fe._1.fame == b.bame)) // ((Foo, Ent), Bar)
+//          .distinct
+//          .map(feb => (feb._1._2, feb._2)) // feb: ((Foo, Ent), Bar)
+//          .distinct
+//          .map(eb => (eb._1.name, eb._2.bame)) // eb: (Ent, Bar)
+//      }
+//      println(run(q)) //helloo
+//    }
+//    nestedWithRenames()
+
 object ExpandJoin {
 
   def apply(q: Ast) = expand(q, None)

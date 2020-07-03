@@ -32,8 +32,9 @@ object Messages {
     case object AvoidAliasConflict extends TraceType { val value = "alias" }
     case object ReifyLiftings extends TraceType { val value = "reify" }
     case object PatMatch extends TraceType { val value = "patmatch" }
+    case object Quotation extends TraceType { val value = "quote" }
 
-    def values: List[TraceType] = List(Standard, SqlNormalizations, Normalizations, NestedQueryExpansion, AvoidAliasConflict, ReifyLiftings, PatMatch)
+    def values: List[TraceType] = List(Standard, SqlNormalizations, Normalizations, NestedQueryExpansion, AvoidAliasConflict, ReifyLiftings, PatMatch, Quotation)
   }
 
   val qprint = new AstPrinter(traceOpinions, traceAstSimple)

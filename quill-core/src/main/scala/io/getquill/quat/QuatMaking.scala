@@ -134,6 +134,10 @@ trait QuatMakingBase {
         case QueryType(tpe) =>
           parseType(tpe)
 
+        // TODO Quat Is this situation needed? What are the cases where top-level type is Query[T]?
+        // case QueryType(Param(tpe)) =>
+        //   parseType(tpe)
+
         // For cases where the type is actually a parameter with type bounds
         // and the upper bound is not final, assume that polymorphism is being used
         // and that the user wants to extend a class e.g.
@@ -155,10 +159,20 @@ trait QuatMakingBase {
           parseType(other)
       }
 
+    /**
+     * Quat parsing has a top-level type parsing function and then secondary function which is recursed. This is because
+     * things like type boundaries (e.g.  type-bounds types (e.g. Query[T &lt;: BaseType]) should only be checked once
+     * at the top level.
+     */
     def parseType(tpe: Type, boundedInterfaceType: Boolean = false): Quat =
       tpe match {
         case DefiniteValue(tpe) =>
           Quat.Value
+
+        // This will happens for val-parsing situations e.g. where you have val (a,b) = (Query[A],Query[B]) inside a quoted block.
+        // In this situations, the CaseClassBaseType should activate first and recurse which will then hit this case clause.
+        case QueryType(tpe) =>
+          parseType(tpe)
 
         // If the type is optional, recurse
         case _ if (isOptionType(tpe)) =>

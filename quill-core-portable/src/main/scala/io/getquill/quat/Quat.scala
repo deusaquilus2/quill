@@ -57,10 +57,10 @@ sealed trait Quat {
         case other => s"[${other.map { case (k, v) => k + "->" + v }.mkString(",")}]"
       })
     }"
-    case Quat.Error(msg) => s"Quat-Error(${msg.take(20)})"
-    case Quat.Generic    => "<G>"
-    case Quat.Value      => "V"
-    case Quat.Null       => "N"
+    case Quat.Error(msg, _) => s"Quat-Error(${msg.take(20)})"
+    case Quat.Generic       => "<G>"
+    case Quat.Value         => "V"
+    case Quat.Null          => "N"
   }
 
   def lookup(path: String): Quat = (this, path) match {
@@ -72,7 +72,7 @@ sealed trait Quat {
       Quat.Error(s"The field '${fieldName}' cannot be looked up from a SQL-level null node") // TODO Quat is there a case where we're putting a property on a entity which is actually a value?
     case (Quat.Generic, fieldName) =>
       Quat.Error(s"The field '${fieldName}' cannot be looked up from a SQL-level generic node") // TODO Quat is there a case where we're putting a property on a entity which is actually a value?
-    case (Quat.Error(msg), _) => Quat.Error(s"${msg}. Also tried to lookup ${path} from node.")
+    case (Quat.Error(msg, _), _) => Quat.Error(s"${msg}. Also tried to lookup ${path} from node.")
   }
   def lookup(list: List[String]): Quat =
     list match {
@@ -111,8 +111,8 @@ object Quat {
     /** Produce a product or throw an error. I.e. 'prove' the fact that the probity is a Product. */
     def prove =
       this match {
-        case p: Quat.Product => p
-        case Quat.Error(msg) => throw new IllegalArgumentException(s"Could not cast ProductOr SQL-Type to Product SQL Type due to error. ${msg}")
+        case p: Quat.Product    => p
+        case Quat.Error(msg, _) => throw new IllegalArgumentException(s"Could not cast ProductOr SQL-Type to Product SQL Type due to error. ${msg}")
       }
   }
 
@@ -240,7 +240,9 @@ object Quat {
         case _   => Quat.Error(s"Renames ${renames} cannot be applied to a value SQL-level type")
       }
   }
-  case class Error(msg: String) extends Probity with Quat {
+  case class Error(msg: String, immediateThrow: Boolean = true) extends Probity with Quat {
+    if (immediateThrow)
+      throw new IllegalArgumentException(msg)
     override def withRenames(renames: List[(String, String)]): Quat = this
   }
 }

@@ -36,12 +36,12 @@ object NewRenameProperties {
 
   def apply(ast: Ast) = {
     (identity[Ast] _)
-      .andThen(SeedRenames.apply(_: Ast))                  // Stage field renames into the Quats of entities
+      .andThen(SeedRenames.apply(_: Ast)) // Stage field renames into the Quats of entities
       .andThen(demarcate("SeedRenames"))
       .andThen(RepropagateQuats.apply(_: Ast))
-      .andThen(demarcate("RepropagateQuats"))     // Propagate the renames from Entity-Quats to the rest of the Quats in the AST
+      .andThen(demarcate("RepropagateQuats")) // Propagate the renames from Entity-Quats to the rest of the Quats in the AST
       .andThen(ApplyRenamesToProps.apply(_: Ast))
-      .andThen(demarcate("ApplyRenamesToProps"))  // Go through the Quats and 'commit' the renames
+      .andThen(demarcate("ApplyRenamesToProps")) // Go through the Quats and 'commit' the renames
       .andThen(CompleteRenames.apply(_: Ast))
       .andThen(demarcate("CompleteRenames"))(ast) // Quats can be invalid in between this phase and the previous one
   }

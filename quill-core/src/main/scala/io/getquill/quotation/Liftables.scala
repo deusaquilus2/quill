@@ -193,7 +193,7 @@ trait Liftables {
 
   implicit val quatProbityLiftable: Liftable[Probity] = Liftable[Probity] {
     case Quat.Product.WithRenames(fields, renames) => q"io.getquill.quat.Quat.Product.WithRenames($fields, $renames)"
-    case Quat.Error(msg)                           => q"io.getquill.quat.Quat.Error($msg)"
+    case Quat.Error(msg, it)                       => q"io.getquill.quat.Quat.Error($msg, $it)"
   }
 
   implicit val quatLiftable: Liftable[Quat] = Liftable[Quat] {
@@ -201,7 +201,7 @@ trait Liftables {
     case Quat.Value                                => q"io.getquill.quat.Quat.Value"
     case Quat.Null                                 => q"io.getquill.quat.Quat.Null"
     case Quat.Generic                              => q"io.getquill.quat.Quat.Generic"
-    case Quat.Error(msg)                           => q"io.getquill.quat.Quat.Error($msg)"
+    case Quat.Error(msg, it)                       => q"io.getquill.quat.Quat.Error($msg, $it)"
   }
 
   implicit val identLiftable: Liftable[Ident] = Liftable[Ident] {

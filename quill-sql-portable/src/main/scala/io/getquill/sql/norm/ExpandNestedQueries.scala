@@ -12,7 +12,7 @@ import scala.collection.mutable.LinkedHashSet
 import io.getquill.util.Interpolator
 import io.getquill.util.Messages.TraceType.NestedQueryExpansion
 import io.getquill.context.sql.norm.nested.ExpandSelect
-import io.getquill.norm.BetaReduction
+import io.getquill.norm.{ BetaReduction, TypeBehavior }
 import io.getquill.quat.Quat
 
 import scala.collection.mutable
@@ -51,7 +51,7 @@ class ExpandNestedQueries(strategy: NamingStrategy) {
 
         // Need to unhide properties that were used during the query
         def replaceProps(ast: Ast) =
-          BetaReduction(ast, replacedRefs: _*)
+          BetaReduction(ast, TypeBehavior.ReplaceWithReduction, replacedRefs: _*) // Since properties could not actually be inside, don't typecheck the reduction
         def replacePropsOption(ast: Option[Ast]) =
           ast.map(replaceProps(_))
 

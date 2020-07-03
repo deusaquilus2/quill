@@ -14,7 +14,7 @@ case class CheckQuats(header: String) extends StatelessTransformer {
 
   protected def check[T <: Ast](ast: T)(continue: T => T): T = {
     ast.quat match {
-      case Quat.Error(msg) =>
+      case Quat.Error(msg, _) =>
         throw new IllegalStateException(s"Failed Phase ${header}: ${msg}\n" + Messages.qprint(ast) + "\n")
       case _ =>
         continue(ast) //super.apply(ast)

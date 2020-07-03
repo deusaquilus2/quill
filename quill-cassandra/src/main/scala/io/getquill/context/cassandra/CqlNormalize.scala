@@ -3,7 +3,7 @@ package io.getquill.context.cassandra
 import io.getquill.ast._
 import io.getquill.norm.ConcatBehavior.AnsiConcat
 import io.getquill.norm.EqualityBehavior.AnsiEquality
-import io.getquill.norm.{ FlattenOptionOperation, Normalize, RenameProperties, SimplifyNullChecks }
+import io.getquill.norm.{ FlattenOptionOperation, Normalize, NewRenameProperties, SimplifyNullChecks }
 
 object CqlNormalize {
 
@@ -15,6 +15,6 @@ object CqlNormalize {
       .andThen(new FlattenOptionOperation(AnsiConcat).apply _)
       .andThen(new SimplifyNullChecks(AnsiEquality).apply _)
       .andThen(Normalize.apply _)
-      .andThen(RenameProperties.apply _)
+      .andThen(NewRenameProperties.apply _)
       .andThen(ExpandMappedInfix.apply _)
 }

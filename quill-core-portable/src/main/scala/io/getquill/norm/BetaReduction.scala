@@ -51,10 +51,11 @@ case class BetaReduction(replacements: Replacements, typeBehavior: TypeBehavior)
               terminal.withQuat(ast.quat)
 
             case Terminal(terminal) =>
-              if (terminal.quat.subTypeOf(ast.quat))
-                terminal
+              val leastUpperType = terminal.quat.leastUpperType(ast.quat)
+              if (leastUpperType.isDefined)
+                terminal.withQuat(leastUpperType.head)
               else
-                throw new IllegalArgumentException(s"Cannot beta reduce [$rep <- $ast] because ${rep}:${rep.quat.shortString} is not a subtype of ${ast}:${ast.quat.shortString}")
+                throw new IllegalArgumentException(s"Cannot beta reduce [$rep <- $ast] because [${rep}]:${rep.quat.shortString} is not a subtype of [${ast}]:${ast.quat.shortString}")
 
             case other =>
               other
@@ -191,7 +192,7 @@ object BetaReduction {
     replacements.foreach {
       case (orig, rep) =>
         //if (orig.quat != rep.quat)
-        if (!rep.quat.subTypeOf(orig.quat))
+        if (rep.quat.leastUpperType(orig.quat).isEmpty)
           throw new IllegalArgumentException(s"Cannot beta reduce [$rep <- $orig] within [$body] because ${rep}:${rep.quat.shortString} is not a subtype of ${orig}:${orig.quat.shortString}")
     }
 

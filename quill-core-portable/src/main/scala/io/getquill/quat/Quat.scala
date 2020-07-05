@@ -15,18 +15,15 @@ sealed trait Quat {
       case other           => Quat.Error(s"Was expecting SQL-level type must be a Product but found `${other}`")
     }
 
-  // Roughly speaking, is this a super-type of the inner type
-  def subTypeOf(other: Quat): Boolean = {
+  def leastUpperType(other: Quat): Option[Quat] = {
     (this, other) match {
-      case (Quat.Value, Quat.Value)                => true
-      case (me: Quat.Product, other: Quat.Product) => me.subTypeOfProduct(other)
-      case (Quat.Null, Quat.Product(_))            => true
-      case (Quat.Null, Quat.Value)                 => true
-      case (Quat.Generic, Quat.Product(_))         => true
-      case (Quat.Generic, Quat.Value)              => true
-      case (Quat.Generic, Quat.Generic)            => true
-      case (Quat.Null, Quat.Null)                  => true
-      case (_, _)                                  => false
+      case (Quat.Generic, other)                   => Some(other)
+      case (Quat.Null, other)                      => Some(other)
+      case (other, Quat.Generic)                   => Some(other)
+      case (other, Quat.Null)                      => Some(other)
+      case (Quat.Value, Quat.Value)                => Some(Quat.Value)
+      case (me: Quat.Product, other: Quat.Product) => me.leastUpperTypeProduct(other)
+      case (_, _)                                  => None
     }
   }
 
@@ -118,12 +115,26 @@ object Quat {
 
   case class Product(fields: List[(String, Quat)]) extends Probity {
 
-    def subTypeOfProduct(other: Quat.Product): Boolean = {
+    def leastUpperTypeProduct(other: Quat.Product): Option[Quat.Product] = {
       // TODO Quat this is a N^2 field check. Explor changing product fields into ListMap and make this more efficient
-      other.fields.forall {
-        case (field, value) =>
-          this.fields.exists { case (thisField, thisValue) => thisField == field && thisValue.subTypeOf(value) }
+
+      val newFields = collection.mutable.ArrayBuffer[(String, Quat)]()
+      for ((otherField, otherValue) <- other.fields) {
+        val foundField =
+          this.fields
+            .find(tup => tup._1 == otherField)
+            .flatMap {
+              case (thisField, thisValue) =>
+                thisValue.leastUpperType(otherValue).map(v => (thisField, v))
+            }
+
+        // Early exit if any of the fields are None for performance reasons
+        if (foundField.isEmpty)
+          return None
+
+        newFields += ((foundField.head))
       }
+      Some(Quat.Product(newFields.toList))
     }
 
     override def withRenames(renames: List[(String, String)]) =

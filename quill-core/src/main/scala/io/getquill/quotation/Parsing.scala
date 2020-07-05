@@ -188,6 +188,8 @@ trait Parsing extends ValueComputation with QuatMaking {
       Entity("unused", Nil, inferQuat(q"$t".tpe).probit)
 
     case q"$pack.querySchema[$t](${ name: String }, ..$properties)" =>
+      val ttpe = q"$t".tpe
+      val inferred = inferQuat(q"$t".tpe)
       Entity.Opinionated(name, properties.map(propertyAliasParser(_)), inferQuat(q"$t".tpe).probit, Fixed)
 
     case q"$pack.impliedQuerySchema[$t](${ name: String }, ..$properties)" =>

@@ -16,7 +16,6 @@ class SqlNormalize(concatBehavior: ConcatBehavior, equalityBehavior: EqualityBeh
 
   private def demarcate(heading: String) =
     ((ast: Ast) => title(heading, TraceType.SqlNormalizations)(ast))
-      .andThen(CheckQuats(heading).apply _)
 
   private val normalize =
     (identity[Ast] _)

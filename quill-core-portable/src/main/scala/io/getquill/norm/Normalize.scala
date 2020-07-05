@@ -31,7 +31,6 @@ object Normalize extends StatelessTransformer {
 
   private def demarcate(heading: String) =
     ((ast: Query) => title(heading)(ast))
-      .andThen(CheckQuats(heading).apply _)
 
   @tailrec
   private def norm(q: Query): Query =

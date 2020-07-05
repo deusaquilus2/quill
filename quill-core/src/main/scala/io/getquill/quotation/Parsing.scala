@@ -75,7 +75,7 @@ trait Parsing extends ValueComputation with QuatMaking {
   }
 
   val valParser: Parser[Val] = Parser[Val] {
-    case q"val $name: $typ = $body" => Val(ident(name, inferQuat(q"$typ".tpe)), astParser(body))
+    case q"val $name: $typ = $body" => Val(ident(name, inferQuat(typ.tpe)), astParser(body))
   }
 
   val patMatchValParser: Parser[Val] = Parser[Val] {

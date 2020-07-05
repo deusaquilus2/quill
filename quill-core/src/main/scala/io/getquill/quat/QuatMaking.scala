@@ -116,7 +116,10 @@ trait QuatMakingBase {
 
     object DefiniteValue {
       def unapply(tpe: Type): Option[Type] = {
-        if (existsEncoderFor(tpe))
+        // UDTs (currently only used by cassandra) are reated as tables even though there is an encoder for them.
+        if (tpe <:< typeOf[io.getquill.Udt])
+          None
+        else if (existsEncoderFor(tpe))
           Some(tpe)
         else if (isType[AnyVal](tpe))
           Some(tpe)
@@ -200,12 +203,12 @@ trait QuatMakingBase {
 
   object QuotedType {
     def unapply(tpe: Type) =
-      paramOf[QuotationDsl#Quoted[Any]](tpe)
+      paramOf(tpe, typeOf[QuotationDsl#Quoted[Any]])
   }
 
   object QueryType {
     def unapply(tpe: Type) =
-      paramOf[io.getquill.Query[Any]](tpe)
+      paramOf(tpe, typeOf[io.getquill.Query[Any]])
   }
 
   object TypeSigParam {
@@ -216,10 +219,10 @@ trait QuatMakingBase {
       }
   }
 
-  def paramOf[T](tpe: Type, maxDepth: Int = 10)(implicit tt: TypeTag[T]): Option[Type] = tpe match {
+  def paramOf(tpe: Type, of: Type, maxDepth: Int = 10): Option[Type] = tpe match {
     case _ if (maxDepth == 0) =>
       throw new IllegalArgumentException(s"Max Depth reached with type: ${tpe}")
-    case _ if (!(tpe <:< tt.tpe)) =>
+    case _ if (!(tpe <:< of)) =>
       None
     case _ if (tpe =:= typeOf[Nothing] || tpe =:= typeOf[Any]) =>
       Some(tpe)
@@ -228,8 +231,8 @@ trait QuatMakingBase {
     case TypeSigParam(param) =>
       Some(param)
     case _ =>
-      val base = tpe.baseType(implicitly[TypeTag[T]].tpe.typeSymbol)
-      paramOf(base, maxDepth - 1)
+      val base = tpe.baseType(of.typeSymbol)
+      paramOf(base, of, maxDepth - 1)
   }
 
   @tailrec

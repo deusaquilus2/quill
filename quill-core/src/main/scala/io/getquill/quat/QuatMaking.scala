@@ -219,20 +219,29 @@ trait QuatMakingBase {
       }
   }
 
-  def paramOf(tpe: Type, of: Type, maxDepth: Int = 10): Option[Type] = tpe match {
-    case _ if (maxDepth == 0) =>
-      throw new IllegalArgumentException(s"Max Depth reached with type: ${tpe}")
-    case _ if (!(tpe <:< of)) =>
-      None
-    case _ if (tpe =:= typeOf[Nothing] || tpe =:= typeOf[Any]) =>
-      Some(tpe)
-    case TypeRef(_, cls, List(arg)) =>
-      Some(arg)
-    case TypeSigParam(param) =>
-      Some(param)
-    case _ =>
-      val base = tpe.baseType(of.typeSymbol)
-      paramOf(base, of, maxDepth - 1)
+  // TODO Quat remove comments
+  def paramOf(tpe: Type, of: Type, maxDepth: Int = 10): Option[Type] = {
+    //println(s"### Attempting to check paramOf ${tpe} assuming it is a ${of}")
+    tpe match {
+      case _ if (maxDepth == 0) =>
+        throw new IllegalArgumentException(s"Max Depth reached with type: ${tpe}")
+      case _ if (!(tpe <:< of)) =>
+        //println(s"### ${tpe} is not a ${of}")
+        None
+      case _ if (tpe =:= typeOf[Nothing] || tpe =:= typeOf[Any]) =>
+        //println(s"### ${tpe} is Nothing or Any")
+        None
+      case TypeRef(_, cls, List(arg)) =>
+        //println(s"### ${tpe} is a TypeRef whose arg is ${arg}")
+        Some(arg)
+      case TypeSigParam(param) =>
+        //println(s"### ${tpe} is a type signature whose type is ${param}")
+        Some(param)
+      case _ =>
+        val base = tpe.baseType(of.typeSymbol)
+        //println(s"### Going to base type for ${tpe} for expected base type ${of}")
+        paramOf(base, of, maxDepth - 1)
+    }
   }
 
   @tailrec

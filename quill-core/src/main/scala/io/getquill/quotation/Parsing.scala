@@ -75,7 +75,10 @@ trait Parsing extends ValueComputation with QuatMaking {
   }
 
   val valParser: Parser[Val] = Parser[Val] {
-    case q"val $name: $typ = $body" => Val(ident(name, inferQuat(typ.tpe)), astParser(body))
+    case q"val $name: $typ = $body" =>
+      // for some reason inferQuat(typ.tpe) causes a compile hang in scala.reflect.internal
+      val bodyAst = astParser(body)
+      Val(ident(name, bodyAst.quat), bodyAst)
   }
 
   val patMatchValParser: Parser[Val] = Parser[Val] {

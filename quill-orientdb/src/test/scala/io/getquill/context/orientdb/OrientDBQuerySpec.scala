@@ -6,6 +6,7 @@ import io.getquill.idiom.StatementInterpolator._
 import io.getquill.idiom.StringToken
 import io.getquill.{ Literal, Spec }
 import io.getquill.Ord
+import io.getquill.quat.Quat
 
 class OrientDBQuerySpec extends Spec {
 
@@ -197,28 +198,28 @@ class OrientDBQuerySpec extends Spec {
     }
     "sql query" in {
       val t = implicitly[Tokenizer[SqlQuery]]
-      val e = FlattenSqlQuery(select = Nil)
+      val e = FlattenSqlQuery(select = Nil)(Quat.Value)
 
       t.token(e) mustBe stmt"SELECT *"
 
-      intercept[IllegalStateException](t.token(e.copy(distinct = true)))
+      intercept[IllegalStateException](t.token(e.copy(distinct = true)(Quat.Value)))
         .getMessage mustBe "OrientDB DISTINCT with multiple columns is not supported"
 
       val x = SelectValue(Ident("x"))
-      intercept[IllegalStateException](t.token(e.copy(select = List(x, x), distinct = true)))
+      intercept[IllegalStateException](t.token(e.copy(select = List(x, x), distinct = true)(Quat.Value)))
         .getMessage mustBe "OrientDB DISTINCT with multiple columns is not supported"
 
       val tb = TableContext(Entity("tb", Nil, QEP), "x1")
-      t.token(e.copy(from = List(tb, tb))) mustBe stmt"SELECT * FROM tb"
+      t.token(e.copy(from = List(tb, tb))(Quat.Value)) mustBe stmt"SELECT * FROM tb"
 
       val jn = FlatJoinContext(InnerJoin, tb.copy(alias = "x2"), Ident("x"))
-      intercept[IllegalStateException](t.token(e.copy(from = List(tb, jn))))
+      intercept[IllegalStateException](t.token(e.copy(from = List(tb, jn))(Quat.Value)))
 
-      t.token(e.copy(limit = Some(Ident("1")), offset = Some(Ident("2")))) mustBe stmt"SELECT * SKIP 2 LIMIT 1"
-      t.token(e.copy(limit = Some(Ident("1")))) mustBe stmt"SELECT * LIMIT 1"
-      t.token(e.copy(offset = Some(Ident("2")))) mustBe stmt"SELECT * SKIP 2"
+      t.token(e.copy(limit = Some(Ident("1", Quat.Value)), offset = Some(Ident("2")))(Quat.Value)) mustBe stmt"SELECT * SKIP 2 LIMIT 1"
+      t.token(e.copy(limit = Some(Ident("1", Quat.Value)))(Quat.Value)) mustBe stmt"SELECT * LIMIT 1"
+      t.token(e.copy(offset = Some(Ident("2", Quat.Value)))(Quat.Value)) mustBe stmt"SELECT * SKIP 2"
 
-      intercept[IllegalStateException](t.token(UnaryOperationSqlQuery(BooleanOperator.`!`, e)))
+      intercept[IllegalStateException](t.token(UnaryOperationSqlQuery(BooleanOperator.`!`, e)(Quat.Value)))
         .getMessage mustBe "Other operators are not supported yet. Please raise a ticket to support more operations"
     }
     "operation" in {
@@ -268,7 +269,7 @@ class OrientDBQuerySpec extends Spec {
     // not actually used anywhere but doing a sanity check here
     "external ident sanity check" in {
       val t = implicitly[Tokenizer[ExternalIdent]]
-      t.token(ExternalIdent("TestIdent")) mustBe StringToken("TestIdent")
+      t.token(ExternalIdent("TestIdent", Quat.Value)) mustBe StringToken("TestIdent")
     }
   }
 }

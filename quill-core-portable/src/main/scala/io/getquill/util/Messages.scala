@@ -7,13 +7,13 @@ object Messages {
   private def variable(propName: String, envName: String, default: String) =
     Option(System.getProperty(propName)).orElse(sys.env.get(envName)).getOrElse(default)
 
-  private[util] val prettyPrint = variable("quill.macro.log.pretty", "quill_macro_log", "false").toBoolean
-  private[util] val debugEnabled = variable("quill.macro.log", "quill_macro_log", "true").toBoolean
-  private[util] val traceEnabled = variable("quill.trace.enabled", "quill_trace_enabled", "false").toBoolean
-  private[util] val traceColors = variable("quill.trace.color", "quill_trace_color,", "false").toBoolean
-  private[util] val traceOpinions = variable("quill.trace.opinion", "quill_trace_opinion", "false").toBoolean
-  private[util] val traceAstSimple = variable("quill.trace.ast.simple", "quill_trace_ast_simple", "false").toBoolean
-  private[util] val traces: List[TraceType] =
+  private[util] def prettyPrint = variable("quill.macro.log.pretty", "quill_macro_log", "false").toBoolean
+  private[util] def debugEnabled = variable("quill.macro.log", "quill_macro_log", "true").toBoolean
+  private[util] def traceEnabled = variable("quill.trace.enabled", "quill_trace_enabled", "false").toBoolean
+  private[util] def traceColors = variable("quill.trace.color", "quill_trace_color,", "false").toBoolean
+  private[util] def traceOpinions = variable("quill.trace.opinion", "quill_trace_opinion", "false").toBoolean
+  private[util] def traceAstSimple = variable("quill.trace.ast.simple", "quill_trace_ast_simple", "false").toBoolean
+  private[util] def traces: List[TraceType] =
     variable("quill.trace.types", "quill_trace_types", "standard")
       .split(",")
       .toList

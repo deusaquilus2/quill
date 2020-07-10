@@ -1,7 +1,6 @@
 package io.getquill.quat
 
 import io.getquill.dsl.QuotationDsl
-import io.getquill.quat
 import io.getquill.util.{ Messages, OptionalTypecheck }
 
 import scala.annotation.tailrec
@@ -27,13 +26,13 @@ trait QuatMaking extends QuatMakingBase {
 // TODO Write a macro to use in dynamic-query cases that will check quats against existing implicits
 //      in the context (i.e. to see what encoders there are for better quat generation)
 object MakeQuat extends MakeQuat {
-  override def existsEncoderFor(tpe: quat.MakeQuat.u.Type): Boolean = true
+  override def existsEncoderFor(tpe: u.Type): Boolean = false
 }
 
 trait MakeQuat extends QuatMakingBase {
   type Uni = scala.reflect.api.Universe
   lazy val u = scala.reflect.runtime.universe
-  def of[T: u.TypeTag]: Quat = inferQuat(implicitly[u.TypeTag[T]].tpe)
+  def of[T](implicit tt: u.TypeTag[T]): Quat = inferQuat(tt.tpe)
 }
 
 trait QuatMakingBase {

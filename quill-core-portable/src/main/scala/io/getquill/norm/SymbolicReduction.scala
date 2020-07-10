@@ -1,15 +1,23 @@
 package io.getquill.norm
 
-import io.getquill.ast.Filter
-import io.getquill.ast.FlatMap
-import io.getquill.ast.Query
-import io.getquill.ast.Union
-import io.getquill.ast.UnionAll
+import io.getquill.ast.{ Filter, FlatMap, Query, Union, UnionAll }
 
 object SymbolicReduction {
 
   def unapply(q: Query) =
     q match {
+
+      // bottles.filter(bottle => isMerlot).flatMap(merlotBottle => {withCheese})
+      //     bottles.flatMap(merlotBottle => {withCheese}.filter(_ => isMerlot[bottle := merlotBottle]))
+
+      // For example:
+      //   withCheese is cheeses.filter(cheese => cheese.pairsWith == merlotBottle)
+      //   isMerlot is bottle.isMerlot
+      //
+      // bottles.filter(bottle => bottle.isMerlot).flatMap(merlotBottle => {cheeses.filter(cheese => cheese.pairsWith == merlotBottle)} )
+      //     bottles.flatMap(merlotBottle => cheeses.filter({bottle.isMerlot}[bottle := merlotBottle]).filter(cheese => cheese.pairsWith == merlotBottle)}
+      // which is:
+      //     bottles.flatMap(merlotBottle => cheeses.filter({doesnt-matter} => merlotBottle.isMerlot).filter(cheese => cheese.pairsWith == merlotBottle)
 
       // a.filter(b => c).flatMap(d => e.$) =>
       //     a.flatMap(d => e.filter(_ => c[b := d]).$)

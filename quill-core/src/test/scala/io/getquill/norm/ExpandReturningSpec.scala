@@ -6,11 +6,13 @@ import io.getquill.ast.Renameable.ByStrategy
 import io.getquill.ast.Visibility.Visible
 import io.getquill.ast._
 import io.getquill.context.Expand
+import io.getquill.quat._
 
 class ExpandReturningSpec extends Spec {
 
   case class Person(name: String, age: Int)
   case class Foo(bar: String, baz: Int)
+  val quat = quatOf[Person]
 
   "inner apply" - {
     val mi = MirrorIdiom
@@ -24,7 +26,7 @@ class ExpandReturningSpec extends Spec {
       val list =
         ExpandReturning.apply(q.ast.asInstanceOf[Returning])(MirrorIdiom, Literal)
       list must matchPattern {
-        case List((Property(ExternalIdent("p", QEP), "name"), _), (Property(ExternalIdent("p", QEP), "age"), _)) =>
+        case List((Property(ExternalIdent("p", `quat`), "name"), _), (Property(ExternalIdent("p", `quat`), "age"), _)) =>
       }
     }
 
@@ -35,7 +37,7 @@ class ExpandReturningSpec extends Spec {
       val list =
         ExpandReturning.apply(q.ast.asInstanceOf[Returning])(MirrorIdiom, Literal)
       list must matchPattern {
-        case List((Property(ExternalIdent("p", QEP), "name"), _), (Property(ExternalIdent("p", QEP), "age"), _)) =>
+        case List((Property(ExternalIdent("p", `quat`), "name"), _), (Property(ExternalIdent("p", `quat`), "age"), _)) =>
       }
     }
   }
@@ -51,7 +53,7 @@ class ExpandReturningSpec extends Spec {
       val list =
         ExpandReturning.apply(q.ast.asInstanceOf[Returning], Some("OTHER"))(MirrorIdiom, SnakeCase)
       list must matchPattern {
-        case List((Property(ExternalIdent("OTHER", QEP), "name"), _), (Property(ExternalIdent("OTHER", QEP), "age"), _)) =>
+        case List((Property(ExternalIdent("OTHER", `quat`), "name"), _), (Property(ExternalIdent("OTHER", `quat`), "age"), _)) =>
       }
     }
 
@@ -62,7 +64,7 @@ class ExpandReturningSpec extends Spec {
       val list =
         ExpandReturning.apply(q.ast.asInstanceOf[Returning], Some("OTHER"))(MirrorIdiom, SnakeCase)
       list must matchPattern {
-        case List((Property(ExternalIdent("OTHER", QEP), "name"), _), (Property(ExternalIdent("OTHER", QEP), "age"), _)) =>
+        case List((Property(ExternalIdent("OTHER", `quat`), "name"), _), (Property(ExternalIdent("OTHER", `quat`), "age"), _)) =>
       }
     }
   }

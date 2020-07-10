@@ -63,17 +63,6 @@ case class BetaReduction(replacements: Replacements, typeBehavior: TypeBehavior)
 
         output
 
-      //        (ast, rep) match {
-      //          case (ast, OptionNone(Quat.Null)) =>
-      //            OptionNone(ast.quat)
-      //          case (ast, Ident(n, Quat.Generic)) =>
-      //            Ident(n, ast.quat)
-      //          case (ast, ScalarValueLift(n, v, e, Quat.Generic)) =>
-      //            ScalarValueLift(n, v, e, ast.quat)
-      //          case (_, rep) =>
-      //            rep
-      //        }
-
       case Property(Tuple(values), name) =>
         apply(values(name.drop(1).toInt - 1))
 
@@ -107,9 +96,12 @@ case class BetaReduction(replacements: Replacements, typeBehavior: TypeBehavior)
 
       case Block(statements) =>
         apply {
+          // Walk through the statements, last to the first
           statements.reverse.tail.foldLeft((IMap[Ast, Ast](), statements.last)) {
             case ((map, stmt), line) =>
+              // Beta-reduce the statements from the end to the beginning
               BetaReduction(Replacements(map), typeBehavior)(line) match {
+                // If the beta reduction is a some 'val x=t', add x->t to the beta reductions map
                 case Val(name, body) =>
                   val newMap = map + (name -> body)
                   val newStmt = BetaReduction(stmt, Replacements(newMap), typeBehavior)

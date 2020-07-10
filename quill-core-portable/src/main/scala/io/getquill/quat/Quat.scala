@@ -210,6 +210,7 @@ object Quat {
     }
   }
   def LeafProduct(list: String*) = new Quat.Product(list.toList.map(e => (e, Quat.Value)))
+  def LeafTuple(numElems: Int) = Quat.Tuple((1 to numElems).map(_ => Quat.Value).toList)
 
   object Product {
     def empty = new Product(List())

@@ -35,7 +35,13 @@ object AttachToEntity {
       case Aggregation(op, a: Query) => Aggregation(op, apply(f, alias)(a))
       case Distinct(a: Query) => Distinct(apply(f, alias)(a))
 
-      case IsEntity(q) => f(q, alias.getOrElse(Ident("x", q.quat)))
+      // TODO Quat The ident generated here should never actually be used and if it conflicts
+      //      with an identically named ident in a FlatMap clause further up in the query, the beta reduction
+      //      will throw a typing error. For this reason, we need to find all Idents inside of the tree
+      //      and get one that is not being used.
+      //      This entails passing the entire tree into AttachToEntity or into SymbolicReduction which it must get from Normalize
+      //      For now a workaround is to use a uuid.
+      case IsEntity(q) => f(q, alias.getOrElse(Ident("temp" + java.util.UUID.randomUUID().toString.replace("-", ""), q.quat)))
 
       case other => fail(s"Can't find an 'Entity' in '$q'")
     }

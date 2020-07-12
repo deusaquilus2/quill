@@ -26,6 +26,7 @@ class QuotationSpec extends Spec {
   // See https://stackoverflow.com/a/16990806/1000455
   case class TestEnt(ev: EmbeddedValue)
   case class TestEnt2(ev: Option[EmbeddedValue])
+  case class ActionTestEntity(id: Int)
 
   "quotes and unquotes asts" - {
 
@@ -391,15 +392,14 @@ class QuotationSpec extends Spec {
             Foreach(ScalarQueryLift("q.list", list, intEncoder, QV), Ident("i"), delete.ast.body)
         }
         "batch with Quoted[Action[T]]" in {
-          case class TestEntity(id: Int)
           val list = List(
-            TestEntity(1),
-            TestEntity(2)
+            ActionTestEntity(1),
+            ActionTestEntity(2)
           )
-          val insert = quote((row: TestEntity) => query[TestEntity].insert(row))
+          val insert = quote((row: ActionTestEntity) => query[ActionTestEntity].insert(row))
           val q = quote(liftQuery(list).foreach(row => quote(insert(row))))
           quote(unquote(q)).ast mustEqual
-            Foreach(CaseClassQueryLift("q.list", list, QV), Ident("row"), insert.ast.body)
+            Foreach(CaseClassQueryLift("q.list", list, quatOf[ActionTestEntity]), Ident("row"), insert.ast.body)
         }
         "unicode arrow must compile" in {
           """|quote {
@@ -1309,7 +1309,7 @@ class QuotationSpec extends Spec {
       }
       "None" in {
         val q = quote(None)
-        quote(unquote(q)).ast mustEqual OptionNone
+        quote(unquote(q)).ast mustEqual OptionNone(Quat.Null)
       }
       "forall" - {
         "simple" in {

@@ -4,7 +4,7 @@ import io.getquill._
 import io.getquill.dsl.DynamicQueryDsl
 import scala.reflect.runtime.universe.TypeTag
 
-class DynamicQuerySpec extends Spec {
+class DynamicQuerySpec extends Spec { //helloooooo
 
   object testContext extends MirrorContext(MirrorIdiom, Literal) with TestEntities with DynamicQueryDsl
   import testContext._

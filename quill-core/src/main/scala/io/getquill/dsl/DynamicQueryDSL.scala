@@ -177,14 +177,14 @@ trait DynamicQueryDsl {
 
     protected[getquill] def q: Quoted[Query[T]]
 
-    protected[this] def transform[U, V: TypeTag, R](
+    protected[this] def transform[U, V, R](
       f: Quoted[U] => Quoted[V],
       t: (Ast, Ident, Ast) => Ast,
       r: Ast => R                 = dyn _
     ) =
       withFreshIdent { v =>
         r(t(q.ast, v, f(splice(v)).ast))
-      }(MakeQuat.of[V])
+      }(Quat.Generic)
 
     protected[this] def transformOpt[O, R, D <: DynamicQuery[T]](
       opt:  Option[O],
@@ -199,7 +199,7 @@ trait DynamicQueryDsl {
           thiz
       }
 
-    def map[R: TypeTag](f: Quoted[T] => Quoted[R]): DynamicQuery[R] =
+    def map[R](f: Quoted[T] => Quoted[R]): DynamicQuery[R] =
       transform(f, Map)
 
     def flatMap[R: TypeTag](f: Quoted[T] => Quoted[Query[R]]): DynamicQuery[R] =
@@ -310,7 +310,7 @@ trait DynamicQueryDsl {
     ): DynamicQuery[R] =
       withFreshIdent { v =>
         dyn(FlatJoin(tpe, q.ast, v, on(splice(v)).ast))
-      }(MakeQuat.of[R])
+      }(Quat.Generic)
 
     def join[A >: T](on: Quoted[A] => Quoted[Boolean])(implicit tt: TypeTag[A]): DynamicQuery[A] =
       flatJoin(InnerJoin, on)
@@ -381,7 +381,7 @@ trait DynamicQueryDsl {
     )(implicit enc: Encoder[O], tt: TypeTag[O]): DynamicEntityQuery[T] =
       transformOpt(opt, f, filter, this)
 
-    override def map[R](f: Quoted[T] => Quoted[R])(implicit tt: TypeTag[R]): DynamicEntityQuery[R] =
+    override def map[R](f: Quoted[T] => Quoted[R]): DynamicEntityQuery[R] =
       transform(f, Map, dyn)
 
     def insertValue(value: T): DynamicInsert[T] = macro DynamicQueryDslMacro.insertValue
@@ -393,7 +393,7 @@ trait DynamicQueryDsl {
     ): List[Assignment] =
       l.collect {
         case s: DynamicSetValue[_, _] =>
-          val v = Ident("v", MakeQuat.of[S])
+          val v = Ident("v", Quat.Generic)
           Assignment(v, s.property(splice(v)).ast, s.value.ast)
       }
 
@@ -443,7 +443,7 @@ trait DynamicQueryDsl {
     def returning[R](f: Quoted[E] => Quoted[R])(implicit tt: TypeTag[R]): DynamicActionReturning[E, R] =
       withFreshIdent { v =>
         DynamicActionReturning[E, R](splice(Returning(q.ast, v, f(splice(v)).ast)))
-      } { MakeQuat.of[R] }
+      } { Quat.Generic }
 
     def returningGenerated[R](
       f: Quoted[E] => Quoted[R]
@@ -452,7 +452,7 @@ trait DynamicQueryDsl {
         DynamicActionReturning[E, R](
           splice(ReturningGenerated(q.ast, v, f(splice(v)).ast))
         )
-      } { MakeQuat.of[R] }
+      } { Quat.Generic }
 
     def onConflictIgnore: DynamicInsert[E] =
       dyn(
@@ -466,7 +466,7 @@ trait DynamicQueryDsl {
     def onConflictIgnore(
       targets: (Quoted[E] => Quoted[Any])*
     )(implicit tt: TypeTag[E]): DynamicInsert[E] = {
-      val v = splice[E](Ident("v", MakeQuat.of[E]))
+      val v = splice[E](Ident("v", Quat.Generic))
       val properties =
         targets.toList.map { f =>
           f(v).ast match {

@@ -4,8 +4,8 @@ import io.getquill.norm._
 import io.getquill.ast.Ast
 import io.getquill.norm.ConcatBehavior.AnsiConcat
 import io.getquill.norm.EqualityBehavior.AnsiEquality
-import io.getquill.norm.capture.{AvoidAliasConflict, DemarcateExternalAliases}
-import io.getquill.util.Messages.{TraceType, title}
+import io.getquill.norm.capture.{ AvoidAliasConflict, DemarcateExternalAliases }
+import io.getquill.util.Messages.{ TraceType, title }
 
 object SqlNormalize {
   def apply(ast: Ast, concatBehavior: ConcatBehavior = AnsiConcat, equalityBehavior: EqualityBehavior = AnsiEquality) =

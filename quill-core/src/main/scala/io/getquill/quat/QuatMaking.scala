@@ -15,25 +15,42 @@ trait QuatMaking extends QuatMakingBase {
 
   import u.{ Block => _, Constant => _, Function => _, Ident => _, If => _, _ }
 
-  def existsEncoderFor(tpe: Type) = {
+  def existsImplicitEncoderFor(tpe: Type) = {
     OptionalTypecheck(c)(q"implicitly[${c.prefix}.Encoder[$tpe]]") match {
       case Some(enc) => true
       case None      => false
+    }
+  }
+
+  import collection.mutable.HashMap;
+
+  val cachedEncoderCheck: HashMap[Type, Boolean] = HashMap();
+
+  def existsEncoderFor(tpe: Type): Boolean = {
+    val cachedEntry = cachedEncoderCheck.get(tpe)
+    cachedEntry match {
+      case None =>
+        val lookup = existsImplicitEncoderFor(tpe)
+        cachedEncoderCheck.put(tpe, lookup)
+        lookup
+
+      case Some(value) =>
+        value
     }
   }
 }
 
 // TODO Write a macro to use in dynamic-query cases that will check quats against existing implicits
 //      in the context (i.e. to see what encoders there are for better quat generation)
-object MakeQuat extends MakeQuat {
-  override def existsEncoderFor(tpe: u.Type): Boolean = false
-}
 
-trait MakeQuat extends QuatMakingBase {
+trait MakeQuatRuntime extends QuatMakingBase {
   type Uni = scala.reflect.api.Universe
   lazy val u = scala.reflect.runtime.universe
   def of[T](implicit tt: u.TypeTag[T]): Quat = inferQuat(tt.tpe)
+  override def existsEncoderFor(tpe: u.Type): Boolean = false
 }
+
+object MakeQuat extends MakeQuatRuntime
 
 trait QuatMakingBase {
   type Uni <: Universe
@@ -50,7 +67,7 @@ trait QuatMakingBase {
         .filter(m => m.isPublic
           && m.owner.name.toString != "Any"
           && m.owner.name.toString != "Object").map { param =>
-          (param.name.toString, param.typeSignature.asSeenFrom(tpe, tpe.typeSymbol))
+          (param.name.toString, param.typeSignature)
         }.toList
     }
 
@@ -62,7 +79,7 @@ trait QuatMakingBase {
 
       // TODO Quat Only one constructor param list supported so far? Have an error for that?
       constructor.paramLists(0).map { param =>
-        (param.name.toString, param.typeSignature.asSeenFrom(tpe, tpe.typeSymbol))
+        (param.name.toString, param.typeSignature)
       }
     }
 
@@ -118,8 +135,6 @@ trait QuatMakingBase {
         // UDTs (currently only used by cassandra) are reated as tables even though there is an encoder for them.
         if (tpe <:< typeOf[io.getquill.Udt])
           None
-        else if (existsEncoderFor(tpe))
-          Some(tpe)
         else if (isType[AnyVal](tpe))
           Some(tpe)
         else
@@ -148,10 +163,10 @@ trait QuatMakingBase {
         // def is80Prof[T <: Spirit] = quote { (spirit: Query[Spirit]) => spirit.filter(_.grade == 80) }
         // run(is80Proof(query[Gin]))
         // When processing is80Prof, we assume that Spirit is actually a base class to be extended
-        case Param(Signature(RealTypeBounds(lower, Deoption(upper)))) if (!upper.typeSymbol.isFinal) =>
+        case Param(Signature(RealTypeBounds(lower, Deoption(upper)))) if (!upper.typeSymbol.isFinal && !existsEncoderFor(tpe)) =>
           parseType(upper, true)
 
-        case Param(RealTypeBounds(lower, Deoption(upper))) if (!upper.typeSymbol.isFinal) =>
+        case Param(RealTypeBounds(lower, Deoption(upper))) if (!upper.typeSymbol.isFinal && !existsEncoderFor(tpe)) =>
           parseType(upper, true)
 
         case Param(tpe) =>

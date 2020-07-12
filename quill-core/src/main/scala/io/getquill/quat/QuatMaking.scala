@@ -15,7 +15,7 @@ trait QuatMaking extends QuatMakingBase {
 
   import u.{ Block => _, Constant => _, Function => _, Ident => _, If => _, _ }
 
-  def existsImplicitEncoderFor(tpe: Type) = {
+  def existsEncoderFor(tpe: Type) = {
     OptionalTypecheck(c)(q"implicitly[${c.prefix}.Encoder[$tpe]]") match {
       case Some(enc) => true
       case None      => false
@@ -24,18 +24,16 @@ trait QuatMaking extends QuatMakingBase {
 
   import collection.mutable.HashMap;
 
-  val cachedEncoderCheck: HashMap[Type, Boolean] = HashMap();
+  val cachedQuats: HashMap[Type, Quat] = HashMap();
 
-  def existsEncoderFor(tpe: Type): Boolean = {
-    val cachedEntry = cachedEncoderCheck.get(tpe)
-    cachedEntry match {
-      case None =>
-        val lookup = existsImplicitEncoderFor(tpe)
-        cachedEncoderCheck.put(tpe, lookup)
-        lookup
-
+  override def inferQuat(tpe: u.Type): Quat = {
+    cachedQuats.get(tpe) match {
       case Some(value) =>
         value
+      case None =>
+        val quat = super.inferQuat(tpe)
+        cachedQuats.put(tpe, quat)
+        quat
     }
   }
 }
@@ -67,7 +65,11 @@ trait QuatMakingBase {
         .filter(m => m.isPublic
           && m.owner.name.toString != "Any"
           && m.owner.name.toString != "Object").map { param =>
-          (param.name.toString, param.typeSignature)
+          (
+            param.name.toString,
+            // Look up the parameter only if needed. This is typically an expensive operation
+            if (!param.isParameter) param.typeSignature else param.typeSignature.asSeenFrom(tpe, tpe.typeSymbol)
+          )
         }.toList
     }
 
@@ -79,7 +81,10 @@ trait QuatMakingBase {
 
       // TODO Quat Only one constructor param list supported so far? Have an error for that?
       constructor.paramLists(0).map { param =>
-        (param.name.toString, param.typeSignature)
+        (
+          param.name.toString,
+          if (!param.isParameter) param.typeSignature else param.typeSignature.asSeenFrom(tpe, tpe.typeSymbol)
+        )
       }
     }
 

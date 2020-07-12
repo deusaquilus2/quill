@@ -15,6 +15,7 @@ abstract class Spec extends AnyFreeSpec with Matchers with BeforeAndAfterAll {
   val QV = Quat.Value
   val QEP = Quat.Product.empty
   def QP(fields: String*) = Quat.LeafProduct(fields: _*)
+  def blassdfsdfdfsdfh = "blahbasdsdfsdfsdlbh"
 
   // Used by various tests to replace temporary idents created by AttachToEntity with 'x'
   val replaceTempIdent = new StatelessTransformer {

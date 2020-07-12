@@ -1,5 +1,7 @@
 package io.getquill
 
+import io.getquill.ast.{ Ident, StatelessTransformer }
+import io.getquill.norm.capture.TemporaryIdent
 import io.getquill.quat.Quat
 import io.getquill.quat.Quat.Probity
 import org.scalatest.BeforeAndAfterAll
@@ -13,6 +15,17 @@ abstract class Spec extends AnyFreeSpec with Matchers with BeforeAndAfterAll {
   val QV = Quat.Value
   val QEP = Quat.Product.empty
   def QP(fields: String*) = Quat.LeafProduct(fields: _*)
+
+  // Used by various tests to replace temporary idents created by AttachToEntity with 'x'
+  val replaceTempIdent = new StatelessTransformer {
+    override def applyIdent(id: Ident): Ident =
+      id match {
+        case TemporaryIdent(tid) =>
+          Ident("x", id.quat)
+        case _ =>
+          id
+      }
+  }
 
   implicit class ProdOrQuatOps(quat: Probity) {
     def rename(fields: (String, String)*): Probity =

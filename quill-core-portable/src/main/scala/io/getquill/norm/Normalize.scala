@@ -3,7 +3,7 @@ package io.getquill.norm
 import io.getquill.ast.Ast
 import io.getquill.ast.Query
 import io.getquill.ast.StatelessTransformer
-import io.getquill.norm.capture.AvoidCapture
+import io.getquill.norm.capture.{ AvoidAliasConflict, Dealias }
 import io.getquill.ast.Action
 import io.getquill.util.Interpolator
 import io.getquill.util.Messages.{ TraceType, title, trace }
@@ -24,7 +24,7 @@ object Normalize extends StatelessTransformer {
 
   override def apply(q: Query): Query =
     trace"Avoid Capture and Normalize" andReturn
-      norm(AvoidCapture(q))
+      norm(Dealias(AvoidAliasConflict(q)))
 
   private def traceNorm[T](label: String) =
     trace[T](s"${label} (Normalize)", 1, Normalizations)

@@ -2,6 +2,9 @@ package io.getquill.norm
 
 import io.getquill.ast.{ Action, Assignment, Ast, ConcatMap, Filter, FlatJoin, FlatMap, GroupBy, Ident, Insert, Join, Map, OnConflict, Property, Query, Returning, ReturningGenerated, SortBy, StatelessTransformer, Update }
 import io.getquill.quat.Quat
+import io.getquill.util.Interpolator
+import io.getquill.util.Messages.TraceType
+import io.getquill.quotation.QuatExceptionOps._
 
 sealed trait RepropagationBehavior
 object RepropagationBehavior {
@@ -10,15 +13,22 @@ object RepropagationBehavior {
 }
 
 object RepropagateQuats {
+  val interp = new Interpolator(TraceType.RepropagateQuats, 1)
+  import interp._
+
   def apply(ast: Ast) =
-    new RepropagateQuats(RepropagationBehavior.AllIdents)(ast)
+    trace"epropagating Quats:" andReturn new RepropagateQuats(RepropagationBehavior.AllIdents)(ast)
 
   def Generic(ast: Ast) =
-    new RepropagateQuats(RepropagationBehavior.OnlyGeneric)(ast)
+    trace"Repropagating Quats:" andReturn new RepropagateQuats(RepropagationBehavior.OnlyGeneric)(ast)
 }
 
 case class RepropagateQuats(behavior: RepropagationBehavior) extends StatelessTransformer {
   import TypeBehavior.{ ReplaceWithReduction => RWR }
+  val msg = "This is acceptable from dynamic queries."
+
+  val interp = new Interpolator(TraceType.RepropagateQuats, 1)
+  import interp._
 
   object Reprop {
     def apply(id: Ident): Boolean =
@@ -47,7 +57,7 @@ case class RepropagateQuats(behavior: RepropagationBehavior) extends StatelessTr
     val ar = apply(a)
     val br = b.withQuat(ar.quat)
     val cr = BetaReduction(c, RWR, b -> br)
-    f(ar, br, apply(cr))
+    trace"Repropagate ${a.quat.suppress(msg)} from ${a} into:" andReturn f(ar, br, apply(cr))
   }
 
   override def apply(e: Query): Query =
@@ -66,13 +76,14 @@ case class RepropagateQuats(behavior: RepropagationBehavior) extends StatelessTr
         val iAr = iA.withQuat(ar.quat)
         val iBr = iB.withQuat(br.quat)
         val onr = BetaReduction(on, RWR, iA -> iAr, iB -> iBr)
-        Join(t, ar, br, iAr, iBr, apply(onr))
+        trace"Repropagate ${a.quat.suppress(msg)} from $a and ${b.quat.suppress(msg)} from $b into:" andReturn Join(t, ar, br, iAr, iBr, apply(onr))
       case FlatJoin(t, a, iA, on) =>
         val ar = apply(a)
         val iAr = iA.withQuat(ar.quat)
         val onr = BetaReduction(on, RWR, iA -> iAr)
-        FlatJoin(t, a, iAr, apply(onr))
-      case other => super.apply(other)
+        trace"Repropagate ${a.quat.suppress(msg)} from $a into:" andReturn FlatJoin(t, a, iAr, apply(onr))
+      case other =>
+        super.apply(other)
     }
 
   def reassign(assignments: List[Assignment], quat: Quat) =
@@ -93,24 +104,28 @@ case class RepropagateQuats(behavior: RepropagationBehavior) extends StatelessTr
       case Insert(q: Query, assignments) =>
         val qr = apply(q)
         val assignmentsR = reassign(assignments, qr.quat)
-        Insert(qr, assignmentsR)
+        trace"Repropagate ${q.quat.suppress(msg)} from $q into:" andReturn
+          Insert(qr, assignmentsR)
 
       case Update(q: Query, assignments) =>
         val qr = apply(q)
         val assignmentsR = reassign(assignments, qr.quat)
-        Update(qr, assignmentsR)
+        trace"Repropagate ${q.quat.suppress(msg)} from $q into:" andReturn
+          Update(qr, assignmentsR)
 
       case Returning(action: Action, Reprop(alias), body) =>
         val actionR = apply(action)
         val aliasR = alias.withQuat(actionR.quat)
         val bodyR = BetaReduction(body, RWR, alias -> aliasR)
-        Returning(actionR, aliasR, bodyR)
+        trace"Repropagate ${alias.quat.suppress(msg)} from $alias into:" andReturn
+          Returning(actionR, aliasR, bodyR)
 
       case ReturningGenerated(action: Action, Reprop(alias), body) =>
         val actionR = apply(action)
         val aliasR = alias.withQuat(actionR.quat)
         val bodyR = BetaReduction(body, RWR, alias -> aliasR)
-        ReturningGenerated(actionR, aliasR, bodyR)
+        trace"Repropagate ${alias.quat.suppress(msg)} from $alias into:" andReturn
+          ReturningGenerated(actionR, aliasR, bodyR)
 
       case oc @ OnConflict(oca: Action, target, act) =>
         val actionR = apply(oca)
@@ -122,6 +137,7 @@ case class RepropagateQuats(behavior: RepropagationBehavior) extends StatelessTr
                 case prop @ PropertyMatroshka(ident, _) =>
                   ident match {
                     case Reprop(_) =>
+                      trace"Repropagate ${oca.quat.suppress(msg)} from $oca into:"
                       BetaReduction(prop, RWR, ident -> ident.withQuat(oca.quat)).asInstanceOf[Property]
                     case _ =>
                       prop
@@ -142,7 +158,8 @@ case class RepropagateQuats(behavior: RepropagationBehavior) extends StatelessTr
                     val aliasR = assignment.alias.copy(quat = oca.quat)
                     val propertyR = BetaReduction(assignment.property, RWR, assignment.alias -> aliasR)
                     val valueR = BetaReduction(assignment.value, RWR, assignment.alias -> aliasR)
-                    Assignment(aliasR, propertyR, valueR)
+                    trace"Repropagate ${oca.quat.suppress(msg)} from $oca into:" andReturn
+                      Assignment(aliasR, propertyR, valueR)
                   case _ =>
                     assignment
                 }

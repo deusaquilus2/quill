@@ -154,7 +154,7 @@ case object DescNullsLast extends PropertyOrdering
 
 case class GroupBy(query: Ast, alias: Ident, body: Ast) extends Query { def quat = Quat.Tuple(body.quat, query.quat) }
 
-case class Aggregation(operator: AggregationOperator, ast: Ast) extends Query { def quat = ast.quat }
+case class Aggregation(operator: AggregationOperator, ast: Ast) extends Query { def quat = Quat.Value }
 
 case class Take(query: Ast, n: Ast) extends Query { def quat = query.quat }
 
@@ -411,7 +411,7 @@ case class Assignment(alias: Ident, property: Ast, value: Ast) extends Ast { def
 
 sealed trait Operation extends Ast
 
-case class UnaryOperation(operator: UnaryOperator, ast: Ast) extends Operation { def quat = ast.quat } // TODO Quat can this be used in a non-scalar context
+case class UnaryOperation(operator: UnaryOperator, ast: Ast) extends Operation { def quat = Quat.Value } // TODO Quat can this be used in a non-scalar context
 case class BinaryOperation(a: Ast, operator: BinaryOperator, b: Ast)
   extends Operation { def quat = Quat.Value } // TODO Quat can this be used in a non-scalar context
 case class FunctionApply(function: Ast, values: List[Ast]) extends Operation { def quat = function.quat }

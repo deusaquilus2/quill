@@ -8,11 +8,13 @@ class QueryGenerator(seed: Int) {
 
   private val random = new Random(seed)
 
-  implicit class QuatExt(q: Quat) {
-    def randomField =
-      q match {
-        case Quat.Product(fields) => fields(random.nextInt(fields.length))._1
-        case _                    => throw new IllegalArgumentException(s"Cannot take random field from a non-product quat: ${q}")
+  implicit class IdentExt(id: Ident) {
+    def randomProperty =
+      id.quat match {
+        case Quat.Product(fields) =>
+          Property(id, fields(random.nextInt(fields.length))._1)
+        case _ =>
+          id
       }
   }
 
@@ -67,19 +69,19 @@ class QueryGenerator(seed: Int) {
   private def filter(i: Int) = {
     val q = apply(i)
     val id = Ident(char, q.quat)
-    Filter(q, id, BinaryOperation(Property(id, id.quat.randomField), EqualityOperator.`!=`, Constant(1)))
+    Filter(q, id, BinaryOperation(id.randomProperty, EqualityOperator.`!=`, Constant(1)))
   }
 
   private def sortBy(i: Int) = {
     val q = apply(i)
     val id = Ident(char, q.quat)
-    SortBy(apply(i), id, Property(id, id.quat.randomField), AscNullsFirst)
+    SortBy(apply(i), id, id.randomProperty, AscNullsFirst)
   }
 
   private def groupBy(i: Int) = {
     val q = apply(i)
     val id = Ident(char, q.quat)
-    val group = GroupBy(q, id, Property(id, id.quat.randomField))
+    val group = GroupBy(q, id, id.randomProperty)
     Map(group, id, id)
   }
 

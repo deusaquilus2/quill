@@ -1,5 +1,7 @@
 package io.getquill.quat
 
+import io.getquill.quotation.QuatException
+
 // This represents a simplified Sql-Type. Since it applies to all dialects, it is called
 // Quill-Application-Type hence Quat.
 sealed trait Quat {
@@ -109,7 +111,7 @@ object Quat {
     def prove =
       this match {
         case p: Quat.Product    => p
-        case Quat.Error(msg, _) => throw new IllegalArgumentException(s"Could not cast ProductOr SQL-Type to Product SQL Type due to error. ${msg}")
+        case Quat.Error(msg, _) => throw new QuatException(s"Could not cast ProductOr SQL-Type to Product SQL Type due to error. ${msg}")
       }
   }
 
@@ -254,7 +256,7 @@ object Quat {
   }
   case class Error(msg: String, immediateThrow: Boolean = true) extends Probity with Quat {
     if (immediateThrow)
-      throw new IllegalArgumentException(msg)
+      throw new QuatException(msg)
     override def withRenames(renames: List[(String, String)]): Quat = this
   }
 }

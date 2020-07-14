@@ -35,9 +35,7 @@ case class BetaReduction(replacements: Replacements, typeBehavior: TypeBehavior)
 
       case ast if replacements.contains(ast) =>
         val rep = BetaReduction(replacements - ast - replacements(ast), typeBehavior)(replacements(ast))
-        // TODO Detect if we're replacing something will null, synthesize a 'null' node
-        //       that has the type of we were replacing it with
-        // TODO what other kinds of entities do we need to detect here whose Quat we need to change?
+        // TODO Quat change null to same functionality as OptionNone
         val output =
           rep match {
             // If we are ignoring types, just do the replacement. Need to do this if we are doing renames since a
@@ -77,12 +75,6 @@ case class BetaReduction(replacements: Replacements, typeBehavior: TypeBehavior)
           conflicts.getOrElse(p, p)
         }
         val bodyr = BetaReduction(Replacements(conflicts ++ params.zip(newParams)), typeBehavior).apply(body)
-
-        //        var paramReductions =
-        //          newParams.zip(values).map {
-        //            case ()
-        //          }
-
         apply(BetaReduction(replacements ++ newParams.zip(values).toMap, typeBehavior).apply(bodyr))
 
       case Function(params, body) =>

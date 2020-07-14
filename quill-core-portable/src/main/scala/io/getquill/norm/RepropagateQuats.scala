@@ -6,47 +6,12 @@ import io.getquill.util.Interpolator
 import io.getquill.util.Messages.TraceType
 import io.getquill.quotation.QuatExceptionOps._
 
-sealed trait RepropagationBehavior
-object RepropagationBehavior {
-  case object AllIdents extends RepropagationBehavior
-  case object OnlyGeneric extends RepropagationBehavior
-}
-
-object RepropagateQuats {
-  val interp = new Interpolator(TraceType.RepropagateQuats, 1)
-  import interp._
-
-  def apply(ast: Ast) =
-    trace"epropagating Quats:" andReturn new RepropagateQuats(RepropagationBehavior.AllIdents)(ast)
-
-  def Generic(ast: Ast) =
-    trace"Repropagating Quats:" andReturn new RepropagateQuats(RepropagationBehavior.OnlyGeneric)(ast)
-}
-
-case class RepropagateQuats(behavior: RepropagationBehavior) extends StatelessTransformer {
+object RepropagateQuats extends StatelessTransformer {
   import TypeBehavior.{ ReplaceWithReduction => RWR }
   val msg = "This is acceptable from dynamic queries."
 
   val interp = new Interpolator(TraceType.RepropagateQuats, 1)
   import interp._
-
-  object Reprop {
-    def apply(id: Ident): Boolean =
-      unapply(id).isDefined
-
-    def unapply(id: Ident) =
-      behavior match {
-        case RepropagationBehavior.AllIdents =>
-          Some(id)
-        case RepropagationBehavior.OnlyGeneric =>
-          id.quat match {
-            case Quat.Generic =>
-              Some(id)
-            case _ =>
-              None
-          }
-      }
-  }
 
   implicit class IdentExt(id: Ident) {
     def withQuat(from: Quat) =
@@ -63,13 +28,13 @@ case class RepropagateQuats(behavior: RepropagationBehavior) extends StatelessTr
   override def apply(e: Query): Query =
     // TODO Quat Do I need to do something for infixes?
     e match {
-      case Filter(a, Reprop(b), c) => applyBody(a, b, c)(Filter)
-      case Map(a, Reprop(b), c) =>
+      case Filter(a, b, c) => applyBody(a, b, c)(Filter)
+      case Map(a, b, c) =>
         applyBody(a, b, c)(Map)
-      case FlatMap(a, Reprop(b), c)   => applyBody(a, b, c)(FlatMap)
-      case ConcatMap(a, Reprop(b), c) => applyBody(a, b, c)(ConcatMap)
-      case GroupBy(a, Reprop(b), c)   => applyBody(a, b, c)(GroupBy)
-      case SortBy(a, Reprop(b), c, d) => applyBody(a, b, c)(SortBy(_, _, _, d))
+      case FlatMap(a, b, c)   => applyBody(a, b, c)(FlatMap)
+      case ConcatMap(a, b, c) => applyBody(a, b, c)(ConcatMap)
+      case GroupBy(a, b, c)   => applyBody(a, b, c)(GroupBy)
+      case SortBy(a, b, c, d) => applyBody(a, b, c)(SortBy(_, _, _, d))
       case Join(t, a, b, iA, iB, on) =>
         val ar = apply(a)
         val br = apply(b)
@@ -88,7 +53,7 @@ case class RepropagateQuats(behavior: RepropagationBehavior) extends StatelessTr
 
   def reassign(assignments: List[Assignment], quat: Quat) =
     assignments.map {
-      case Assignment(Reprop(alias), property, value) =>
+      case Assignment(alias, property, value) =>
         val aliasR = alias.withQuat(quat)
         val propertyR = BetaReduction(property, RWR, alias -> aliasR)
         val valueR = BetaReduction(value, RWR, alias -> aliasR)
@@ -113,14 +78,14 @@ case class RepropagateQuats(behavior: RepropagationBehavior) extends StatelessTr
         trace"Repropagate ${q.quat.suppress(msg)} from $q into:" andReturn
           Update(qr, assignmentsR)
 
-      case Returning(action: Action, Reprop(alias), body) =>
+      case Returning(action: Action, alias, body) =>
         val actionR = apply(action)
         val aliasR = alias.withQuat(actionR.quat)
         val bodyR = BetaReduction(body, RWR, alias -> aliasR)
         trace"Repropagate ${alias.quat.suppress(msg)} from $alias into:" andReturn
           Returning(actionR, aliasR, bodyR)
 
-      case ReturningGenerated(action: Action, Reprop(alias), body) =>
+      case ReturningGenerated(action: Action, alias, body) =>
         val actionR = apply(action)
         val aliasR = alias.withQuat(actionR.quat)
         val bodyR = BetaReduction(body, RWR, alias -> aliasR)
@@ -135,13 +100,8 @@ case class RepropagateQuats(behavior: RepropagationBehavior) extends StatelessTr
               val propsR = props.map {
                 // Recreate the assignment with new idents but only if we need to repropagate
                 case prop @ PropertyMatroshka(ident, _) =>
-                  ident match {
-                    case Reprop(_) =>
-                      trace"Repropagate ${oca.quat.suppress(msg)} from $oca into:"
-                      BetaReduction(prop, RWR, ident -> ident.withQuat(oca.quat)).asInstanceOf[Property]
-                    case _ =>
-                      prop
-                  }
+                  trace"Repropagate ${oca.quat.suppress(msg)} from $oca into:" andReturn
+                    BetaReduction(prop, RWR, ident -> ident.withQuat(oca.quat)).asInstanceOf[Property]
                 case other =>
                   throw new IllegalArgumentException(s"Malformed onConflict element ${oc}. Could not parse property ${other}")
               }
@@ -153,16 +113,11 @@ case class RepropagateQuats(behavior: RepropagationBehavior) extends StatelessTr
           case OnConflict.Update(assignments) =>
             val assignmentsR =
               assignments.map { assignment =>
-                assignment.alias match {
-                  case Reprop(_) =>
-                    val aliasR = assignment.alias.copy(quat = oca.quat)
-                    val propertyR = BetaReduction(assignment.property, RWR, assignment.alias -> aliasR)
-                    val valueR = BetaReduction(assignment.value, RWR, assignment.alias -> aliasR)
-                    trace"Repropagate ${oca.quat.suppress(msg)} from $oca into:" andReturn
-                      Assignment(aliasR, propertyR, valueR)
-                  case _ =>
-                    assignment
-                }
+                val aliasR = assignment.alias.copy(quat = oca.quat)
+                val propertyR = BetaReduction(assignment.property, RWR, assignment.alias -> aliasR)
+                val valueR = BetaReduction(assignment.value, RWR, assignment.alias -> aliasR)
+                trace"Repropagate ${oca.quat.suppress(msg)} from $oca into:" andReturn
+                  Assignment(aliasR, propertyR, valueR)
               }
             OnConflict.Update(assignmentsR)
           case _ => act

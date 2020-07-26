@@ -4,7 +4,7 @@ import io.getquill.{ MirrorSqlDialect, SnakeCase, Spec, SqlMirrorContext }
 import io.getquill.context.sql.testContext
 import io.getquill.context.sql.util.StringOps._
 
-class ExpandNestedQueriesSpec extends Spec {
+class ExpandNestedQueriesSpec extends Spec { //hello
 
   "keeps the initial table alias" in {
     import testContext._
@@ -88,6 +88,7 @@ class ExpandNestedQueriesSpec extends Spec {
         case (a, b) => (a.i, b.i)
       }
     }
+    println(testContext.run(q).string(true))
     testContext.run(q.dynamic).string mustEqual
       "SELECT x03._1i, x03._2i FROM (SELECT a.i AS _1i, b.i AS _2i FROM TestEntity a INNER JOIN TestEntity2 b ON a.i = b.i) AS x03"
   }
@@ -154,7 +155,7 @@ class ExpandNestedQueriesSpec extends Spec {
       val q = quote {
         query[Parent].map(p => p.emb).distinct.map(e => (e.name, e.id))
       }
-      ctx.run(q).string mustEqual "SELECT e.name, e.id FROM (SELECT DISTINCT name AS name, id AS id FROM Parent p) AS e"
+      ctx.run(q).string mustEqual "SELECT e.name, e.id FROM (SELECT DISTINCT p.name, p.id FROM Parent p) AS e"
     }
 
     "can be propagated across distinct query with naming intact - double distinct" in {
@@ -164,7 +165,7 @@ class ExpandNestedQueriesSpec extends Spec {
       val q = quote {
         query[Parent].map(p => p.emb).distinct.map(e => (e.name, e.id)).distinct
       }
-      ctx.run(q).string mustEqual "SELECT DISTINCT e.name, e.id FROM (SELECT DISTINCT name AS name, id AS id FROM Parent p) AS e"
+      ctx.run(q).string mustEqual "SELECT DISTINCT e.name, e.id FROM (SELECT DISTINCT p.name, p.id FROM Parent p) AS e"
     }
 
     "can be propagated across distinct query with naming intact then re-wrapped into the parent" in {
@@ -178,7 +179,7 @@ class ExpandNestedQueriesSpec extends Spec {
         """SELECT tup.name, tup.id
           |FROM (SELECT DISTINCT tup._1 AS name, tup._2 AS id
           |      FROM (SELECT DISTINCT e.name AS _1, e.id AS _2
-          |            FROM (SELECT DISTINCT name AS name, id AS id FROM Parent p) AS e) AS tup) AS tup
+          |            FROM (SELECT DISTINCT p.name, p.id FROM Parent p) AS e) AS tup) AS tup
         """.stripMargin.collapseSpace
     }
   }
@@ -200,6 +201,8 @@ class ExpandNestedQueriesSpec extends Spec {
         .map(tup => GrandParent(tup._1, tup._2)).distinct
     }
 
+    val str = testContext.run(q).string(true)
+    println(str)
     testContext.run(q).string.collapseSpace mustEqual
       """SELECT tup.id, tup.parid, tup.parname, tup.parembid, tup.parembname
         |FROM (SELECT DISTINCT tup._1        AS id,

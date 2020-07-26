@@ -1,7 +1,7 @@
 package io.getquill.sql.norm
 
 import io.getquill.ast.Property
-import io.getquill.context.sql.{FlattenSqlQuery, SelectValue}
+import io.getquill.context.sql.{ FlattenSqlQuery, SelectValue }
 
 /**
  * Remove aliases at the top level of the AST since they are not needed

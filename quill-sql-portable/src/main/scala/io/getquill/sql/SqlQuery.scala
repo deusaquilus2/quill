@@ -104,20 +104,6 @@ object SqlQuery {
         (List.empty, other)
     }
 
-  object NestedNest {
-    def unapply(q: Ast): Option[Ast] =
-      q match {
-        case _: Nested => recurse(q)
-        case _         => None
-      }
-
-    private def recurse(q: Ast): Option[Ast] =
-      q match {
-        case Nested(qn) => recurse(qn)
-        case other      => Some(other)
-      }
-  }
-
   private def flatten(sources: List[FromContext], finalFlatMapBody: Ast, alias: String): FlattenSqlQuery = {
 
     def select(alias: String, quat: Quat) = SelectValue(Ident(alias, quat), None) :: Nil
@@ -126,7 +112,7 @@ object SqlQuery {
       def nest(ctx: FromContext) = FlattenSqlQuery(from = sources :+ ctx, select = select(alias, q.quat))(q.quat)
       q match {
         case Map(_: GroupBy, _, _) => nest(source(q, alias))
-        case NestedNest(q)         => nest(QueryContext(apply(q), alias))
+        case Nested(q)             => nest(QueryContext(apply(q), alias))
         case q: ConcatMap          => nest(QueryContext(apply(q), alias))
         case Join(tpe, a, b, iA, iB, on) =>
           val ctx = source(q, alias)

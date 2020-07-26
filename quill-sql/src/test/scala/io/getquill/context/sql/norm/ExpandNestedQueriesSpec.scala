@@ -19,6 +19,26 @@ class ExpandNestedQueriesSpec extends Spec { //hello
       "SELECT x.s, x.i, x.l, x.o FROM (SELECT x.s, x.i, x.l, x.o FROM TestEntity a, TestEntity2 x) AS x"
   }
 
+  "multi-nests correctly" in {
+    import testContext._
+    case class MyPerson(first: String, last: String, age: Int)
+    val q = quote {
+      query[MyPerson].nested.nested
+    }
+    println(testContext.run(q.dynamic).string) mustEqual
+      "SELECT x.first, x.last, x.age FROM (SELECT x.first, x.last, x.age FROM (SELECT x.first, x.last, x.age FROM MyPerson x) AS x) AS x"
+  }
+
+  "multi-nests correctly with exclusions" in {
+    import testContext._
+    case class MyPerson(first: String, last: String, age: Int)
+    val q = quote {
+      query[MyPerson].nested.nested.map(p => (p.first, p.last))
+    }
+    println(testContext.run(q.dynamic).string) mustEqual
+      "SELECT p.first, p.last FROM (SELECT x.first, x.last FROM (SELECT x.first, x.last FROM MyPerson x) AS x) AS p"
+  }
+
   "preserves order of selection" in {
     import testContext._
     val q = quote {

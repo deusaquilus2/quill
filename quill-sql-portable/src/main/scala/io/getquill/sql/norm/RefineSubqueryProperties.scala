@@ -12,7 +12,9 @@ import scala.collection.mutable
 import scala.collection.mutable.LinkedHashSet
 
 /**
- * Filter out unused subquery properties and unhide the ones that are used
+ * Filter out unused subquery properties and unhide the ones that are used. This is safe
+ * to do now since all properties have been propagated from quats from parent to child
+ * SQL select trees.
  */
 object RefineSubqueryProperties {
 

@@ -114,15 +114,22 @@ class ExpandSelection(from: List[FromContext]) {
       // we're selecting from an actual table and in that case, the embedded paths don't actually exist.
       val wholePathVisible = !refersToEntity
 
+      // Assuming renames have been applied so the value of a renamed field will be the 2nd element
+      def isPropertyRenameable(name: String) =
+        if (quat.renames.find(_._2 == name).isDefined)
+          Renameable.Fixed
+        else
+          Renameable.ByStrategy
+
       quat.fields.flatMap {
         case (name, child: Quat.Product) =>
-          applyInner(child, Property.Opinionated(core, name, Renameable.ByStrategy, if (wholePathVisible) Visible else Hidden)).map { // TODO Need to know if renames have been applied in order to create as fixed vs renameable, in RenameProperties keep that information
+          applyInner(child, Property.Opinionated(core, name, isPropertyRenameable(name), if (wholePathVisible) Visible else Hidden)).map { // TODO Need to know if renames have been applied in order to create as fixed vs renameable, in RenameProperties keep that information
             case (prop, path) =>
               (prop, name +: path)
           }
         case (name, _) =>
           // The innermost entity of the quat. This is always visible since it is the actual column of the table
-          List((Property.Opinionated(core, name, Renameable.ByStrategy, Visible), List(name)))
+          List((Property.Opinionated(core, name, isPropertyRenameable(name), Visible), List(name)))
       }.toList
     }
   }

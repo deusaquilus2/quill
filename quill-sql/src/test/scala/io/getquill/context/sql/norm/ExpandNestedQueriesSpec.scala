@@ -1,7 +1,7 @@
 package io.getquill.context.sql.norm
 
 import io.getquill.{ MirrorSqlDialect, SnakeCase, Spec, SqlMirrorContext }
-import io.getquill.context.sql.testContext
+import io.getquill.context.sql.{ testContext, testContextUpperEscapeColumn }
 import io.getquill.context.sql.util.StringOps._
 
 class ExpandNestedQueriesSpec extends Spec { //hello
@@ -258,4 +258,219 @@ class ExpandNestedQueriesSpec extends Spec { //hello
         |                                    FROM GrandParent g) AS p) AS tup) AS tup) AS tup) AS tup) AS tup
       """.collapseSpace
   }
+
+  "multiple embedding levels - another example" in {
+    import testContext._
+    case class Sim(sid: Int) extends Embedded
+    case class Mam(mid: Int, sim: Sim) extends Embedded
+    case class Bim(bid: Int, mam: Mam)
+
+    val q = quote {
+      query[Bim]
+        .map(g => (g.bid, g.mam)).distinct
+        .map(p => (p._1, p._2.mid, p._2.sim)).distinct
+        .map(tup => (tup._1, tup._2, tup._3)).distinct
+        .map(tup => (tup._1, tup._2, tup._3.sid)).distinct
+        .map(tup => (tup._1, tup._2, Sim(tup._3))).distinct
+        .map(tup => (tup._1, Mam(tup._2, tup._3))).distinct
+        .map(tup => Bim(tup._1, tup._2)).distinct
+    }
+    testContext.run(q).string(true).collapseSpace mustEqual
+      """
+        |SELECT
+        |  tup.bid,
+        |  tup.mammid,
+        |  tup.mamsimsid
+        |FROM
+        |  (
+        |    SELECT
+        |      DISTINCT tup._1 AS bid,
+        |      tup._2mid AS mammid,
+        |      tup._2simsid AS mamsimsid
+        |    FROM
+        |      (
+        |        SELECT
+        |          DISTINCT tup._1,
+        |          tup._2 AS _2mid,
+        |          tup._3sid AS _2simsid
+        |        FROM
+        |          (
+        |            SELECT
+        |              DISTINCT tup._1,
+        |              tup._2,
+        |              tup._3 AS _3sid
+        |            FROM
+        |              (
+        |                SELECT
+        |                  DISTINCT tup._1,
+        |                  tup._2,
+        |                  tup._3sid AS _3
+        |                FROM
+        |                  (
+        |                    SELECT
+        |                      DISTINCT p._1,
+        |                      p._2mid AS _2,
+        |                      p._2simsid AS _3sid
+        |                    FROM
+        |                      (
+        |                        SELECT
+        |                          DISTINCT g.bid AS _1,
+        |                          g.mid AS _2mid,
+        |                          g.sid AS _2simsid
+        |                        FROM
+        |                          Bim g
+        |                      ) AS p
+        |                  ) AS tup
+        |              ) AS tup
+        |          ) AS tup
+        |      ) AS tup
+        |  ) AS tup
+        |""".collapseSpace
+  }
+
+  "multiple embedding levels - another example - with rename" in {
+    import testContext._
+    case class Sim(sid: Int) extends Embedded
+    case class Mam(mid: Int, sim: Sim) extends Embedded
+    case class Bim(bid: Int, mam: Mam)
+
+    implicit val bimSchemaMeta = schemaMeta[Bim]("theBim", _.bid -> "theBid", _.mam.sim.sid -> "theSid")
+
+    val q = quote {
+      query[Bim]
+        .map(g => (g.bid, g.mam)).distinct
+        .map(p => (p._1, p._2.mid, p._2.sim)).distinct
+        .map(tup => (tup._1, tup._2, tup._3)).distinct
+        .map(tup => (tup._1, tup._2, tup._3.sid)).distinct
+        .map(tup => (tup._1, tup._2, Sim(tup._3))).distinct
+        .map(tup => (tup._1, Mam(tup._2, tup._3))).distinct
+        .map(tup => Bim(tup._1, tup._2)).distinct
+    }
+    println(testContext.run(q).string(true))
+    testContext.run(q).string(true).collapseSpace mustEqual
+      """
+        |SELECT
+        |  tup.bid,
+        |  tup.mammid,
+        |  tup.mamsimsid
+        |FROM
+        |  (
+        |    SELECT
+        |      DISTINCT tup._1 AS bid,
+        |      tup._2mid AS mammid,
+        |      tup._2simsid AS mamsimsid
+        |    FROM
+        |      (
+        |        SELECT
+        |          DISTINCT tup._1,
+        |          tup._2 AS _2mid,
+        |          tup._3sid AS _2simsid
+        |        FROM
+        |          (
+        |            SELECT
+        |              DISTINCT tup._1,
+        |              tup._2,
+        |              tup._3 AS _3sid
+        |            FROM
+        |              (
+        |                SELECT
+        |                  DISTINCT tup._1,
+        |                  tup._2,
+        |                  tup._3theSid AS _3
+        |                FROM
+        |                  (
+        |                    SELECT
+        |                      DISTINCT p._1,
+        |                      p._2mid AS _2,
+        |                      p._2simtheSid AS _3theSid
+        |                    FROM
+        |                      (
+        |                        SELECT
+        |                          DISTINCT g.theBid AS _1,
+        |                          g.mid AS _2mid,
+        |                          g.theSid AS _2simtheSid
+        |                        FROM
+        |                          theBim g
+        |                      ) AS p
+        |                  ) AS tup
+        |              ) AS tup
+        |          ) AS tup
+        |      ) AS tup
+        |  ) AS tup
+        |""".collapseSpace
+  }
+
+  "multiple embedding levels - another example - with rename - with escape column" in {
+    val ctx = testContextUpperEscapeColumn
+    import ctx._
+    case class Sim(sid: Int) extends Embedded
+    case class Mam(mid: Int, sim: Sim) extends Embedded
+    case class Bim(bid: Int, mam: Mam)
+
+    implicit val bimSchemaMeta = schemaMeta[Bim]("theBim", _.bid -> "theBid", _.mam.sim.sid -> "theSid")
+
+    val q = quote {
+      query[Bim]
+        .map(g => (g.bid, g.mam)).distinct
+        .map(p => (p._1, p._2.mid, p._2.sim)).distinct
+        .map(tup => (tup._1, tup._2, tup._3)).distinct
+        .map(tup => (tup._1, tup._2, tup._3.sid)).distinct
+        .map(tup => (tup._1, tup._2, Sim(tup._3))).distinct
+        .map(tup => (tup._1, Mam(tup._2, tup._3))).distinct
+        .map(tup => Bim(tup._1, tup._2)).distinct
+    }
+    println(ctx.run(q.dynamic).string(true))
+    ctx.run(q.dynamic).string(true).collapseSpace mustEqual
+      """
+        |SELECT
+        |  tup.bid,
+        |  tup.mammid,
+        |  tup.mamsimsid
+        |FROM
+        |  (
+        |    SELECT
+        |      DISTINCT tup._1 AS bid,
+        |      tup._2mid AS mammid,
+        |      tup._2simsid AS mamsimsid
+        |    FROM
+        |      (
+        |        SELECT
+        |          DISTINCT tup._1,
+        |          tup._2 AS _2mid,
+        |          tup._3sid AS _2simsid
+        |        FROM
+        |          (
+        |            SELECT
+        |              DISTINCT tup._1,
+        |              tup._2,
+        |              tup._3 AS _3sid
+        |            FROM
+        |              (
+        |                SELECT
+        |                  DISTINCT tup._1,
+        |                  tup._2,
+        |                  tup._3theSid AS _3
+        |                FROM
+        |                  (
+        |                    SELECT
+        |                      DISTINCT p._1,
+        |                      p._2mid AS _2,
+        |                      p._2simtheSid AS _3theSid
+        |                    FROM
+        |                      (
+        |                        SELECT
+        |                          DISTINCT g.theBid AS _1,
+        |                          g.mid AS _2mid,
+        |                          g.theSid AS _2simtheSid
+        |                        FROM
+        |                          theBim g
+        |                      ) AS p
+        |                  ) AS tup
+        |              ) AS tup
+        |          ) AS tup
+        |      ) AS tup
+        |  ) AS tup
+        |""".collapseSpace
+  }
+
 }

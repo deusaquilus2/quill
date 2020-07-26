@@ -36,6 +36,7 @@ object testContext extends TestContextTemplate[MirrorSqlDialect, Literal](Mirror
 object testContextSnake extends TestContextTemplate[MirrorSqlDialect, SnakeCase](MirrorSqlDialect, SnakeCase)
 object testContextUpper extends TestContextTemplate[MirrorSqlDialect, getquill.UpperCaseNonDefault](MirrorSqlDialect, UpperCaseNonDefault)
 object testContextEscape extends TestContextTemplate[MirrorSqlDialect, Escape](MirrorSqlDialect, Escape)
+object testContextUpperEscapeColumn extends TestContextTemplate[MirrorSqlDialect, getquill.UpperCaseEscapeColumn](MirrorSqlDialect, UpperCaseEscapeColumn)
 
 trait NonAnsiMirrorSqlDialect extends MirrorSqlDialect {
   override def equalityBehavior: EqualityBehavior = NonAnsiEquality

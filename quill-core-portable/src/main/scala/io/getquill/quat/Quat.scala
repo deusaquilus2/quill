@@ -140,10 +140,10 @@ object Quat {
       Product.WithRenames(fields, renames)
 
     /**
-     * Rename the properties and reset renames to empty.
-     * An interesting idea would be not to clear
-     * the renames at the end but rather keep them around until the SqlQuery phase wherein we could potentially
-     * create SQL aliases not based on the renamed properties by based on the original property name.
+     * Rename the properties based on the renames list. Keep this list
+     * around since it is used in sql sub-query expansion to determine whether
+     * the property is fixed or not (i.e. whether the column naming strategy should
+     * be applied to it).
      */
     override def applyRenames: Quat.Product = {
       val newFields = fields.map {
@@ -153,7 +153,7 @@ object Quat {
           val newValue = q.applyRenames
           (newKey, newValue)
       }
-      Product(newFields)
+      Product.WithRenames(newFields, renames)
     }
   }
   def LeafProduct(list: String*) = Quat.Product(list.map(e => (e, Quat.Value)))

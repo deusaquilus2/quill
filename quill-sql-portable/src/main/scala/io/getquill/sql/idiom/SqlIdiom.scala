@@ -41,7 +41,7 @@ trait SqlIdiom extends Idiom {
           val sql = querifyAst(q)
           trace("sql")(sql)
           VerifySqlQuery(sql).map(fail)
-          val expanded = new ExpandNestedQueries(naming)(sql, List())
+          val expanded = new ExpandNestedQueries2(naming)(sql)
           trace("expanded sql")(expanded)
           val tokenized = expanded.token
           trace("tokenized sql")(tokenized)

@@ -247,8 +247,8 @@ object SqlQuery {
 
   private def selectValues(ast: Ast) =
     ast match {
-      case Tuple(values) => values.map(SelectValue(_))
-      case other         => SelectValue(ast) :: Nil
+      //case Tuple(values) => values.map(SelectValue(_))
+      case other => SelectValue(ast) :: Nil
     }
 
   private def source(ast: Ast, alias: String): FromContext =

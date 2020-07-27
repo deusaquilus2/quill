@@ -176,15 +176,20 @@ trait SqlIdiom extends Idiom {
       case _     => strategy.table(table)
     }
 
-  protected def tokenizeColumnAlias(strategy: NamingStrategy, table: String): String =
-    strategy.column(table)
+  // By default do not change alias of an "AS column" based on naming strategy because the corresponding
+  // things using it would also need to change.
+  protected def tokenizeColumnAlias(strategy: NamingStrategy, column: String): String =
+    column
+
+  protected def tokenizeTableAlias(strategy: NamingStrategy, table: String): String =
+    strategy.table(table)
 
   implicit def selectValueTokenizer(implicit astTokenizer: Tokenizer[Ast], strategy: NamingStrategy): Tokenizer[SelectValue] = {
 
     def tokenizer(implicit astTokenizer: Tokenizer[Ast]) =
       Tokenizer[SelectValue] {
         case SelectValue(ast, Some(alias), false) => {
-          stmt"${ast.token} AS ${alias.token}"
+          stmt"${ast.token} AS ${tokenizeColumnAlias(strategy, alias).token}"
         }
         case SelectValue(ast, Some(alias), true) => stmt"${concatFunction.token}(${ast.token}) AS ${tokenizeColumnAlias(strategy, alias).token}"
         case selectValue =>
@@ -256,9 +261,9 @@ trait SqlIdiom extends Idiom {
     stmt"ORDER BY ${criterias.token}"
 
   implicit def sourceTokenizer(implicit astTokenizer: Tokenizer[Ast], strategy: NamingStrategy): Tokenizer[FromContext] = Tokenizer[FromContext] {
-    case TableContext(name, alias)  => stmt"${name.token} ${strategy.table(alias).token}"
-    case QueryContext(query, alias) => stmt"(${query.token}) AS ${strategy.table(alias).token}"
-    case InfixContext(infix, alias) => stmt"(${(infix: Ast).token}) AS ${strategy.table(alias).token}"
+    case TableContext(name, alias)  => stmt"${name.token} ${tokenizeTableAlias(strategy, alias).token}"
+    case QueryContext(query, alias) => stmt"(${query.token}) AS ${tokenizeTableAlias(strategy, alias).token}"
+    case InfixContext(infix, alias) => stmt"(${(infix: Ast).token}) AS ${tokenizeTableAlias(strategy, alias).token}"
     case JoinContext(t, a, b, on)   => stmt"${a.token} ${t.token} ${b.token} ON ${on.token}"
     case FlatJoinContext(t, a, on)  => stmt"${t.token} ${a.token} ON ${on.token}"
   }

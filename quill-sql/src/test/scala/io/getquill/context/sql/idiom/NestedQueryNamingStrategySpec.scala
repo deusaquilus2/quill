@@ -18,7 +18,7 @@ class NestedQueryNamingStrategySpec extends Spec {
           p => (p, infix"foobar".as[Int])
         }.filter(_._1.id == 1)
       }
-      testContextEscape.run(q).string mustEqual
+      testContextEscape.run(q.dynamic).string mustEqual
         """SELECT "p"."_1id", "p"."_1name", "p"."_2" FROM (SELECT "p"."id" AS "_1id", "p"."name" AS "_1name", foobar AS _2 FROM "Person" "p") AS "p" WHERE "p"."_1id" = 1"""
     }
   }

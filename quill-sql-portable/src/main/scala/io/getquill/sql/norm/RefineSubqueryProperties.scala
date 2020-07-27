@@ -1,6 +1,6 @@
 package io.getquill.sql.norm
 
-import io.getquill.ast.{ Ast, Ident, Property, StatefulTransformer, Transform }
+import io.getquill.ast.{ Ast, CollectAst, Ident, Property, StatefulTransformer, Transform }
 import io.getquill.ast.Visibility.Visible
 import io.getquill.context.sql.{ FlatJoinContext, FlattenSqlQuery, FromContext, InfixContext, JoinContext, QueryContext, SelectValue, SetOperationSqlQuery, SqlQuery, TableContext, UnaryOperationSqlQuery }
 import io.getquill.norm.{ BetaReduction, PropertyMatroshka, TypeBehavior }
@@ -38,8 +38,13 @@ object RefineSubqueryProperties {
     val usedAliases = references.map {
       case PropertyMatroshka(_, list) => list.mkString
     }.toSet
-    select.filter(sv => sv.alias.forall(aliasValue => usedAliases.contains(aliasValue)))
+    select.filter(sv =>
+      sv.alias.forall(aliasValue => usedAliases.contains(aliasValue)) ||
+        hasImpureInfix(sv.ast))
   }
+
+  private def hasImpureInfix(ast: Ast) =
+    CollectAst.byType[io.getquill.ast.Infix](ast).find(i => !i.pure).isDefined
 
   private def expandNested(q: FlattenSqlQuery, isTopLevel: Boolean): SqlQuery =
     q match {

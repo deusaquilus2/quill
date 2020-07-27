@@ -4,6 +4,7 @@ import io.getquill.ast._
 import io.getquill.context.sql._
 import io.getquill.sql.norm.{ SelectPropertyExpander, StatelessQueryTransformer }
 import io.getquill.ast.PropertyOrCore
+import io.getquill.norm.PropertyMatroshka
 
 class ExpandSelection(from: List[FromContext]) {
 
@@ -69,6 +70,32 @@ object ExpandNestedQueries extends StatelessQueryTransformer {
           else
             values.distinct
 
+        def refersToEntity(ast: Ast) = {
+          val tables = newFroms.collect { case TableContext(entity, alias) => alias }
+          ast match {
+            case Ident(v, _)                       => tables.contains(v)
+            case PropertyMatroshka(Ident(v, _), _) => tables.contains(v)
+            case _                                 => false
+          }
+        }
+
+        def flattenNestedProperty(p: Ast): Ast = {
+          val isEntity = refersToEntity(p)
+          p match {
+            case PropertyMatroshka(inner, path) =>
+              if (!isEntity)
+                Property.Opinionated(inner, path.mkString, Renameable.Fixed, Visibility.Visible)
+              else
+                Property.Opinionated(inner, path.last, Renameable.ByStrategy, Visibility.Visible)
+            case other => other
+          }
+        }
+
+        def flattenPropertiesInside(ast: Ast) =
+          Transform(ast) {
+            case p: Property => flattenNestedProperty(p)
+          }
+
         /*
          * In sub-queries, need to make sure that the same field/alias pair is not selected twice
          * which is possible when aliases are used. For example, something like this:
@@ -90,9 +117,17 @@ object ExpandNestedQueries extends StatelessQueryTransformer {
          * (p.name, p.emb, p.id, p.emb.id) needs the fields p.embid, p.embtheName in that precise order in the selection
          * or they cannot be encoded.
          */
-        val newSelects =
+        val distinctSelects =
           distinctIfNotTopLevel(select)
 
-        q.copy(select = newSelects, from = newFroms)(q.quat)
+        q.copy(
+          select = distinctSelects.map(sv => sv.copy(ast = flattenNestedProperty(sv.ast))),
+          from = newFroms,
+          where = where.map(flattenPropertiesInside(_)),
+          groupBy = groupBy.map(flattenPropertiesInside(_)),
+          orderBy = orderBy.map(ob => ob.copy(ast = flattenPropertiesInside(ob.ast))),
+          limit = limit.map(flattenPropertiesInside(_)),
+          offset = offset.map(flattenPropertiesInside(_))
+        )(q.quat)
     }
 }

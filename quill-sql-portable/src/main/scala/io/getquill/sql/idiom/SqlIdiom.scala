@@ -41,10 +41,11 @@ trait SqlIdiom extends Idiom {
         case q: Query =>
           val sql = querifyAst(q)
           trace("sql")(sql)
-          VerifySqlQuery(sql).map(fail)
+          //VerifySqlQuery(sql).map(fail)
           val expanded = ExpandNestedQueries(sql)
           trace("expanded sql")(expanded)
-          val refined = RefineSubqueryProperties(expanded)
+          val v = RefineSubqueryProperties(expanded)
+          val refined = expanded
           trace("refined sql")(refined)
           val cleaned = RemoveExtraAlias(refined)
           trace("cleaned sql")(cleaned)

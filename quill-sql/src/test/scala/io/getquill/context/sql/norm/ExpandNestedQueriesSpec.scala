@@ -508,4 +508,103 @@ class ExpandNestedQueriesSpec extends Spec {
         |""".collapseSpace
   }
 
+  "multiple embedding levels - another example - with rename - with escape column - with groupby" in {
+    val ctx = testContextUpperEscapeColumn
+    import ctx._
+    case class Sim(sid: Int) extends Embedded
+    case class Mam(mid: Int, sim: Sim) extends Embedded
+    case class Bim(bid: Int, mam: Mam)
+
+    implicit val bimSchemaMeta = schemaMeta[Bim]("theBim", _.bid -> "theBid", _.mam.sim.sid -> "theSid")
+
+    /*
+    Does not work
+    val q = quote {
+      query[Bim]
+        .map(g => (g.bid, g.mam)).distinct //.sortBy(_._2.sim.sid)
+        .map(p => (p._1, p._2.mid, p._2.sim)).distinct
+        .map(tup => (tup._1, tup._2, tup._3)).filter(n => n._3.sid == 1).distinct
+     */
+
+    /*
+    Fix by doing this
+    val q = quote {
+      query[Bim]
+        .map(g => (g.bid, g.mam)).distinct //.sortBy(_._2.sim.sid)
+        .map(p => (p._1, p._2.mid, p._2.sim)).distinct
+        .map(tup => (tup._1, tup._2, tup._3)).nested.filter(n => n._3.sid == 1).distinct
+     */
+
+    //    System.setProperty("quill.macro.log.pretty", "false")
+    //    System.setProperty("quill.macro.log", "true")
+    //    System.setProperty("quill.trace.enabled", "true")
+    //    System.setProperty("quill.trace.color", "true")
+    //    System.setProperty("quill.trace.opinion", "false")
+    //    System.setProperty("quill.trace.ast.simple", "false")
+    //    System.setProperty("quill.trace.types", "standard,norm,sql")
+
+    val q = quote {
+      query[Bim]
+        .map(g => (g.bid, g.mam)).distinct.sortBy(_._2.sim.sid)
+        .map(p => (p._1, p._2.mid, p._2.sim)).distinct
+        .map(tup => (tup._1, tup._2, tup._3)).filter(n => n._3.sid == 1).distinct
+        .map(tup => (tup._1, tup._2, tup._3.sid)).distinct
+        .map(tup => (tup._1, tup._2, Sim(tup._3))).distinct
+        .map(tup => (tup._1, Mam(tup._2, tup._3))).distinct
+        .map(tup => Bim(tup._1, tup._2)).distinct
+    }
+    println(ctx.run(q.dynamic).string(true))
+    ctx.run(q.dynamic).string(true).collapseSpace mustEqual
+      """
+        |SELECT
+        |  tup.bid,
+        |  tup.mammid,
+        |  tup.mamsimsid
+        |FROM
+        |  (
+        |    SELECT
+        |      DISTINCT tup._1 AS bid,
+        |      tup._2mid AS mammid,
+        |      tup._2simsid AS mamsimsid
+        |    FROM
+        |      (
+        |        SELECT
+        |          DISTINCT tup._1,
+        |          tup._2 AS _2mid,
+        |          tup._3sid AS _2simsid
+        |        FROM
+        |          (
+        |            SELECT
+        |              DISTINCT tup._1,
+        |              tup._2,
+        |              tup._3 AS _3sid
+        |            FROM
+        |              (
+        |                SELECT
+        |                  DISTINCT tup._1,
+        |                  tup._2,
+        |                  tup._3theSid AS _3
+        |                FROM
+        |                  (
+        |                    SELECT
+        |                      DISTINCT p._1,
+        |                      p._2mid AS _2,
+        |                      p._2simtheSid AS _3theSid
+        |                    FROM
+        |                      (
+        |                        SELECT
+        |                          DISTINCT g.theBid AS _1,
+        |                          g."MID" AS _2mid,
+        |                          g.theSid AS _2simtheSid
+        |                        FROM
+        |                          theBim g
+        |                      ) AS p
+        |                  ) AS tup
+        |              ) AS tup
+        |          ) AS tup
+        |      ) AS tup
+        |  ) AS tup
+        |""".collapseSpace
+  }
+
 }

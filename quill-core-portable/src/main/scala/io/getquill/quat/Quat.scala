@@ -127,13 +127,16 @@ object Quat {
     }
 
     def leastUpperTypeProduct(other: Quat.Product): Option[Quat.Product] = {
-      val newFields =
+      val newFieldsIter =
         fields.zipWith(other.fields) {
           case (key, thisQuat, Some(otherQuat)) => (key, thisQuat.leastUpperType(otherQuat))
         }.collect {
           case (key, Some(value)) => (key, value)
         }
-      Some(Quat.Product(newFields))
+      val newFields = mutable.LinkedHashMap(newFieldsIter.toList: _*)
+      // Note, some extra renames from properties that don't exist could make it here.
+      // Need to make sure to ignore extra ones when they are actually applied.
+      Some(Quat.Product(newFields).withRenames(renames))
     }
 
     def withRenames(renames: List[(String, String)]) =

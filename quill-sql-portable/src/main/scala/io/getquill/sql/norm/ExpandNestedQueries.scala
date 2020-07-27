@@ -1,25 +1,11 @@
 package io.getquill.context.sql.norm
 
-import io.getquill.ast.Ast
-import io.getquill.ast.Ident
 import io.getquill.ast._
-import io.getquill.ast.Visibility.{ Hidden, Visible }
 import io.getquill.context.sql._
-
-import io.getquill.norm.PropertyMatroshka
-import io.getquill.quat.Quat
-import io.getquill.sql.norm.StatelessQueryTransformer
+import io.getquill.sql.norm.{ SelectPropertyExpander, StatelessQueryTransformer }
+import io.getquill.ast.PropertyOrCore
 
 class ExpandSelection(from: List[FromContext]) {
-
-  private def refersToEntity(ast: Ast) = {
-    val tables = from.collect { case TableContext(entity, alias) => alias }
-    ast match {
-      case Ident(v, _)                       => tables.contains(v)
-      case PropertyMatroshka(Ident(v, _), _) => tables.contains(v)
-      case _                                 => false
-    }
-  }
 
   def apply(values: List[SelectValue]): List[SelectValue] =
     values.flatMap(apply(_))
@@ -28,8 +14,8 @@ class ExpandSelection(from: List[FromContext]) {
     value match {
       // Assuming there's no case class or tuple buried inside or a property i.e. if there were,
       // the beta reduction would have unrolled them already
-      case SelectValue(ast @ PropertyOrTerminal(), alias, concat) =>
-        val exp = expand(ast)
+      case SelectValue(ast @ PropertyOrCore(), alias, concat) =>
+        val exp = SelectPropertyExpander(from)(ast)
         exp.map {
           case (p: Property, path) =>
             SelectValue(p, Some(path.mkString), concat)
@@ -60,83 +46,9 @@ class ExpandSelection(from: List[FromContext]) {
       case other => List(other)
     }
   }
-
-  object PropertyOrTerminal {
-    def unapply(ast: Ast): Boolean =
-      Terminal.unapply(ast) || ast.isInstanceOf[Property]
-  }
-
-  object Terminal {
-    def unapply(ast: Ast): Boolean =
-      ast.isInstanceOf[Ident] || ast.isInstanceOf[Infix] || ast.isInstanceOf[Constant]
-  }
-
-  def expand(ast: Ast): List[(Ast, List[String])] = {
-    def unhideProps(p: Ast): Ast =
-      p match {
-        case Property.Opinionated(ast, name, r, v) =>
-          Property.Opinionated(unhideProps(ast), name, r, Visible)
-        case other =>
-          other
-      }
-
-    ast match {
-      case id @ Terminal() =>
-        val isEntity = refersToEntity(id)
-        id.quat match {
-          case p: Quat.Product => QuatExpander(isEntity)(p, id)
-          case _               => List(id).map(p => (p, List.empty))
-        }
-      // Assuming a property contains only an Ident, Infix or Constant at this point
-      // and all situations where there is a case-class, tuple, etc... inside have already been beta-reduced
-      case prop @ PropertyMatroshka(id @ Terminal(), _) =>
-        val isEntity = refersToEntity(id)
-        val propsWithVisibility = if (!isEntity) unhideProps(prop) else prop
-        prop.quat match {
-          case p: Quat.Product => QuatExpander(isEntity)(p, propsWithVisibility)
-          case _               => List(propsWithVisibility).map(p => (p, List.empty))
-        }
-      case other => List(other).map(p => (p, List.empty))
-    }
-  }
-
-  /* Take a quat and project it out as nested properties with some core ast inside.
-   * quat: CC(foo,bar:Quat(a,b)) with core id:Ident(x) =>
-   *   List( Prop(id,foo) [foo], Prop(Prop(id,bar),a) [bar.a], Prop(Prop(id,bar),b) [bar.b] )
-   */
-  case class QuatExpander(refersToEntity: Boolean) {
-    def apply(quat: Quat.Product, core: Ast): List[(Property, List[String])] =
-      applyInner(quat, core)
-
-    def applyInner(quat: Quat.Product, core: Ast): List[(Property, List[String])] = {
-      // Property (and alias path) should be visible unless we are referring directly to a TableContext
-      // with an Entity that has embedded fields. In that case, only top levels should show since
-      // we're selecting from an actual table and in that case, the embedded paths don't actually exist.
-      val wholePathVisible = !refersToEntity
-
-      // Assuming renames have been applied so the value of a renamed field will be the 2nd element
-      def isPropertyRenameable(name: String) =
-        if (quat.renames.find(_._2 == name).isDefined)
-          Renameable.Fixed
-        else
-          Renameable.ByStrategy
-
-      quat.fields.flatMap {
-        case (name, child: Quat.Product) =>
-          applyInner(child, Property.Opinionated(core, name, isPropertyRenameable(name), if (wholePathVisible) Visible else Hidden)).map { // TODO Need to know if renames have been applied in order to create as fixed vs renameable, in RenameProperties keep that information
-            case (prop, path) =>
-              (prop, name +: path)
-          }
-        case (name, _) =>
-          // The innermost entity of the quat. This is always visible since it is the actual column of the table
-          List((Property.Opinionated(core, name, isPropertyRenameable(name), Visible), List(name)))
-      }.toList
-    }
-  }
-
 }
 
-object ExpandNestedQueries2 extends StatelessQueryTransformer {
+object ExpandNestedQueries extends StatelessQueryTransformer {
 
   protected override def apply(q: SqlQuery, isTopLevel: Boolean = false): SqlQuery =
     q match {

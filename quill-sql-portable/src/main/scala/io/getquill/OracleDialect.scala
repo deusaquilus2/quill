@@ -63,7 +63,7 @@ trait OracleDialect
   override protected def tokenizeTable(strategy: NamingStrategy, table: String, renameable: Renameable): String =
     tokenizeEscapeUnderscores(strategy, table, Some(renameable))
 
-  override protected def tokenizeAlias(strategy: NamingStrategy, table: String): String =
+  override protected def tokenizeColumnAlias(strategy: NamingStrategy, table: String): String =
     tokenizeEscapeUnderscores(strategy, table, None)
 
   private def tokenizeEscapeUnderscores(strategy: NamingStrategy, columnOrTable: String, renameable: Option[Renameable]): String =

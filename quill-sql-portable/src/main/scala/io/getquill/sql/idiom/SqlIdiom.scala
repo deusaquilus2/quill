@@ -42,7 +42,7 @@ trait SqlIdiom extends Idiom {
           val sql = querifyAst(q)
           trace("sql")(sql)
           VerifySqlQuery(sql).map(fail)
-          val expanded = ExpandNestedQueries2(sql)
+          val expanded = ExpandNestedQueries(sql)
           trace("expanded sql")(expanded)
           val refined = RefineSubqueryProperties(expanded)
           trace("refined sql")(refined)
@@ -176,8 +176,8 @@ trait SqlIdiom extends Idiom {
       case _     => strategy.table(table)
     }
 
-  protected def tokenizeAlias(strategy: NamingStrategy, table: String) =
-    strategy.default(table)
+  protected def tokenizeColumnAlias(strategy: NamingStrategy, table: String): String =
+    strategy.column(table)
 
   implicit def selectValueTokenizer(implicit astTokenizer: Tokenizer[Ast], strategy: NamingStrategy): Tokenizer[SelectValue] = {
 
@@ -186,7 +186,7 @@ trait SqlIdiom extends Idiom {
         case SelectValue(ast, Some(alias), false) => {
           stmt"${ast.token} AS ${alias.token}"
         }
-        case SelectValue(ast, Some(alias), true) => stmt"${concatFunction.token}(${ast.token}) AS ${alias.token}"
+        case SelectValue(ast, Some(alias), true) => stmt"${concatFunction.token}(${ast.token}) AS ${tokenizeColumnAlias(strategy, alias).token}"
         case selectValue =>
           val value =
             selectValue match {
@@ -256,9 +256,9 @@ trait SqlIdiom extends Idiom {
     stmt"ORDER BY ${criterias.token}"
 
   implicit def sourceTokenizer(implicit astTokenizer: Tokenizer[Ast], strategy: NamingStrategy): Tokenizer[FromContext] = Tokenizer[FromContext] {
-    case TableContext(name, alias)  => stmt"${name.token} ${tokenizeAlias(strategy, alias).token}"
-    case QueryContext(query, alias) => stmt"(${query.token}) AS ${tokenizeAlias(strategy, alias).token}"
-    case InfixContext(infix, alias) => stmt"(${(infix: Ast).token}) AS ${strategy.default(alias).token}"
+    case TableContext(name, alias)  => stmt"${name.token} ${strategy.table(alias).token}"
+    case QueryContext(query, alias) => stmt"(${query.token}) AS ${strategy.table(alias).token}"
+    case InfixContext(infix, alias) => stmt"(${(infix: Ast).token}) AS ${strategy.table(alias).token}"
     case JoinContext(t, a, b, on)   => stmt"${a.token} ${t.token} ${b.token} ON ${on.token}"
     case FlatJoinContext(t, a, on)  => stmt"${t.token} ${a.token} ON ${on.token}"
   }

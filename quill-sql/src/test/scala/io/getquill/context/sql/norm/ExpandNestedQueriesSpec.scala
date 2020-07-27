@@ -4,7 +4,7 @@ import io.getquill.{ MirrorSqlDialect, SnakeCase, Spec, SqlMirrorContext }
 import io.getquill.context.sql.{ testContext, testContextUpperEscapeColumn }
 import io.getquill.context.sql.util.StringOps._
 
-class ExpandNestedQueriesSpec extends Spec { //hello
+class ExpandNestedQueriesSpec extends Spec {
 
   "keeps the initial table alias" in {
     import testContext._
@@ -25,7 +25,7 @@ class ExpandNestedQueriesSpec extends Spec { //hello
     val q = quote {
       query[MyPerson].nested.nested
     }
-    println(testContext.run(q.dynamic).string) mustEqual
+    testContext.run(q.dynamic).string mustEqual
       "SELECT x.first, x.last, x.age FROM (SELECT x.first, x.last, x.age FROM (SELECT x.first, x.last, x.age FROM MyPerson x) AS x) AS x"
   }
 
@@ -35,7 +35,7 @@ class ExpandNestedQueriesSpec extends Spec { //hello
     val q = quote {
       query[MyPerson].nested.nested.map(p => (p.first, p.last))
     }
-    println(testContext.run(q.dynamic).string) mustEqual
+    testContext.run(q.dynamic).string mustEqual
       "SELECT p.first, p.last FROM (SELECT x.first, x.last FROM (SELECT x.first, x.last FROM MyPerson x) AS x) AS p"
   }
 
@@ -77,7 +77,7 @@ class ExpandNestedQueriesSpec extends Spec { //hello
         .map(e => (e, 1))
         .nested
     ).string mustEqual
-      "SELECT e.camel_case, 1 FROM (SELECT x.camel_case FROM entity x) AS e"
+      "SELECT e.camelCase, 1 FROM (SELECT x.camel_case FROM entity x) AS e"
   }
 
   "expands nested tuple select" in {
@@ -126,9 +126,44 @@ class ExpandNestedQueriesSpec extends Spec { //hello
     val q = quote {
       qr1.join(qr1).on((a, b) => a.i == b.i).nested.map(both => both match { case (a, b) => Dual(a, b) }).nested
     }
-
-    testContext.run(q).string mustEqual
-      "SELECT both._1s, both._1i, both._1l, both._1o, both._2s, both._2i, both._2l, both._2o FROM (SELECT a.s AS _1s, a.i AS _1i, a.l AS _1l, a.o AS _1o, b.s AS _2s, b.i AS _2i, b.l AS _2l, b.o AS _2o FROM TestEntity a INNER JOIN TestEntity b ON a.i = b.i) AS both"
+    testContext.run(q).string(true).collapseSpace mustEqual
+      """SELECT
+        |  both._1s,
+        |  both._1i,
+        |  both._1l,
+        |  both._1o,
+        |  both._2s,
+        |  both._2i,
+        |  both._2l,
+        |  both._2o
+        |FROM
+        |  (
+        |    SELECT
+        |      x._1s AS _1s,
+        |      x._1i AS _1i,
+        |      x._1l AS _1l,
+        |      x._1o AS _1o,
+        |      x._2s AS _2s,
+        |      x._2i AS _2i,
+        |      x._2l AS _2l,
+        |      x._2o AS _2o
+        |    FROM
+        |      (
+        |        SELECT
+        |          a.s AS _1s,
+        |          a.i AS _1i,
+        |          a.l AS _1l,
+        |          a.o AS _1o,
+        |          b.s AS _2s,
+        |          b.i AS _2i,
+        |          b.l AS _2l,
+        |          b.o AS _2o
+        |        FROM
+        |          TestEntity a
+        |          INNER JOIN TestEntity b ON a.i = b.i
+        |      ) AS x
+        |  ) AS both
+        |""".collapseSpace
   }
 
   "nested with distinct" - {
@@ -460,7 +495,7 @@ class ExpandNestedQueriesSpec extends Spec { //hello
         |                      (
         |                        SELECT
         |                          DISTINCT g.theBid AS _1,
-        |                          g.mid AS _2mid,
+        |                          g."MID" AS _2mid,
         |                          g.theSid AS _2simtheSid
         |                        FROM
         |                          theBim g

@@ -129,7 +129,7 @@ object ExpandNestedQueries extends StatelessQueryTransformer {
           distinctIfNotTopLevel(select)
 
         q.copy(
-          select = distinctSelects.map(sv => sv.copy(ast = flattenNestedProperty(sv.ast))),
+          select = distinctSelects.map(sv => sv.copy(ast = flattenPropertiesInside(sv.ast))),
           from = newFroms,
           where = where.map(flattenPropertiesInside(_)),
           groupBy = groupBy.map(flattenPropertiesInside(_)),

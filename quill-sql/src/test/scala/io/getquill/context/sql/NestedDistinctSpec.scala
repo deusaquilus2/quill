@@ -49,7 +49,6 @@ class NestedDistinctSpec extends Spec {
             .map(tup => tup._2.map(_.myEmb.name).sum)
         }
 
-        //SELECT SUM(x5.name) FROM (SELECT DISTINCT x4.name AS myEmbname FROM MyParent x4 WHERE x4.name = 1) AS x5 WHERE x5.myEmbname = 2 GROUP BY x5.myEmbname
         ctx.run(q).string mustEqual "SELECT SUM(x5.myEmbname) FROM (SELECT DISTINCT x4.name AS myEmbname FROM MyParent x4 WHERE x4.name = 1) AS x5 WHERE x5.myEmbname = 2 GROUP BY x5.myEmbname"
       }
 

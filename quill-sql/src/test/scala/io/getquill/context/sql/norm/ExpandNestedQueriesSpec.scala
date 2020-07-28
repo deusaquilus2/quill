@@ -518,7 +518,7 @@ class ExpandNestedQueriesSpec extends Spec {
     implicit val bimSchemaMeta = schemaMeta[Bim]("theBim", _.bid -> "theBid", _.mam.sim.sid -> "theSid")
 
     /*
-    Does not work
+    The following Does not work
     val q = quote {
       query[Bim]
         .map(g => (g.bid, g.mam)).distinct //.sortBy(_._2.sim.sid)
@@ -534,14 +534,6 @@ class ExpandNestedQueriesSpec extends Spec {
         .map(p => (p._1, p._2.mid, p._2.sim)).distinct
         .map(tup => (tup._1, tup._2, tup._3)).nested.filter(n => n._3.sid == 1).distinct
      */
-
-    //    System.setProperty("quill.macro.log.pretty", "false")
-    //    System.setProperty("quill.macro.log", "true")
-    //    System.setProperty("quill.trace.enabled", "true")
-    //    System.setProperty("quill.trace.color", "true")
-    //    System.setProperty("quill.trace.opinion", "false")
-    //    System.setProperty("quill.trace.ast.simple", "false")
-    //    System.setProperty("quill.trace.types", "standard,norm,sql")
 
     val q = quote {
       query[Bim]
@@ -587,16 +579,22 @@ class ExpandNestedQueriesSpec extends Spec {
         |                FROM
         |                  (
         |                    SELECT
-        |                      DISTINCT p._1,
-        |                      p._2mid AS _2,
-        |                      p._2simtheSid AS _3theSid
+        |                      DISTINCT x10._1,
+        |                      x10._2mid AS _2,
+        |                      x10._2simtheSid AS _3theSid
         |                    FROM
         |                      (
         |                        SELECT
-        |                          g
+        |                          DISTINCT g.theBid AS _1,
+        |                          g."MID" AS _2mid,
+        |                          g.theSid AS _2simtheSid
         |                        FROM
         |                          theBim g
-        |                      ) AS p
+        |                        ORDER BY
+        |                          g.theSid ASC NULLS FIRST
+        |                      ) AS x10
+        |                    WHERE
+        |                      tup._3theSid = 1
         |                  ) AS tup
         |              ) AS tup
         |          ) AS tup

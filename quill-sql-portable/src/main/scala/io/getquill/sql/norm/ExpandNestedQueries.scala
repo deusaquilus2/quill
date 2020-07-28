@@ -80,13 +80,21 @@ object ExpandNestedQueries extends StatelessQueryTransformer {
         }
 
         def flattenNestedProperty(p: Ast): Ast = {
-          val isEntity = refersToEntity(p)
           p match {
-            case PropertyMatroshka(inner, path) =>
-              if (!isEntity)
-                Property.Opinionated(inner, path.mkString, Renameable.Fixed, Visibility.Visible)
+            case p @ PropertyMatroshka(inner, path) =>
+              val isSubselect = !refersToEntity(p)
+              val renameable =
+                if (p.prevName.isDefined || isSubselect)
+                  Renameable.Fixed
+                else
+                  Renameable.ByStrategy
+
+              // If it is a sub-select or a renamed property, do not apply the strategy to the property
+              if (isSubselect)
+                Property.Opinionated(inner, path.mkString, renameable, Visibility.Visible)
               else
-                Property.Opinionated(inner, path.last, Renameable.ByStrategy, Visibility.Visible)
+                Property.Opinionated(inner, path.last, renameable, Visibility.Visible)
+
             case other => other
           }
         }

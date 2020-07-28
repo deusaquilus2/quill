@@ -314,6 +314,7 @@ case class Property(ast: Ast, name: String) extends Ast {
   def renameable: Renameable = Renameable.neutral
 
   def quat = ast.quat.lookup(name)
+  def prevName = ast.quat.beforeRenamed(name)
 
   // Properties that are 'Hidden' are used for embedded objects whose path should not be expressed
   // during SQL Tokenization.

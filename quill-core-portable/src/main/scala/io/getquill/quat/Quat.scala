@@ -63,15 +63,23 @@ sealed trait Quat {
     case Quat.Null    => "N"
   }
 
+  /** What was the value of a given property before it was renamed (i.e. looks up the value of the Renames hash) */
+  def beforeRenamed(path: String): Option[String] = (this, path) match {
+    case (cc: Quat.Product, fieldName) =>
+      // NOTE This is a linear lookup. To improve efficiency store a map going back from rename to the initial property,
+      // if we did that however, we would need to make sure to warn a user of two things are renamed to the same property however,
+      // that kind of warning should probably exist already
+      renames.find(_._2 == fieldName).headOption.map(_._2)
+    case (other, fieldName) =>
+      QuatException(s"The post-rename field '${fieldName}' does not exist in an SQL-level type ${other}")
+  }
+
   def lookup(path: String): Quat = (this, path) match {
     case (cc @ Quat.Product(fields), fieldName) =>
+      // TODO Change to Get
       fields.find(_._1 == fieldName).headOption.map(_._2).getOrElse(QuatException(s"The field ${fieldName} does not exist in the SQL-level ${cc}"))
-    case (Quat.Value, fieldName) =>
-      QuatException(s"The field '${fieldName}' does not exist in an SQL-level leaf-node")
-    case (Quat.Null, fieldName) =>
-      QuatException(s"The field '${fieldName}' cannot be looked up from a SQL-level null node")
-    case (Quat.Generic, fieldName) =>
-      QuatException(s"The field '${fieldName}' cannot be looked up from a SQL-level generic node")
+    case (other, fieldName) =>
+      QuatException(s"The field '${fieldName}' does not exist in an SQL-level type ${other}")
   }
   def lookup(list: List[String]): Quat =
     list match {

@@ -21,8 +21,15 @@ object RefineSubqueryProperties {
   private def apply(q: SqlQuery, references: LinkedHashSet[Property], isTopLevel: Boolean = false): SqlQuery =
     q match {
       case q: FlattenSqlQuery =>
-        // gather asts used here
-        val asts = gatherAsts(q)
+        // Filter the select values based on which references are used in the upper-level query
+        val newSelect = filterUnused(q.select, references.toSet)
+
+        // Gather asts used here
+        // Since we first need to replace select values from super queries onto sub queries,
+        // take the newly filtered selects instead of the ones in the query which are pre-filtered
+        // ... unless we are on the top level query. Since in the top level query 'references'
+        // will always be empty we need to copy through the entire select caluse
+        val asts = gatherAsts(q, if (!isTopLevel) newSelect else q.select)
 
         // recurse into the from clause with ExpandContext
         val fromContextsAndSuperProps = q.from.map(expandContext(_, asts))
@@ -30,13 +37,12 @@ object RefineSubqueryProperties {
 
         if (!isTopLevel) {
           // copy the new from clause and filter aliases
-          val select = filterUnused(q.select, references.toSet)
-          q.copy(from = fromContexts, select = select)(q.quat)
+          q.copy(from = fromContexts, select = newSelect)(q.quat)
         } else {
           // If we are on the top level, the list of aliases being used by clauses outer to 'us'
           // don't exist since we are the outermost level of the sql. Therefore no filteration
           // should happen in that case.
-          q
+          q.copy(from = fromContexts)(q.quat)
         }
 
       case SetOperationSqlQuery(a, op, b) =>
@@ -57,10 +63,10 @@ object RefineSubqueryProperties {
   private def hasImpureInfix(ast: Ast) =
     CollectAst.byType[io.getquill.ast.Infix](ast).find(i => !i.pure).isDefined
 
-  private def gatherAsts(q: FlattenSqlQuery): List[Ast] =
+  private def gatherAsts(q: FlattenSqlQuery, newSelect: List[SelectValue]): List[Ast] =
     q match {
       case FlattenSqlQuery(from, where, groupBy, orderBy, limit, offset, select, distinct) =>
-        Nil ++ select.map(_.ast) ++ where ++ groupBy ++ orderBy.map(_.ast) ++ limit ++ offset
+        Nil ++ newSelect.map(_.ast) ++ where ++ groupBy ++ orderBy.map(_.ast) ++ limit ++ offset
     }
 
   private def expandContext(s: FromContext, asts: List[Ast]): (FromContext, LinkedHashSet[Property]) =

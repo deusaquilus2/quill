@@ -4,7 +4,7 @@ import io.getquill.{ MirrorSqlDialect, SnakeCase, Spec, SqlMirrorContext }
 import io.getquill.context.sql.{ testContext, testContextUpperEscapeColumn }
 import io.getquill.context.sql.util.StringOps._
 
-class ExpandNestedQueriesSpec extends Spec { //hello
+class ExpandNestedQueriesSpec extends Spec {
 
   "keeps the initial table alias" in {
     import testContext._

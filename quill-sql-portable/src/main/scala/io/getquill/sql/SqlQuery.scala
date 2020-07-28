@@ -124,6 +124,8 @@ object SqlQuery {
               case JoinContext(_, a, b, _)  => aliases(a) ::: aliases(b)
               case FlatJoinContext(_, a, _) => aliases(a)
             }
+          // TODO Quat what impact does it have on this process if we do the alternative version of ExpandJoins that uses nested flatmaps?
+          //      would that version actually produce more consistent results here?
           // TODO Quat Test in situations where you have more then two things. Would the subselect work properly?
           val collectedAliases = aliases(ctx).map { case (a, quat) => Ident(a, quat) }
           val select = Tuple(collectedAliases)

@@ -53,7 +53,7 @@ object CompleteRenames extends StatelessTransformer {
 
   override def apply(e: Query): Query =
     e match {
-      case ent: Entity => ent.copy(quat = ent.quat.applyRenames)
+      case ent: Entity => Entity.Opinionated(ent.name, ent.properties, ent.quat, ent.renameable)
       case _           => super.apply(e)
     }
 

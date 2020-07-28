@@ -593,9 +593,7 @@ class ExpandNestedQueriesSpec extends Spec {
         |                    FROM
         |                      (
         |                        SELECT
-        |                          DISTINCT g.theBid AS _1,
-        |                          g."MID" AS _2mid,
-        |                          g.theSid AS _2simtheSid
+        |                          g
         |                        FROM
         |                          theBim g
         |                      ) AS p

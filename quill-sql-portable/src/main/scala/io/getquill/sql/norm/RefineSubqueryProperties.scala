@@ -28,9 +28,16 @@ object RefineSubqueryProperties {
         val fromContextsAndSuperProps = q.from.map(expandContext(_, asts))
         val fromContexts = fromContextsAndSuperProps.map(_._1)
 
-        // copy the new from clause and filter aliases
-        val select = filterUnused(q.select, references.toSet)
-        q.copy(from = fromContexts, select = select)(q.quat)
+        if (!isTopLevel) {
+          // copy the new from clause and filter aliases
+          val select = filterUnused(q.select, references.toSet)
+          q.copy(from = fromContexts, select = select)(q.quat)
+        } else {
+          // If we are on the top level, the list of aliases being used by clauses outer to 'us'
+          // don't exist since we are the outermost level of the sql. Therefore no filteration
+          // should happen in that case.
+          q
+        }
 
       case SetOperationSqlQuery(a, op, b) =>
         SetOperationSqlQuery(apply(a, references), op, apply(b, references))(q.quat)

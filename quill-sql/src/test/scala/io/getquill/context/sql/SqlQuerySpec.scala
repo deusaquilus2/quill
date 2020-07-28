@@ -80,7 +80,17 @@ class SqlQuerySpec extends Spec {
             }
         }
       }
-      testContext.run(q).string mustEqual
+
+      System.setProperty("quill.macro.log.pretty", "false")
+      System.setProperty("quill.macro.log", "true")
+      System.setProperty("quill.trace.enabled", "true")
+      System.setProperty("quill.trace.color", "true")
+      System.setProperty("quill.trace.opinion", "false")
+      System.setProperty("quill.trace.ast.simple", "false")
+      System.setProperty("quill.trace.types", "sql,norm,standard")
+
+      println(testContext.run(q.dynamic).string)
+      testContext.run(q.dynamic).string mustEqual
         "SELECT ab._1s, ab._1field_i, ab._1l, ab._1o, ab._2s, ab._2i, ab._2l, ab._2o, c.s, c.i, c.l, c.o FROM (SELECT a.s AS _1s, a.field_i AS _1field_i, a.l AS _1l, a.o AS _1o, b.s AS _2s, b.i AS _2i, b.l AS _2l, b.o AS _2o FROM CustomEntity a LEFT JOIN TestEntity2 b ON a.field_i = b.i WHERE b.l = 3) AS ab LEFT JOIN TestEntity3 c ON ab._2i = ab._1field_i AND ab._2i = c.i"
     }
 

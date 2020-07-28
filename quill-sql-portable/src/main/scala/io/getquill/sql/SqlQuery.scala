@@ -124,9 +124,12 @@ object SqlQuery {
               case JoinContext(_, a, b, _)  => aliases(a) ::: aliases(b)
               case FlatJoinContext(_, a, _) => aliases(a)
             }
+          // TODO Quat Test in situations where you have more then two things. Would the subselect work properly?
+          val collectedAliases = aliases(ctx).map { case (a, quat) => Ident(a, quat) }
+          val select = Tuple(collectedAliases)
           FlattenSqlQuery(
             from = ctx :: Nil,
-            select = aliases(ctx).map { case (a, quat) => SelectValue(Ident(a, quat), None) }
+            select = List(SelectValue(select, None))
           )(q.quat)
         case q @ (_: Map | _: Filter | _: Entity) => flatten(sources, q, alias)
         case q if (sources == Nil)                => flatten(sources, q, alias)

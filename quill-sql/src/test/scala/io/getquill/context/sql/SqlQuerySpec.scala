@@ -80,7 +80,7 @@ class SqlQuerySpec extends Spec {
             }
         }
       }
-      testContext.run(q.dynamic).string mustEqual
+      testContext.run(q).string mustEqual
         "SELECT ab._1s, ab._1field_i, ab._1l, ab._1o, ab._2s, ab._2i, ab._2l, ab._2o, c.s, c.i, c.l, c.o FROM (SELECT a.s AS _1s, a.field_i AS _1field_i, a.l AS _1l, a.o AS _1o, b.s AS _2s, b.i AS _2i, b.l AS _2l, b.o AS _2o FROM CustomEntity a LEFT JOIN TestEntity2 b ON a.field_i = b.i WHERE b.l = 3) AS ab LEFT JOIN TestEntity3 c ON ab._2i = ab._1field_i AND ab._2i = c.i"
     }
 
@@ -154,7 +154,7 @@ class SqlQuerySpec extends Spec {
           e2 <- qr2.leftJoin(e2 => e2.i == e1.i)
         } yield (e1.i, e2.map(e => e.i))
       }
-      testContext.run(q.dynamic).string mustEqual
+      testContext.run(q).string mustEqual
         "SELECT e1.i, e2.i FROM TestEntity e1 LEFT JOIN TestEntity2 e2 ON e2.i = e1.i"
     }
 
@@ -413,7 +413,7 @@ class SqlQuerySpec extends Spec {
         val q = quote {
           qr1.map(t => t.i).distinct.map(t => 1)
         }
-        testContext.run(q.dynamic).string mustEqual
+        testContext.run(q).string mustEqual
           "SELECT 1 FROM (SELECT DISTINCT t.i FROM TestEntity t) AS t"
       }
 

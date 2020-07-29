@@ -25,7 +25,7 @@ class ExpandNestedQueriesSpec extends Spec {
     val q = quote {
       query[MyPerson].nested.nested
     }
-    testContext.run(q.dynamic).string mustEqual
+    testContext.run(q).string mustEqual
       "SELECT x.first, x.last, x.age FROM (SELECT x.first, x.last, x.age FROM (SELECT x.first, x.last, x.age FROM MyPerson x) AS x) AS x"
   }
 
@@ -35,7 +35,7 @@ class ExpandNestedQueriesSpec extends Spec {
     val q = quote {
       query[MyPerson].nested.nested.map(p => (p.first, p.last))
     }
-    testContext.run(q.dynamic).string mustEqual
+    testContext.run(q).string mustEqual
       "SELECT p.first, p.last FROM (SELECT x.first, x.last FROM (SELECT x.first, x.last FROM MyPerson x) AS x) AS p"
   }
 
@@ -97,7 +97,7 @@ class ExpandNestedQueriesSpec extends Spec {
     val q = quote {
       qr1.fullJoin(qr2).on((a, b) => a.i == b.i).distinct
     }
-    testContext.run(q.dynamic).string mustEqual
+    testContext.run(q).string mustEqual
       "SELECT x._1s, x._1i, x._1l, x._1o, x._2s, x._2i, x._2l, x._2o FROM (SELECT DISTINCT a.s AS _1s, a.i AS _1i, a.l AS _1l, a.o AS _1o, b.s AS _2s, b.i AS _2i, b.l AS _2l, b.o AS _2o FROM TestEntity a FULL JOIN TestEntity2 b ON a.i = b.i) AS x"
   }
 
@@ -109,7 +109,7 @@ class ExpandNestedQueriesSpec extends Spec {
       }
     }
     println(testContext.run(q).string(true))
-    testContext.run(q.dynamic).string mustEqual
+    testContext.run(q).string mustEqual
       "SELECT x03._1i, x03._2i FROM (SELECT a.i AS _1i, b.i AS _2i FROM TestEntity a INNER JOIN TestEntity2 b ON a.i = b.i) AS x03"
   }
 
@@ -258,7 +258,7 @@ class ExpandNestedQueriesSpec extends Spec {
 
     val str = testContext.run(q).string(true)
     println(str)
-    testContext.run(q.dynamic).string.collapseSpace mustEqual
+    testContext.run(q).string.collapseSpace mustEqual
       """SELECT tup.id, tup.parid, tup.parname, tup.parembid, tup.parembname
         |FROM (SELECT DISTINCT tup._1        AS id,
         |                      tup._2id      AS parid,
@@ -454,7 +454,7 @@ class ExpandNestedQueriesSpec extends Spec {
         .map(tup => (tup._1, Mam(tup._2, tup._3))).distinct
         .map(tup => Bim(tup._1, tup._2)).distinct
     }
-    ctx.run(q.dynamic).string(true).collapseSpace mustEqual
+    ctx.run(q).string(true).collapseSpace mustEqual
       """
         |SELECT
         |  tup.bid,
@@ -544,7 +544,7 @@ class ExpandNestedQueriesSpec extends Spec {
         .map(tup => (tup._1, Mam(tup._2, tup._3))).distinct
         .map(tup => Bim(tup._1, tup._2)).distinct
     }
-    ctx.run(q.dynamic).string(true).collapseSpace mustEqual
+    ctx.run(q).string(true).collapseSpace mustEqual
       """
         |SELECT
         |  tup.bid,

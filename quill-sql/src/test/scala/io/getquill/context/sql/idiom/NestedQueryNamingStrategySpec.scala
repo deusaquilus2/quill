@@ -19,26 +19,18 @@ class NestedQueryNamingStrategySpec extends Spec { //hello
           p => (p, infix"foobar".as[Int])
         }.filter(_._1.id == 1)
       }
-      testContextEscape.run(q.dynamic).string mustEqual
+      testContextEscape.run(q).string mustEqual
         """SELECT p._1id, p._1name, p._2 FROM (SELECT p."id" AS _1id, p."name" AS _1name, foobar AS _2 FROM "Person" p) AS p WHERE p._1id = 1"""
     }
 
     "inner aliases should use naming strategy only when instructed" in {
-      System.setProperty("quill.macro.log.pretty", "false")
-      System.setProperty("quill.macro.log", "true")
-      System.setProperty("quill.trace.enabled", "true")
-      System.setProperty("quill.trace.color", "true")
-      System.setProperty("quill.trace.opinion", "false")
-      System.setProperty("quill.trace.ast.simple", "false")
-      System.setProperty("quill.trace.types", "sql,norm,standard")
-
       import testContextEscapeElements._
       val q = quote {
         query[Person].map {
           p => (p, infix"foobar".as[Int])
         }.filter(_._1.id == 1)
       }
-      testContextEscapeElements.run(q.dynamic).string mustEqual
+      testContextEscapeElements.run(q).string mustEqual
         """SELECT "p"."_1id", "p"."_1name", "p"."_2" FROM (SELECT "p"."id" AS "_1id", "p"."name" AS "_1name", foobar AS "_2" FROM "Person" "p") AS "p" WHERE "p"."_1id" = 1"""
     }
   }
@@ -67,7 +59,7 @@ class NestedQueryNamingStrategySpec extends Spec { //hello
           p => (p, infix"foobar".as[Int])
         }.filter(_._1.id == 1)
       }
-      testContextUpper.run(q.dynamic).string mustEqual
+      testContextUpper.run(q).string mustEqual
         "SELECT p._1theId, p._1theName, p._2 FROM (SELECT p.theId AS _1theId, p.theName AS _1theName, foobar AS _2 FROM ThePerson p) AS p WHERE p._1theId = 1"
     }
 

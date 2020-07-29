@@ -83,14 +83,14 @@ class RenamePropertiesSpec extends Spec {
           val q = quote {
             e1.insert(lift(TestEntity("s", 1, 1L, None))).returning(_.i)
           }
-          val mirror = ctx.run(q.dynamic)
+          val mirror = ctx.run(q)
           mirror.returningBehavior mustEqual ReturnRecord
         }
         "returning generated - alias" in {
           val q = quote {
             e.insert(lift(TestEntity("s", 1, 1L, None))).returningGenerated(_.i)
           }
-          val mirror = testContext.run(q.dynamic)
+          val mirror = testContext.run(q)
           mirror.returningBehavior mustEqual ReturnColumns(List("field_i"))
         }
       }
@@ -107,7 +107,7 @@ class RenamePropertiesSpec extends Spec {
         val q = quote {
           e.flatMap(t => qr2.map(u => t)).map(t => t.s)
         }
-        testContext.run(q.dynamic).string mustEqual
+        testContext.run(q).string mustEqual
           "SELECT t.field_s FROM test_entity t, TestEntity2 u"
       }
       "with filter" in {
@@ -127,7 +127,7 @@ class RenamePropertiesSpec extends Spec {
       val q = quote {
         e.concatMap(t => t.s.split(" "))
       }
-      testContext.run(q.dynamic).string mustEqual
+      testContext.run(q).string mustEqual
         "SELECT UNNEST(SPLIT(t.field_s, ' ')) FROM test_entity t"
     }
     "map" - {

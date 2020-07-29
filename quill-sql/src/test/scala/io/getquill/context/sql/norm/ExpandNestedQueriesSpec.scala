@@ -4,7 +4,7 @@ import io.getquill.{ MirrorSqlDialect, SnakeCase, Spec, SqlMirrorContext }
 import io.getquill.context.sql.{ testContext, testContextUpperEscapeColumn }
 import io.getquill.context.sql.util.StringOps._
 
-class ExpandNestedQueriesSpec extends Spec {
+class ExpandNestedQueriesSpec extends Spec { //hellooooo
 
   "keeps the initial table alias" in {
     import testContext._
@@ -77,7 +77,7 @@ class ExpandNestedQueriesSpec extends Spec {
         .map(e => (e, 1))
         .nested
     ).string mustEqual
-      "SELECT e.camelCase, 1 FROM (SELECT x.camel_case FROM entity x) AS e"
+      "SELECT e.camelCase, 1 FROM (SELECT x.camel_case AS camelCase FROM entity x) AS e"
   }
 
   "expands nested tuple select" in {
@@ -178,7 +178,7 @@ class ExpandNestedQueriesSpec extends Spec {
         query[Parent].map(p => (p.emb, 1)).distinct.map(e => (e._1.name, e._1.id))
       }
 
-      ctx.run(q).string mustEqual "SELECT p._1name, p._1id FROM (SELECT DISTINCT p.name AS _1name, p.id AS _1id FROM Parent p) AS p"
+      ctx.run(q).string mustEqual "SELECT p._1name, p._1id FROM (SELECT DISTINCT p.name AS _1name, p.id AS _1id, 1 AS _2 FROM Parent p) AS p"
     }
 
     "embedded, distinct entity in case class" in {
@@ -190,7 +190,7 @@ class ExpandNestedQueriesSpec extends Spec {
         query[Parent].map(p => SuperParent(p.emb, 1)).distinct.map(e => (e.emb.name, e.emb.id))
       }
 
-      ctx.run(q).string mustEqual "SELECT p.embname, p.embid FROM (SELECT DISTINCT p.name AS embname, p.id AS embid FROM Parent p) AS p"
+      ctx.run(q).string mustEqual "SELECT p.embname, p.embid FROM (SELECT DISTINCT p.name AS embname, p.id AS embid, 1 AS id FROM Parent p) AS p"
     }
 
     "can be propagated across nested query with naming intact" in {
@@ -258,7 +258,7 @@ class ExpandNestedQueriesSpec extends Spec {
 
     val str = testContext.run(q).string(true)
     println(str)
-    testContext.run(q).string.collapseSpace mustEqual
+    testContext.run(q.dynamic).string.collapseSpace mustEqual
       """SELECT tup.id, tup.parid, tup.parname, tup.parembid, tup.parembname
         |FROM (SELECT DISTINCT tup._1        AS id,
         |                      tup._2id      AS parid,
@@ -470,25 +470,25 @@ class ExpandNestedQueriesSpec extends Spec {
         |    FROM
         |      (
         |        SELECT
-        |          DISTINCT tup._1,
+        |          DISTINCT tup._1 AS _1,
         |          tup._2 AS _2mid,
         |          tup._3sid AS _2simsid
         |        FROM
         |          (
         |            SELECT
-        |              DISTINCT tup._1,
-        |              tup._2,
+        |              DISTINCT tup._1 AS _1,
+        |              tup._2 AS _2,
         |              tup._3 AS _3sid
         |            FROM
         |              (
         |                SELECT
-        |                  DISTINCT tup._1,
-        |                  tup._2,
+        |                  DISTINCT tup._1 AS _1,
+        |                  tup._2 AS _2,
         |                  tup._3theSid AS _3
         |                FROM
         |                  (
         |                    SELECT
-        |                      DISTINCT p._1,
+        |                      DISTINCT p._1 AS _1,
         |                      p._2mid AS _2,
         |                      p._2simtheSid AS _3theSid
         |                    FROM
@@ -560,31 +560,31 @@ class ExpandNestedQueriesSpec extends Spec {
         |    FROM
         |      (
         |        SELECT
-        |          DISTINCT tup._1,
+        |          DISTINCT tup._1 AS _1,
         |          tup._2 AS _2mid,
         |          tup._3sid AS _2simsid
         |        FROM
         |          (
         |            SELECT
-        |              DISTINCT tup._1,
-        |              tup._2,
+        |              DISTINCT tup._1 AS _1,
+        |              tup._2 AS _2,
         |              tup._3 AS _3sid
         |            FROM
         |              (
         |                SELECT
-        |                  DISTINCT tup._1,
-        |                  tup._2,
+        |                  DISTINCT tup._1 AS _1,
+        |                  tup._2 AS _2,
         |                  tup._3theSid AS _3
         |                FROM
         |                  (
         |                    SELECT
-        |                      DISTINCT n._1,
-        |                      n._2,
-        |                      n._3theSid
+        |                      DISTINCT n._1 AS _1,
+        |                      n._2 AS _2,
+        |                      n._3theSid AS _3theSid
         |                    FROM
         |                      (
         |                        SELECT
-        |                          DISTINCT x10._1,
+        |                          DISTINCT x10._1 AS _1,
         |                          x10._2mid AS _2,
         |                          x10._2simtheSid AS _3theSid
         |                        FROM

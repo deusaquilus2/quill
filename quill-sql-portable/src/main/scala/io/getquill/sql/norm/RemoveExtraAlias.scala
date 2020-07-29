@@ -14,6 +14,14 @@ case class RemoveExtraAlias(strategy: NamingStrategy) extends StatelessQueryTran
   // Remove aliases that are the same as as the select values. Since a strategy may change the name,
   // use a heuristic where if the column naming strategy make the property name be different from the
   // alias, keep the column property name.
+  // Note that in many cases e.g. tuple names _1,_2 etc... the column name will be rarely changed,
+  // as a result of column capitalization, however it is possible that it will be changed as a result
+  // of some other scheme (e.g. adding 'col' to every name where columns actually named _1,_2 become col_1,col_2)
+  // and then unless the proper alias is there (e.g. foo.col_1 AS _1, foo.col_2 AS _2) subsequent selects will incorrectly
+  // select _1.foo,_2.bar fields assuming the _1,_2 columns actually exist.
+  // This happens even if the column is marked as fixed since users can overwrite things
+  // such as the tokenColumnAlias function, we are being cautious in those kinds of situations
+  // and putting the alias anyway.
   def strategyMayChangeColumnName(column: String): Boolean =
     strategy.column(column) != column || strategy.default(column) != column
 

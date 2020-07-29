@@ -286,15 +286,6 @@ class SqlQuerySpec extends Spec {
         }
       }
       "after flatMap" in {
-
-        System.setProperty("quill.macro.log.pretty", "false")
-        System.setProperty("quill.macro.log", "true")
-        System.setProperty("quill.trace.enabled", "true")
-        System.setProperty("quill.trace.color", "true")
-        System.setProperty("quill.trace.opinion", "false")
-        System.setProperty("quill.trace.ast.simple", "false")
-        System.setProperty("quill.trace.types", "sql,norm,standard")
-
         val q = quote {
           (for {
             a <- qr1
@@ -304,7 +295,7 @@ class SqlQuerySpec extends Spec {
           })
             .sortBy(_._2)(Ord.desc)
         }
-        testContext.run(q.dynamic).string mustEqual
+        testContext.run(q).string mustEqual
           "SELECT b._1, b._2 FROM (SELECT a.s AS _1, b.s AS _2 FROM TestEntity a, TestEntity2 b WHERE a.i = b.i) AS b ORDER BY b._2 DESC"
       }
       "fails if the sortBy criteria is malformed" in {

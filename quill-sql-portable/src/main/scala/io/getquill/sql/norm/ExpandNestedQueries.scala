@@ -11,6 +11,11 @@ class ExpandSelection(from: List[FromContext]) {
   def apply(values: List[SelectValue]): List[SelectValue] =
     values.flatMap(apply(_))
 
+  implicit class AliasOp(alias: Option[String]) {
+    def concatWith(str: String): Option[String] =
+      alias.orElse(Some("")).map(v => s"${v}${str}")
+  }
+
   private def apply(value: SelectValue): List[SelectValue] = {
     value match {
       // Assuming there's no case class or tuple buried inside or a property i.e. if there were,
@@ -19,33 +24,31 @@ class ExpandSelection(from: List[FromContext]) {
         val exp = SelectPropertyProtractor(from)(ast)
         exp.map {
           case (p: Property, Nil) =>
-            // If it is the name of a real column alias it as the name of the ident previous to it's having been renamed
-            // since that alias may be used later in outer queries.
-            SelectValue(p, Some(p.prevName.getOrElse(p.name)), concat)
+            // If the quat-path is nothing and there is some pre-existing alias (e.g. if we came from a case-class or quat)
+            // the use that. Otherwise the selection is of an individual element so use the element name (before the rename)
+            // as the alias.
+            alias match {
+              case None =>
+                SelectValue(p, Some(p.prevName.getOrElse(p.name)), concat)
+              case Some(value) =>
+                SelectValue(p, Some(value), concat)
+            }
           case (p: Property, path) =>
-            SelectValue(p, Some(path.mkString), concat)
+            // Append alias headers (i.e. _1,_2 from tuples and field names foo,bar from case classes) to the
+            // value of the Quat path
+            SelectValue(p, alias.concatWith(path.mkString), concat)
           case (other, _) =>
-            SelectValue(other, None, concat)
+            SelectValue(other, alias, concat)
         }
       case SelectValue(Tuple(values), alias, concat) =>
         values.zipWithIndex.flatMap {
           case (ast, i) =>
-            apply(SelectValue(ast, alias, concat)).map { sv =>
-              sv.copy(
-                alias = sv.alias.orElse(Some(""))
-                  .map(alias => s"_${i + 1}${alias}")
-              )
-            }
+            apply(SelectValue(ast, alias.concatWith(s"_${i + 1}"), concat))
         }
       case SelectValue(CaseClass(fields), alias, concat) =>
         fields.flatMap {
           case (name, ast) =>
-            apply(SelectValue(ast, alias, concat)).map { sv =>
-              sv.copy(
-                alias = sv.alias.orElse(Some(""))
-                  .map(alias => s"${name}${alias}")
-              )
-            }
+            apply(SelectValue(ast, alias.concatWith(name), concat))
         }
       // Direct infix select, etc...
       case other => List(other)

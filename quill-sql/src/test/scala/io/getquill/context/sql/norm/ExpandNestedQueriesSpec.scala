@@ -4,7 +4,7 @@ import io.getquill.{ MirrorSqlDialect, SnakeCase, Spec, SqlMirrorContext }
 import io.getquill.context.sql.{ testContext, testContextUpperEscapeColumn }
 import io.getquill.context.sql.util.StringOps._
 
-class ExpandNestedQueriesSpec extends Spec { //hellooooo
+class ExpandNestedQueriesSpec extends Spec {
 
   "keeps the initial table alias" in {
     import testContext._
@@ -454,7 +454,6 @@ class ExpandNestedQueriesSpec extends Spec { //hellooooo
         .map(tup => (tup._1, Mam(tup._2, tup._3))).distinct
         .map(tup => Bim(tup._1, tup._2)).distinct
     }
-    println(ctx.run(q.dynamic).string(true))
     ctx.run(q.dynamic).string(true).collapseSpace mustEqual
       """
         |SELECT
@@ -470,25 +469,25 @@ class ExpandNestedQueriesSpec extends Spec { //hellooooo
         |    FROM
         |      (
         |        SELECT
-        |          DISTINCT tup._1 AS _1,
+        |          DISTINCT tup._1,
         |          tup._2 AS _2mid,
         |          tup._3sid AS _2simsid
         |        FROM
         |          (
         |            SELECT
-        |              DISTINCT tup._1 AS _1,
-        |              tup._2 AS _2,
+        |              DISTINCT tup._1,
+        |              tup._2,
         |              tup._3 AS _3sid
         |            FROM
         |              (
         |                SELECT
-        |                  DISTINCT tup._1 AS _1,
-        |                  tup._2 AS _2,
+        |                  DISTINCT tup._1,
+        |                  tup._2,
         |                  tup._3theSid AS _3
         |                FROM
         |                  (
         |                    SELECT
-        |                      DISTINCT p._1 AS _1,
+        |                      DISTINCT p._1,
         |                      p._2mid AS _2,
         |                      p._2simtheSid AS _3theSid
         |                    FROM
@@ -560,31 +559,31 @@ class ExpandNestedQueriesSpec extends Spec { //hellooooo
         |    FROM
         |      (
         |        SELECT
-        |          DISTINCT tup._1 AS _1,
+        |          DISTINCT tup._1,
         |          tup._2 AS _2mid,
         |          tup._3sid AS _2simsid
         |        FROM
         |          (
         |            SELECT
-        |              DISTINCT tup._1 AS _1,
-        |              tup._2 AS _2,
+        |              DISTINCT tup._1,
+        |              tup._2,
         |              tup._3 AS _3sid
         |            FROM
         |              (
         |                SELECT
-        |                  DISTINCT tup._1 AS _1,
-        |                  tup._2 AS _2,
+        |                  DISTINCT tup._1,
+        |                  tup._2,
         |                  tup._3theSid AS _3
         |                FROM
         |                  (
         |                    SELECT
-        |                      DISTINCT n._1 AS _1,
-        |                      n._2 AS _2,
-        |                      n._3theSid AS _3theSid
+        |                      DISTINCT n._1,
+        |                      n._2,
+        |                      n._3theSid
         |                    FROM
         |                      (
         |                        SELECT
-        |                          DISTINCT x10._1 AS _1,
+        |                          DISTINCT x10._1,
         |                          x10._2mid AS _2,
         |                          x10._2simtheSid AS _3theSid
         |                        FROM

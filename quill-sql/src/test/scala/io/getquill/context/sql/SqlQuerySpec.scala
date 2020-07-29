@@ -10,7 +10,7 @@ class SqlQuerySpec extends Spec {
 
   implicit val naming = new Literal {}
 
-  "transforms the ast into a flatten sql-like structure" - {
+  "transforms the ast into a flatten sql-like structure" - { //hello
 
     "inner join query" in {
       val q = quote {
@@ -286,6 +286,15 @@ class SqlQuerySpec extends Spec {
         }
       }
       "after flatMap" in {
+
+        System.setProperty("quill.macro.log.pretty", "false")
+        System.setProperty("quill.macro.log", "true")
+        System.setProperty("quill.trace.enabled", "true")
+        System.setProperty("quill.trace.color", "true")
+        System.setProperty("quill.trace.opinion", "false")
+        System.setProperty("quill.trace.ast.simple", "false")
+        System.setProperty("quill.trace.types", "sql,norm,standard")
+
         val q = quote {
           (for {
             a <- qr1
@@ -295,7 +304,7 @@ class SqlQuerySpec extends Spec {
           })
             .sortBy(_._2)(Ord.desc)
         }
-        testContext.run(q).string mustEqual
+        testContext.run(q.dynamic).string mustEqual
           "SELECT b._1, b._2 FROM (SELECT a.s AS _1, b.s AS _2 FROM TestEntity a, TestEntity2 b WHERE a.i = b.i) AS b ORDER BY b._2 DESC"
       }
       "fails if the sortBy criteria is malformed" in {
@@ -423,8 +432,17 @@ class SqlQuerySpec extends Spec {
         val q = quote {
           qr1.map(t => t.i).distinct.map(t => 1)
         }
-        testContext.run(q).string mustEqual
+        testContext.run(q.dynamic).string mustEqual
           "SELECT 1 FROM (SELECT DISTINCT t.i FROM TestEntity t) AS t"
+      }
+
+      "with map uppsercase" in {
+        import testContextUpper._
+        val q = quote {
+          qr1.map(t => t.i).distinct.map(t => 1)
+        }
+        testContextUpper.run(q).string mustEqual
+          "SELECT 1 FROM (SELECT DISTINCT t.I AS i FROM TESTENTITY t) AS t"
       }
 
       "with map inside join" in {

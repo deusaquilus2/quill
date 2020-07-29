@@ -18,6 +18,10 @@ class ExpandSelection(from: List[FromContext]) {
       case SelectValue(ast @ PropertyOrCore(), alias, concat) =>
         val exp = SelectPropertyProtractor(from)(ast)
         exp.map {
+          case (p: Property, Nil) =>
+            // If it is the name of a real column alias it as the name of the ident previous to it's having been renamed
+            // since that alias may be used later in outer queries.
+            SelectValue(p, Some(p.prevName.getOrElse(p.name)), concat)
           case (p: Property, path) =>
             SelectValue(p, Some(path.mkString), concat)
           case (other, _) =>

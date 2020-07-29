@@ -45,8 +45,8 @@ trait SqlIdiom extends Idiom {
           val expanded = ExpandNestedQueries(sql)
           trace("expanded sql")(expanded)
           val refined = RemoveUnusedSelects(expanded)
-          trace("selects filtered sql")(refined)
-          val cleaned = RemoveExtraAlias(refined)
+          trace("filtered sql (only used selects)")(refined)
+          val cleaned = RemoveExtraAlias(naming)(refined)
           trace("cleaned sql")(cleaned)
           val tokenized = cleaned.token
           trace("tokenized sql")(tokenized)

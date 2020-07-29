@@ -24,18 +24,30 @@ object RemoveUnusedSelects {
         // Filter the select values based on which references are used in the upper-level query
         val newSelect = filterUnused(q.select, references.toSet)
 
-        // Gather asts used here
+        // If the select is not a distinct (since if it is distinct the result will be different if more fields are selected),
+        // same with groupBy, sortBy, and limit (some obscure properties is databases may have different results if different columns are selected with a limit)
+        // it is not top level (all top level queries will have no references outer-selected from them)
+        // since they are top level the filter the selects.
+        // Also, if nothing is being selected (specifically including a check on references.size to be explicit about it but technically it is covered by other cases),
+        // do not filter the selects either since the
+        // alternative is to have a "select *" from having a concrete set of selects is almost always better then a "select *"
+        val doSelectFiltration =
+          !isTopLevel && !q.distinct && q.groupBy.isEmpty && q.orderBy.isEmpty && q.limit.isEmpty &&
+            references.size != 0 && newSelect.size != 0
+
+        // Gather asts used here - i.e. push every property we are using to the From-Clause selects to make
+        // sure that they in turn are using them.
         // Since we first need to replace select values from super queries onto sub queries,
         // take the newly filtered selects instead of the ones in the query which are pre-filtered
         // ... unless we are on the top level query. Since in the top level query 'references'
         // will always be empty we need to copy through the entire select caluse
-        val asts = gatherAsts(q, if (!isTopLevel) newSelect else q.select)
+        val asts = gatherAsts(q, if (doSelectFiltration) newSelect else q.select)
 
         // recurse into the from clause with ExpandContext
         val fromContextsAndSuperProps = q.from.map(expandContext(_, asts))
         val fromContexts = fromContextsAndSuperProps.map(_._1)
 
-        if (!isTopLevel) {
+        if (doSelectFiltration) {
           // copy the new from clause and filter aliases
           q.copy(from = fromContexts, select = newSelect)(q.quat)
         } else {

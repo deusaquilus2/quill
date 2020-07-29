@@ -260,7 +260,7 @@ class RenamePropertiesSpec extends Spec {
           e.distinct.map(t => t.s)
         }
         testContext.run(q).string mustEqual
-          "SELECT t.field_s FROM (SELECT DISTINCT x.field_s FROM test_entity x) AS t"
+          "SELECT t.field_s FROM (SELECT DISTINCT x.field_s, x.field_i, x.l, x.o FROM test_entity x) AS t"
       }
     }
 
@@ -357,7 +357,7 @@ class RenamePropertiesSpec extends Spec {
           e.filter(a => a.i > 0).isEmpty
         }
         testContext.run(q).string mustEqual
-          "SELECT NOT EXISTS (SELECT a.* FROM test_entity a WHERE a.field_i > 0)"
+          "SELECT NOT EXISTS (SELECT a.field_s, a.field_i, a.l, a.o FROM test_entity a WHERE a.field_i > 0)"
       }
     }
   }

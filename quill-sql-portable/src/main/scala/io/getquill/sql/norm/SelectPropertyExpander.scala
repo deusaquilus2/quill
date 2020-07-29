@@ -81,11 +81,41 @@ case class SelectPropertyExpander(from: List[FromContext]) {
 
       quat.fields.flatMap {
         case (name, child: Quat.Product) =>
-          applyInner(child, Property.Opinionated(core, name, isPropertyRenameable(name), if (wholePathVisible) Visible else Hidden)).map { // TODO Need to know if renames have been applied in order to create as fixed vs renameable, in RenameProperties keep that information
-            case (prop, path) =>
-              (prop, name +: path)
-          }
+          // Should not need this
+          //val fieldName = quat.renames.find(_._1 == name).map(_._2).getOrElse(name)
+          // TODO Quat once renames changed to LinkedHashSet change the lookup here to lookup from the hash for better perf
+          applyInner(
+            child,
+            Property.Opinionated(
+              core,
+              // If the quat is renamed, create a property representing the renamed field, otherwise use the quat field for the property
+              name,
+              // Property is renameable if it is being directly selected from a table and there is no naming strategy selecting from it
+              isPropertyRenameable(name),
+              /* If the property represents a property of a Entity (i.e. we're selecting from an actual table,
+               * then the entire projection of the Quat should be visible (since subsequent aliases will
+               * be using the entire path.
+               * Take: Bim(bid:Int, mam:Mam), Mam(mid:Int, mood:Int) extends Embedded
+               * Here is an example:
+               * SELECT g.mam FROM
+               *    SELECT gim.bim: CC(bid:Int,mam:CC(mid:Int,mood:Int)) FROM g
+               *
+               * This needs to be projected into:
+               * SELECT g.mammid, g.mammood FROM                         -- (2) so their selection of sub-properties from here is correct
+               *    SELECT gim.mid AS mammid, gim.mood as mammood FROM g -- (1) for mamid and mammood need full quat path here...
+               *
+               * (See examples of this in ExpandNestedQueries multiple embedding levels series of tests. Also note that since sub-selection
+               * is typically done from tuples, paths typically start with _1,_2 etc...)
+               */
+              if (wholePathVisible) Visible else Hidden
+            )
+          ).map {
+              case (prop, path) =>
+                (prop, name +: path)
+            }
         case (name, _) =>
+          // If the quat is renamed, create a property representing the renamed field, otherwise use the quat field for the property
+          //val fieldName = quat.renames.find(_._1 == name).map(_._2).getOrElse(name)
           // The innermost entity of the quat. This is always visible since it is the actual column of the table
           List((Property.Opinionated(core, name, isPropertyRenameable(name), Visible), List(name)))
       }.toList

@@ -182,7 +182,7 @@ trait SqlIdiom extends Idiom {
     column
 
   protected def tokenizeTableAlias(strategy: NamingStrategy, table: String): String =
-    strategy.table(table)
+    table
 
   implicit def selectValueTokenizer(implicit astTokenizer: Tokenizer[Ast], strategy: NamingStrategy): Tokenizer[SelectValue] = {
 

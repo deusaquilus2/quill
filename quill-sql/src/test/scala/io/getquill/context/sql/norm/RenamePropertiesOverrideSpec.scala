@@ -233,11 +233,20 @@ class RenamePropertiesOverrideSpec extends Spec {
     }
     "distinct" - {
       "body" in {
+
+        System.setProperty("quill.macro.log.pretty", "false")
+        System.setProperty("quill.macro.log", "true")
+        System.setProperty("quill.trace.enabled", "true")
+        System.setProperty("quill.trace.color", "true")
+        System.setProperty("quill.trace.opinion", "false")
+        System.setProperty("quill.trace.ast.simple", "false")
+        System.setProperty("quill.trace.types", "sql,norm,standard")
+
         val q = quote {
           e.distinct
         }
         testContextUpper.run(q).string mustEqual
-          "SELECT x.field_s, x.field_i, x.L, x.O FROM (SELECT DISTINCT x.field_s, x.field_i, x.L, x.O FROM test_entity x) AS x"
+          "SELECT x.field_s, x.field_i, x.l, x.o FROM (SELECT DISTINCT x.field_s, x.field_i, x.L, x.O FROM test_entity x) AS x"
       }
       "transitive" in {
         val q = quote {

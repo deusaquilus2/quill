@@ -46,14 +46,12 @@ object RenameProperties {
 
 object CompleteRenames extends StatelessTransformer {
   // NOTE Leaving renames on Entities so knowledges of what renames have been done remains in the AST. May want to change this in the future.
-  override def applyIdent(e: Ident): Ident = e match {
-    case e: Ident =>
-      e.copy(quat = e.quat.applyRenames)
-  }
+  override def applyIdent(e: Ident): Ident =
+    e.copy(quat = e.quat.applyRenames)
 
   override def apply(e: Query): Query =
     e match {
-      case ent: Entity => Entity.Opinionated(ent.name, ent.properties, ent.quat, ent.renameable)
+      case ent: Entity => ent.copy(quat = ent.quat.applyRenames)
       case _           => super.apply(e)
     }
 

@@ -1,6 +1,7 @@
 package io.getquill.context.sql.idiom
 
 import io.getquill.Spec
+import io.getquill.context.sql.testContextEscapeElements
 
 class NestedQueryNamingStrategySpec extends Spec { //hello
 
@@ -12,14 +13,33 @@ class NestedQueryNamingStrategySpec extends Spec { //hello
     import io.getquill.context.sql.testContextEscape
     import io.getquill.context.sql.testContextEscape._
 
-    "inner aliases should use naming strategy" in {
+    "inner aliases should not use naming strategy" in {
       val q = quote {
         query[Person].map {
           p => (p, infix"foobar".as[Int])
         }.filter(_._1.id == 1)
       }
       testContextEscape.run(q.dynamic).string mustEqual
-        """SELECT "p"._1id, "p"._1name, "p"._2 FROM (SELECT "p"."id" AS _1id, "p"."name" AS _1name, foobar AS _2 FROM "Person" "p") AS "p" WHERE "p"._1id = 1"""
+        """SELECT p._1id, p._1name, p._2 FROM (SELECT p."id" AS _1id, p."name" AS _1name, foobar AS _2 FROM "Person" p) AS p WHERE p._1id = 1"""
+    }
+
+    "inner aliases should use naming strategy only when instructed" in {
+      System.setProperty("quill.macro.log.pretty", "false")
+      System.setProperty("quill.macro.log", "true")
+      System.setProperty("quill.trace.enabled", "true")
+      System.setProperty("quill.trace.color", "true")
+      System.setProperty("quill.trace.opinion", "false")
+      System.setProperty("quill.trace.ast.simple", "false")
+      System.setProperty("quill.trace.types", "sql,norm,standard")
+
+      import testContextEscapeElements._
+      val q = quote {
+        query[Person].map {
+          p => (p, infix"foobar".as[Int])
+        }.filter(_._1.id == 1)
+      }
+      testContextEscapeElements.run(q.dynamic).string mustEqual
+        """SELECT "p"."_1id", "p"."_1name", "p"."_2" FROM (SELECT "p"."id" AS "_1id", "p"."name" AS "_1name", foobar AS "_2" FROM "Person" "p") AS "p" WHERE "p"."_1id" = 1"""
     }
   }
 

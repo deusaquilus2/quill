@@ -166,7 +166,7 @@ trait SqlIdiom extends Idiom {
 
   protected def tokenizeColumn(strategy: NamingStrategy, column: String, renameable: Renameable) =
     renameable match {
-      case Fixed => column
+      case Fixed => tokenizeFixedColumn(strategy, column)
       case _     => strategy.column(column)
     }
 
@@ -181,8 +181,14 @@ trait SqlIdiom extends Idiom {
   protected def tokenizeColumnAlias(strategy: NamingStrategy, column: String): String =
     column
 
+  protected def tokenizeFixedColumn(strategy: NamingStrategy, column: String): String =
+    column
+
   protected def tokenizeTableAlias(strategy: NamingStrategy, table: String): String =
     table
+
+  protected def tokenizeIdentName(strategy: NamingStrategy, name: String): String =
+    name
 
   implicit def selectValueTokenizer(implicit astTokenizer: Tokenizer[Ast], strategy: NamingStrategy): Tokenizer[SelectValue] = {
 
@@ -342,9 +348,12 @@ trait SqlIdiom extends Idiom {
       }
 
     def tokenizePrefixedProperty(name: String, prefix: List[String], strategy: NamingStrategy, renameable: Renameable, prefixRenameable: Renameable = Renameable.neutral) =
-      prefixRenameable.fixedOr(
-        (tokenizeColumn(strategy, prefix.mkString, prefixRenameable) + "." + tokenizeColumn(strategy, name, renameable)).token
-      )(tokenizeColumn(strategy, prefix.mkString + name, renameable).token)
+      prefixRenameable match {
+        case Renameable.Fixed =>
+          (tokenizeColumn(strategy, prefix.mkString, prefixRenameable) + "." + tokenizeColumn(strategy, name, renameable)).token
+        case _ =>
+          tokenizeColumn(strategy, prefix.mkString + name, renameable).token
+      }
 
     Tokenizer[Property] {
       case Property.Opinionated(ast, name, renameable, _ /* Top level property cannot be invisible */ ) =>
@@ -401,10 +410,10 @@ trait SqlIdiom extends Idiom {
   }
 
   implicit def identTokenizer(implicit astTokenizer: Tokenizer[Ast], strategy: NamingStrategy): Tokenizer[Ident] =
-    Tokenizer[Ident](e => strategy.default(e.name).token)
+    Tokenizer[Ident](e => tokenizeIdentName(strategy, e.name).token)
 
   implicit def externalIdentTokenizer(implicit astTokenizer: Tokenizer[Ast], strategy: NamingStrategy): Tokenizer[ExternalIdent] =
-    Tokenizer[ExternalIdent](e => strategy.default(e.name).token)
+    Tokenizer[ExternalIdent](e => tokenizeIdentName(strategy, e.name).token)
 
   implicit def assignmentTokenizer(implicit astTokenizer: Tokenizer[Ast], strategy: NamingStrategy): Tokenizer[Assignment] = Tokenizer[Assignment] {
     case Assignment(alias, prop, value) =>

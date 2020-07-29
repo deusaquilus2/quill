@@ -14,7 +14,7 @@ import io.getquill.idiom._
 import io.getquill.norm.ConcatBehavior.AnsiConcat
 import io.getquill.norm.EqualityBehavior.AnsiEquality
 import io.getquill.norm.{ ConcatBehavior, EqualityBehavior, ExpandReturning }
-import io.getquill.sql.norm.{ RefineSubqueryProperties, RemoveExtraAlias }
+import io.getquill.sql.norm.{ RemoveUnusedSelects, RemoveExtraAlias }
 import io.getquill.util.Interleave
 import io.getquill.util.Messages.{ fail, trace }
 
@@ -44,8 +44,8 @@ trait SqlIdiom extends Idiom {
           VerifySqlQuery(sql).map(fail)
           val expanded = ExpandNestedQueries(sql)
           trace("expanded sql")(expanded)
-          val refined = RefineSubqueryProperties(expanded)
-          trace("refined sql")(refined)
+          val refined = RemoveUnusedSelects(expanded)
+          trace("selects filtered sql")(refined)
           val cleaned = RemoveExtraAlias(refined)
           trace("cleaned sql")(cleaned)
           val tokenized = cleaned.token

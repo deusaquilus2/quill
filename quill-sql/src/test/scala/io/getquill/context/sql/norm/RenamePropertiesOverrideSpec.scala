@@ -233,15 +233,6 @@ class RenamePropertiesOverrideSpec extends Spec {
     }
     "distinct" - {
       "body" in {
-
-        System.setProperty("quill.macro.log.pretty", "false")
-        System.setProperty("quill.macro.log", "true")
-        System.setProperty("quill.trace.enabled", "true")
-        System.setProperty("quill.trace.color", "true")
-        System.setProperty("quill.trace.opinion", "false")
-        System.setProperty("quill.trace.ast.simple", "false")
-        System.setProperty("quill.trace.types", "sql,norm,standard")
-
         val q = quote {
           e.distinct
         }
@@ -350,7 +341,7 @@ class RenamePropertiesOverrideSpec extends Spec {
           e.filter(a => a.i > 0).isEmpty
         }
         testContextUpper.run(q).string mustEqual
-          "SELECT NOT EXISTS (SELECT a.* FROM test_entity a WHERE a.field_i > 0)"
+          "SELECT NOT EXISTS (SELECT * FROM test_entity a WHERE a.field_i > 0)"
       }
     }
   }

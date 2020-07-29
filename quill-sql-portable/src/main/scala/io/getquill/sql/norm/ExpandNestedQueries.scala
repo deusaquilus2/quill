@@ -2,7 +2,7 @@ package io.getquill.context.sql.norm
 
 import io.getquill.ast._
 import io.getquill.context.sql._
-import io.getquill.sql.norm.{ SelectPropertyExpander, StatelessQueryTransformer }
+import io.getquill.sql.norm.{ SelectPropertyProtractor, StatelessQueryTransformer }
 import io.getquill.ast.PropertyOrCore
 import io.getquill.norm.PropertyMatroshka
 
@@ -16,7 +16,7 @@ class ExpandSelection(from: List[FromContext]) {
       // Assuming there's no case class or tuple buried inside or a property i.e. if there were,
       // the beta reduction would have unrolled them already
       case SelectValue(ast @ PropertyOrCore(), alias, concat) =>
-        val exp = SelectPropertyExpander(from)(ast)
+        val exp = SelectPropertyProtractor(from)(ast)
         exp.map {
           case (p: Property, path) =>
             SelectValue(p, Some(path.mkString), concat)

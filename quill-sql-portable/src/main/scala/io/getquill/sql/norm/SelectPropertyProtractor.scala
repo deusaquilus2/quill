@@ -7,7 +7,7 @@ import io.getquill.norm.PropertyMatroshka
 import io.getquill.quat.Quat
 import io.getquill.ast.Core
 
-case class SelectPropertyExpander(from: List[FromContext]) {
+case class SelectPropertyProtractor(from: List[FromContext]) {
 
   private def refersToEntity(ast: Ast) = {
     val tables = from.collect { case TableContext(entity, alias) => alias }
@@ -40,7 +40,7 @@ case class SelectPropertyExpander(from: List[FromContext]) {
         val isEntity = refersToEntity(id)
         id.quat match {
           case p: Quat.Product =>
-            QuatExpander(isEntity)(p, id).map { case (prop, path) => (freezeNonEntityProps(prop, isEntity), path) }
+            ProtractQuat(isEntity)(p, id).map { case (prop, path) => (freezeNonEntityProps(prop, isEntity), path) }
           case _ =>
             List(id).map(p => (freezeNonEntityProps(p, isEntity), List.empty))
         }
@@ -50,7 +50,7 @@ case class SelectPropertyExpander(from: List[FromContext]) {
         val isEntity = refersToEntity(id)
         prop.quat match {
           case p: Quat.Product =>
-            QuatExpander(isEntity)(p, prop).map { case (prop, path) => (freezeNonEntityProps(prop, isEntity), path) }
+            ProtractQuat(isEntity)(p, prop).map { case (prop, path) => (freezeNonEntityProps(prop, isEntity), path) }
           case _ =>
             List(prop).map(p => (freezeNonEntityProps(p, isEntity), List.empty))
         }
@@ -62,7 +62,7 @@ case class SelectPropertyExpander(from: List[FromContext]) {
  * quat: CC(foo,bar:Quat(a,b)) with core id:Ident(x) =>
  *   List( Prop(id,foo) [foo], Prop(Prop(id,bar),a) [bar.a], Prop(Prop(id,bar),b) [bar.b] )
  */
-  case class QuatExpander(refersToEntity: Boolean) {
+  case class ProtractQuat(refersToEntity: Boolean) {
     def apply(quat: Quat.Product, core: Ast): List[(Property, List[String])] =
       applyInner(quat, core)
 

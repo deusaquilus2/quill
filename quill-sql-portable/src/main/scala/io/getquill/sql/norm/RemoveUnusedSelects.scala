@@ -13,7 +13,7 @@ import scala.collection.mutable.LinkedHashSet
  * now since all properties have been propagated from quats from parent to child
  * SQL select trees.
  */
-object RefineSubqueryProperties {
+object RemoveUnusedSelects {
 
   def apply(q: SqlQuery): SqlQuery =
     apply(q, LinkedHashSet.empty, true)

@@ -5,6 +5,7 @@ import io.getquill.ast.Ast
 import io.getquill.norm.ConcatBehavior.AnsiConcat
 import io.getquill.norm.EqualityBehavior.AnsiEquality
 import io.getquill.norm.capture.{ AvoidAliasConflict, DemarcateExternalAliases }
+import io.getquill.sql.norm.FlatExpandJoin
 import io.getquill.util.Messages.{ TraceType, title }
 
 object SqlNormalize {
@@ -41,7 +42,7 @@ class SqlNormalize(concatBehavior: ConcatBehavior, equalityBehavior: EqualityBeh
       .andThen(demarcate("NestImpureMappedInfix"))
       .andThen(Normalize.apply _)
       .andThen(demarcate("Normalize"))
-      .andThen(ExpandJoin.apply _)
+      .andThen(FlatExpandJoin.apply _) // TODO Enabled via variable
       .andThen(demarcate("ExpandJoin"))
       .andThen(ExpandMappedInfix.apply _)
       .andThen(demarcate("ExpandMappedInfix"))

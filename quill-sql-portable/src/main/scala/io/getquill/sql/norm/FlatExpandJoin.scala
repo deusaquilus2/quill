@@ -48,6 +48,8 @@ object FlatExpandJoin {
                 case FlatMap(fj: FlatJoin, alias, MoreTables) =>
                   val fjr = BetaReduction(fj, RWR, MoreCond -> (Constant(1) +==+ Constant(1))) // TODO reduce this out i.e. something && 1==1 should be just something
                   Map(fjr, alias, tuple)
+                case other =>
+                  throw new IllegalArgumentException(s"Flat Join Expansion created Illegal FlatJoin COnstruct:\n${io.getquill.util.Messages.qprint(other).plainText}")
               }
             val output = BetaReduction(qr, RWR, innermost -> newInnermost)
 
